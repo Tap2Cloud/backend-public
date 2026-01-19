@@ -7,7 +7,7 @@ from inspect import isawaitable
 
 import tomlkit
 
-from ..core.db.session import get_session_context
+from t2c_backend.core.db.session import get_session_context
 
 
 async def maybe_coroutine(func, *args, **kwargs):

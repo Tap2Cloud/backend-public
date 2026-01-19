@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from ..endpoints.v1 import rest as v1_rest_router
+from t2c_backend.endpoints.v1 import rest as v1_rest_router
 
 api_router = APIRouter()
 ws_router = APIRouter()

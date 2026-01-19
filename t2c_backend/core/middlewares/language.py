@@ -1,8 +1,8 @@
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ...core.i18n import set_locale
-from ...utils.enums import Language
+from t2c_backend.core.i18n import set_locale
+from t2c_backend.utils.enums import Language
 
 
 class LanguageMiddleware(BaseHTTPMiddleware):

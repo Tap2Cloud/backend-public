@@ -14,6 +14,9 @@ class Config(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = field(default_factory=lambda: ["*"])
     REQUEST_ID_HEADER_NAME: str = "X-Request-Id"
 
+    JSON_LOGS: bool
+    GUNICORN_WORKERS: int
+
     # noinspection PyNestedDecorators
     @field_validator("BACKEND_CORS_ORIGINS")
     @classmethod
@@ -40,6 +43,6 @@ class Config(BaseSettings):
 
     @property
     def project_meta(self):
-        return get_project_meta("pyproject.toml")
+        return get_project_meta("../pyproject.toml")
 
     model_config = SettingsConfigDict(case_sensitive=True)
