@@ -39,7 +39,7 @@ class TranslationWrapper:
         using the default language and the specified
         translation directory.
         """
-        from utils.enums import Language
+        from t2c_backend.utils.enums import Language
 
         lang = Language.en  # Default language
         # src/translation

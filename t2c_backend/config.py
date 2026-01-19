@@ -1,13 +1,16 @@
 import os
 from dataclasses import field
+from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from utils.enums import ENVIRONMENT
-from utils.misc import get_project_meta
+
+from .utils.enums import ENVIRONMENT
+from .utils.misc import get_project_meta
 
 
 class Config(BaseSettings):
+    project_root: Path
     ENVIRONMENT: ENVIRONMENT
     API_STR: str = "/api"
 
@@ -43,6 +46,6 @@ class Config(BaseSettings):
 
     @property
     def project_meta(self):
-        return get_project_meta("../pyproject.toml")
+        return get_project_meta(self.project_root / "pyproject.toml")
 
-    model_config = SettingsConfigDict(case_sensitive=True)
+    model_config = SettingsConfigDict(case_sensitive=True, env_ignore_empty=True)

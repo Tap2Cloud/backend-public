@@ -1,26 +1,27 @@
-import asyncio
 import importlib.machinery
 import importlib.util
 import logging
 import sys
 import traceback
 import types
+from pathlib import Path
 from uuid import uuid4
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from asgi_correlation_id.middleware import is_valid_uuid4
-from config import Config
-from core.error_handlers import application_exception_handler
-from core.event_handlers import start_app_handler, stop_app_handler
-from core.middlewares.language import LanguageMiddleware
-from core.middlewares.sqlalchemy import SQLAlchemyMiddleware
-from endpoints.router import api_router
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
-from utils.enums import ENVIRONMENT
-from utils.errors import ApplicationError
-from utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
+
+from .config import Config
+from .core.error_handlers import application_exception_handler
+from .core.event_handlers import start_app_handler, stop_app_handler
+from .core.middlewares.language import LanguageMiddleware
+from .core.middlewares.sqlalchemy import SQLAlchemyMiddleware
+from .endpoints.router import api_router
+from .utils.enums import ENVIRONMENT
+from .utils.errors import ApplicationError
+from .utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
 
 initial_clients = []
 
@@ -52,9 +53,9 @@ class CustomFastAPI(FastAPI):
     Custom FastAPI class that encapsulates the app setup and configuration.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, project_root: Path) -> None:
         # Initialize the parent FastAPI class
-        self.config = Config()
+        self.config = Config(project_root=project_root)
 
         super().__init__(
             title=self.config.PROJECT_NAME,
@@ -164,10 +165,7 @@ class CustomFastAPI(FastAPI):
         await self._load_from_module_spec(spec, name)
 
     @classmethod
-    async def create(cls):
-        instance = cls()
+    async def create(cls, project_root: Path):
+        instance = cls(project_root=project_root)
         await instance.setup_hook()
         return instance
-
-
-app = asyncio.run(CustomFastAPI.create())
