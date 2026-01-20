@@ -32,6 +32,12 @@ class Config(BaseSettings):
 
     PROJECT_NAME: str
 
+    DATABASE_HOST: str
+    DATABASE_PORT: int = 5432
+    DATABASE_USER: str
+    DATABASE_PASSWORD: str
+    DATABASE_NAME: str
+
     APP_HOST: str
     APP_PORT: int
 

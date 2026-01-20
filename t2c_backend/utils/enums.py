@@ -35,3 +35,14 @@ class Language(str, Enum):
         if isinstance(value, str) and value in cls.__members__:
             return cls[value]
         return cls.en
+
+
+class TokenType(int, Enum):
+    EmailVerificationToken = 1
+    ForgotPasswordToken = 2
+
+
+class Status(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
