@@ -23,7 +23,9 @@ from .utils.enums import ENVIRONMENT
 from .utils.errors import ApplicationError
 from .utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
 
-initial_clients = []
+initial_clients = [
+    "t2c_backend.clients.token_backend",
+]
 
 
 def get_middleware_stack(app_config):

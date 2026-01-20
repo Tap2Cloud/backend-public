@@ -1,8 +1,8 @@
-"""update
+"""Initial tables
 
-Revision ID: c59dd71d377a
+Revision ID: 3a78977f14f4
 Revises:
-Create Date: 2026-01-20 15:12:39.804367
+Create Date: 2026-01-20 16:27:18.843348
 
 """
 
@@ -14,7 +14,7 @@ import t2c_backend
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "c59dd71d377a"
+revision: str = "3a78977f14f4"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

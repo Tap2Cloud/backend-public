@@ -31,9 +31,6 @@ class Organization(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeB
     email: Mapped[str] = mapped_column(Text())
     logo: Mapped["Image"] = mapped_column(ImageType(), nullable=True)
     taxonomy = relationship("Taxonomy")
-    organization_rented_assets = relationship(
-        "OrganizationRentedAsset", back_populates="organization"
-    )
 
     location = relationship(
         "Location",

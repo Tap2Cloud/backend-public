@@ -59,7 +59,6 @@ class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Aud
         secondary="user_roles",
         back_populates="users",
     )
-    organization_rented_assets = relationship("OrganizationRentedAsset", back_populates="user")
 
     def get_full_name(self):
         return get_full_name(self.first_name, self.last_name)

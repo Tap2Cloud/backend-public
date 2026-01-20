@@ -1,11 +1,21 @@
 import logging
 from collections.abc import Callable
 
+from t2c_backend.core.db import Engine
+from t2c_backend.utils.enums import ENVIRONMENT
+
 logger = logging.getLogger(__name__)
 
 
 async def _startup(app) -> None:
-    pass
+    app.database_engine = Engine(
+        app.config.DATABASE_NAME,
+        app.config.DATABASE_USER,
+        app.config.DATABASE_PASSWORD,
+        app.config.DATABASE_HOST,
+        app.config.DATABASE_PORT,
+        echo=app.config.ENVIRONMENT != ENVIRONMENT.PRODUCTION,
+    )
 
 
 async def _shutdown(app) -> None:

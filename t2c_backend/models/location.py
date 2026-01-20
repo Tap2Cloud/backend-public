@@ -28,12 +28,6 @@ class Location(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase)
     email: Mapped[str] = mapped_column(Text(), nullable=True)
 
     organization = relationship("Organization")
-    asset = relationship(
-        "Asset",
-        back_populates="location",
-        cascade="all, delete",
-        passive_deletes=True,
-    )
     user = relationship(
         "User",
         back_populates="location",
