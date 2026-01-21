@@ -2,7 +2,7 @@ from sqlalchemy import select
 
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import Location, Organization, Role, User, UserRole
-from t2c_backend.utils.errors import AlreadyExistsError
+from t2c_backend.utils.errors import AlreadyExistsError, UnAuthorizedError
 
 
 class UserService:
@@ -37,6 +37,23 @@ class UserService:
         )
 
         return await self.repository.save(user)
+
+    async def login(self, email: str, password: str) -> User:
+        # Fetch user data from the repository
+        db_user = await self.repository.get_one_or_none(email=email)
+
+        if not db_user:
+            raise UnAuthorizedError(msg="Not authenticated")
+
+        # Verify the password
+        is_valid_password = (
+            self.app.services.authentication.verify_hash(password, db_user.salt)
+            == db_user.hashed_password
+        )
+        if not is_valid_password:
+            raise UnAuthorizedError(msg="Incorrect username or password")
+
+        return db_user
 
     async def get_user_org_location_and_roles(self, user_id: int) -> dict:
         stmt = (
