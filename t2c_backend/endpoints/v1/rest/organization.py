@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, File, Form, Path, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile
 
+from t2c_backend.core.pagination import CustomPage
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.location import Location, LocationCreateRequest
 from t2c_backend.schemas.v1.organization import (
+    DetailedOrganization,
     UpdateOrganizationResponse,
 )
 from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
 from t2c_backend.schemas.v1.taxonomy import Taxonomy
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
+from t2c_backend.utils.enums import SortBy
 from t2c_backend.utils.errors import UnAuthorizedError
 from t2c_backend.utils.misc import DictContainer
 
@@ -109,3 +112,17 @@ async def delete_organization(
 ):
     await services.organization_service.delete_organization(organization_id)
     return Response(status_code=200)
+
+
+@router.get("/organization", response_model=CustomPage[DetailedOrganization], status_code=200)
+async def get_all_organizations(
+    q: str | None = None,
+    sort_by: SortBy | None = SortBy.Latest,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.organization_service.list_organizations(
+        q=q, sort_by=sort_by, page=page, page_size=page_size
+    )
