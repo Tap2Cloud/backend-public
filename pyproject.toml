@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asgi-correlation-id>=4.3.4",
+    "fastapi-pagination>=0.15.6",
     "fastapi[all]>=0.128.0",
     "gunicorn>=23.0.0",
     "loguru>=0.7.3",
