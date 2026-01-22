@@ -1,0 +1,42 @@
+[
+  {
+    "language_id": 1,
+    "asset_type_category_name": "Spender"
+  },
+  {
+    "language_id": 1,
+    "asset_type_category_name": "Bombe"
+  },
+  {
+    "language_id": 1,
+    "asset_type_category_name": "Behälter"
+  },
+  {
+    "language_id": 1,
+    "asset_type_category_name": "Automat"
+  },
+  {
+    "language_id": 1,
+    "asset_type_category_name": "Merchandise"
+  },
+  {
+    "language_id": 2,
+    "asset_type_category_name": "Spender"
+  },
+  {
+    "language_id": 2,
+    "asset_type_category_name": "Bombe"
+  },
+  {
+    "language_id": 2,
+    "asset_type_category_name": "Behälter"
+  },
+  {
+    "language_id": 2,
+    "asset_type_category_name": "Automat"
+  },
+  {
+    "language_id": 2,
+    "asset_type_category_name": "Merchandise"
+  }
+]

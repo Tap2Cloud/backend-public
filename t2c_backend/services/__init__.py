@@ -3,6 +3,8 @@ import traceback
 
 from fastapi import Depends, Request
 
+from .asset_type_category import AssetTypeCategoryService
+from .asset_type_category import setup as setup_asset_type_category
 from .authentication import Authentication
 from .authentication import setup as setup_authentication
 from .location import LocationService
@@ -20,6 +22,7 @@ from .user_email_token import setup as setup_user_email_token
 
 __services__ = [
     (Authentication, setup_authentication),
+    (AssetTypeCategoryService, setup_asset_type_category),
     (LocationService, setup_location),
     (OrganizationService, setup_organization),
     (RoleService, setup_role),

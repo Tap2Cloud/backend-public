@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from t2c_backend.endpoints.v1.rest import (
+    asset_type_category,
     authentication,
     health,
     location,
@@ -14,6 +15,7 @@ from t2c_backend.endpoints.v1.rest import (
 router = APIRouter(prefix="/v1")
 
 router.include_router(authentication.router, tags=["authentication"])
+router.include_router(asset_type_category.router, tags=["asset-type-category"])
 router.include_router(health.router, tags=["health"])
 router.include_router(location.router, tags=["location"])
 router.include_router(organization.router, tags=["organization"])

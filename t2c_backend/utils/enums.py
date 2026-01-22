@@ -87,3 +87,33 @@ class Role(str, Enum):
 class SortBy(str, Enum):
     Latest = "latest"
     Oldest = "oldest"
+
+
+class InputType(str, Enum):
+    time = "time"
+    url = "url"
+    text = "text"
+    radio = "radio"
+    password = "password"
+    number = "number"
+    image = "image"
+    file = "file"
+    email = "email"
+    date = "date"
+    datetime = "datetime"
+    checkbox = "checkbox"
+    multiselect = "multiselect"
+    select = "select"
+
+
+class DocumentStatus(str, Enum):
+    released = "released"
+    pending = "pending"
+    rejected = "rejected"
+
+
+class DocumentType(str, Enum):
+    instruction_manual = "instruction_manual"
+    inspection = "inspection"
+    typeplate = "typeplate"
+    declaration_file = "declaration_file"
