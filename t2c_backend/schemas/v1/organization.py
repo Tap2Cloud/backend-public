@@ -76,10 +76,3 @@ class DetailedOrganization(DisplayOrganization):
     role_count: int = Field(..., alias="roleCount")
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class OrganizationCredit(BaseModel):
-    credits: float
-    hold_credits: float = Field(..., alias="holdCredits")
-
-    model_config = ConfigDict(from_attributes=True)

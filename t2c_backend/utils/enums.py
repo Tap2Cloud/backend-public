@@ -1,5 +1,7 @@
 from enum import Enum
 
+from t2c_backend.core.i18n import _
+
 
 class ENVIRONMENT(str, Enum):
     TEST = "test"
@@ -117,3 +119,30 @@ class DocumentType(str, Enum):
     inspection = "inspection"
     typeplate = "typeplate"
     declaration_file = "declaration_file"
+
+
+class AssetStatus(str, Enum):
+    putting_into_service = "putting_into_service"
+    placing_on_the_market = "placing_on_the_market"
+    making_available_on_the_market = "making_available_on_the_market"
+    re_use = "re_use"
+    repair = "repair"
+    maintenance = "maintenance"
+    remanufacturing = "remanufacturing"
+    repurposing = "repurposing"
+    treatment = "treatment"
+    preparation_for_re_use = "preparation_for_re_use"
+    preparation_for_repurposing = "preparation_for_repurposing"
+    preparation_for_recycling = "preparation_for_recycling"
+    recycling = "recycling"
+    waste_management = "waste_management"
+
+
+class ServiceTypes(str, Enum):
+    premium = "premium"
+    basic = "basic"
+
+
+class AuditTaskStatus(str, Enum):
+    SUCCEEDED = _("SUCCEEDED")
+    FAILED = _("FAILED")

@@ -49,7 +49,6 @@ class LocationBaseResponse(BaseModel):
     fax_number: str | None = Field(..., alias="faxNumber")
     email: str | None
     organization: DisplayOrganization
-    organization_credit: float | None = Field(None, alias="organizationCredit")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -82,7 +81,7 @@ class LocationBaseResponse(BaseModel):
     @staticmethod
     def to_orm(location_obj: "LocationBaseResponse") -> LocationModel:
         return LocationModel(
-            **location_obj.model_dump(exclude={"organization", "organization_credit"}),
+            **location_obj.model_dump(exclude={"organization"}),
             organization=DisplayOrganization.to_orm(location_obj.organization),
         )
 

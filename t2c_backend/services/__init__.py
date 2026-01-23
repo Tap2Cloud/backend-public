@@ -3,6 +3,8 @@ import traceback
 
 from fastapi import Depends, Request
 
+from .asset import AssetService
+from .asset import setup as setup_asset
 from .asset_type import AssetTypeService
 from .asset_type import setup as setup_asset_type
 from .asset_type_category import AssetTypeCategoryService
@@ -17,6 +19,8 @@ from .role import RoleService
 from .role import setup as setup_role
 from .taxonomy import TaxonomyService
 from .taxonomy import setup as setup_taxonomy
+from .typeplate import TypeplateService
+from .typeplate import setup as setup_typeplate_documents
 from .user import UserService
 from .user import setup as setup_user
 from .user_email_token import UserEmailTokenService
@@ -26,10 +30,12 @@ __services__ = [
     (Authentication, setup_authentication),
     (AssetTypeCategoryService, setup_asset_type_category),
     (AssetTypeService, setup_asset_type),
+    (AssetService, setup_asset),
     (LocationService, setup_location),
     (OrganizationService, setup_organization),
     (RoleService, setup_role),
     (TaxonomyService, setup_taxonomy),
+    (TypeplateService, setup_typeplate_documents),
     (UserService, setup_user),
     (UserEmailTokenService, setup_user_email_token),
 ]

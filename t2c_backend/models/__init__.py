@@ -1,3 +1,4 @@
+from .asset import Asset
 from .asset_type import AssetType, AssetTypeDocument, AssetTypeField, AssetTypeFieldOptions
 from .asset_type_category import (
     AssetTypeCategory,
@@ -5,6 +6,7 @@ from .asset_type_category import (
     AssetTypeCategoryFieldOption,
     AssetTypeCategoryGroup,
 )
+from .audit import Audit, AuditTask, AuditTaskDocument
 from .documents import Document
 from .location import Location
 from .organization import Organization
@@ -14,6 +16,7 @@ from .typeplate import TypelateImageMapping, Typeplate, TypeplateDocument, Typep
 from .user import User, UserEmailToken
 
 __all__ = [
+    "Asset",
     "AssetType",
     "AssetTypeField",
     "AssetTypeFieldOptions",
@@ -22,6 +25,9 @@ __all__ = [
     "AssetTypeCategoryField",
     "AssetTypeCategoryFieldOption",
     "AssetTypeCategoryGroup",
+    "Audit",
+    "AuditTask",
+    "AuditTaskDocument",
     "Document",
     "Location",
     "Organization",
