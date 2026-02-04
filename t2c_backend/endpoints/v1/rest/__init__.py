@@ -10,6 +10,7 @@ from t2c_backend.endpoints.v1.rest import (
     location,
     organization,
     register,
+    service,
     taxonomy,
     token,
     typeplate,
@@ -31,3 +32,4 @@ router.include_router(typeplate.router, tags=["typeplate"])
 router.include_router(token.router, tags=["token"])
 router.include_router(user.router, tags=["user"])
 router.include_router(instruction_manual.router, tags=["instruction-manual"])
+router.include_router(service.router, tags=["service"])

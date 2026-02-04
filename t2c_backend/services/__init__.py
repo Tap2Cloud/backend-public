@@ -17,6 +17,8 @@ from .organization import OrganizationService
 from .organization import setup as setup_organization
 from .role import RoleService
 from .role import setup as setup_role
+from .service import ServiceService
+from .service import setup as setup_service
 from .taxonomy import TaxonomyService
 from .taxonomy import setup as setup_taxonomy
 from .typeplate import TypeplateService
@@ -34,6 +36,7 @@ __services__ = [
     (LocationService, setup_location),
     (OrganizationService, setup_organization),
     (RoleService, setup_role),
+    (ServiceService, setup_service),
     (TaxonomyService, setup_taxonomy),
     (TypeplateService, setup_typeplate_documents),
     (UserService, setup_user),
