@@ -6,6 +6,7 @@ from t2c_backend.endpoints.v1.rest import (
     asset_type_category,
     authentication,
     health,
+    instruction_manual,
     location,
     organization,
     register,
@@ -29,3 +30,4 @@ router.include_router(taxonomy.router, tags=["taxonomy"])
 router.include_router(typeplate.router, tags=["typeplate"])
 router.include_router(token.router, tags=["token"])
 router.include_router(user.router, tags=["user"])
+router.include_router(instruction_manual.router, tags=["instruction-manual"])
