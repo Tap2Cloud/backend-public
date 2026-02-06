@@ -5,6 +5,7 @@ from t2c_backend.endpoints.v1.rest import (
     asset_type,
     asset_type_category,
     authentication,
+    dashboard,
     health,
     instruction_manual,
     location,
@@ -23,6 +24,7 @@ router.include_router(authentication.router, tags=["authentication"])
 router.include_router(asset_type_category.router, tags=["asset-type-category"])
 router.include_router(asset_type.router, tags=["asset-type"])
 router.include_router(asset.router, tags=["asset"])
+router.include_router(dashboard.router, tags=["dashboard"])
 router.include_router(health.router, tags=["health"])
 router.include_router(location.router, tags=["location"])
 router.include_router(organization.router, tags=["organization"])
