@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload
 
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import Location, Organization, Role, User, UserRole
+from t2c_backend.models.user import UserInvite, UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
@@ -18,6 +19,8 @@ class UserService:
     def __init__(self, app, session) -> None:
         self.app = app
         self.repository = BaseRepository(app, session, self._model)
+        self.user_invite_repository = BaseRepository(app, session, UserInvite)
+        self.user_invite_role_repository = BaseRepository(app, session, UserInviteRole)
         self.user_role_repository = BaseRepository(app, session, UserRole)
 
     async def register_user(

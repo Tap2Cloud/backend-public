@@ -33,6 +33,12 @@ class Role(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
         secondary="user_roles",
         back_populates="roles",
     )
+    invitees: Mapped[list["user.UserInvite"]] = relationship(
+        "UserInvite",
+        uselist=True,
+        secondary="user_invite_roles",
+        back_populates="invitee_roles",
+    )
 
     def __str__(self) -> str:
         return self.name

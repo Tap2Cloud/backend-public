@@ -22,7 +22,7 @@ from t2c_backend.core.db import (
 from t2c_backend.core.db.types import ImageType
 from t2c_backend.models import role
 from t2c_backend.schemas.v1.image import Image
-from t2c_backend.utils.enums import TokenType
+from t2c_backend.utils.enums import Role, Status, TokenType
 from t2c_backend.utils.misc import get_full_name
 
 
@@ -80,3 +80,38 @@ class UserEmailToken(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativ
     is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     user = relationship("User", back_populates="email_tokens", lazy="selectin")
+
+
+class UserInvite(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
+    __tablename__ = "user_invites"
+
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
+    inviter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    invitee_email: Mapped[str] = mapped_column(Text(), nullable=False)
+    token: Mapped[str] = mapped_column(Text(), unique=True, index=True, nullable=False)
+    status: Mapped[Status] = mapped_column(Enum(Status), nullable=False)
+
+    invitee_roles: Mapped[list["Role"]] = relationship(
+        "Role",
+        secondary="user_invite_roles",
+        back_populates="invitees",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
+    location = relationship("Location")
+
+
+class UserInviteRole(AdvancedDeclarativeBase, CommonTableAttributes):
+    __tablename__ = "user_invite_roles"
+
+    role_id: Mapped[int] = mapped_column(
+        ForeignKey("roles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    invitee_id: Mapped[int] = mapped_column(
+        ForeignKey("user_invites.id", ondelete="CASCADE"),
+        primary_key=True,
+    )

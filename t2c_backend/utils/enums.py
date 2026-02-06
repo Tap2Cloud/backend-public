@@ -146,3 +146,10 @@ class ServiceTypes(str, Enum):
 class AuditTaskStatus(str, Enum):
     SUCCEEDED = _("SUCCEEDED")
     FAILED = _("FAILED")
+
+
+class UserStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INVITED = "INVITED"
+    BANNED = "BANNED"
+    REJECTED = "REJECTED"
