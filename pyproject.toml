@@ -5,12 +5,15 @@ description = "Open source t2c backend base"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiofiles>=25.1.0",
     "asgi-correlation-id>=4.3.4",
+    "babel>=2.18.0",
     "fastapi-pagination>=0.15.6",
     "fastapi[all]>=0.128.0",
     "gunicorn>=23.0.0",
     "loguru>=0.7.3",
     "pyjwt>=2.10.1",
+    "reportlab>=4.4.9",
     "sqlalchemy[asyncio]>=2.0.45",
     "tomlkit>=0.14.0",
 ]

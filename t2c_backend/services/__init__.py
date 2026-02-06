@@ -9,6 +9,8 @@ from .asset_type import AssetTypeService
 from .asset_type import setup as setup_asset_type
 from .asset_type_category import AssetTypeCategoryService
 from .asset_type_category import setup as setup_asset_type_category
+from .audit import AuditService
+from .audit import setup as setup_audit
 from .authentication import Authentication
 from .authentication import setup as setup_authentication
 from .location import LocationService
@@ -32,6 +34,7 @@ __services__ = [
     (Authentication, setup_authentication),
     (AssetTypeCategoryService, setup_asset_type_category),
     (AssetTypeService, setup_asset_type),
+    (AuditService, setup_audit),
     (AssetService, setup_asset),
     (LocationService, setup_location),
     (OrganizationService, setup_organization),

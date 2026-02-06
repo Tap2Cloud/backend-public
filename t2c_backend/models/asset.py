@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
-    JSON,
     DateTime,
     Enum,
     ForeignKey,
@@ -66,21 +65,3 @@ class Asset(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Au
     )
 
     audit: Mapped[list["Audit"]] = relationship("Audit", order_by=desc(Audit.id))
-
-
-class AssetMonitoringHistory(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
-    __tablename__ = "asset_monitoring_history"
-
-    device_id: Mapped[str] = mapped_column(Text())
-    asset_id: Mapped[int] = mapped_column(
-        ForeignKey("assets.id", ondelete="CASCADE"), nullable=True
-    )
-    monitoring_data: Mapped[dict] = mapped_column(JSON(), nullable=True)
-
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    insert_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-    )
-
-    asset = relationship("Asset")

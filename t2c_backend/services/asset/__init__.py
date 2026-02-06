@@ -16,7 +16,6 @@ from t2c_backend.models import (
     Location,
     Organization,
 )
-from t2c_backend.models.asset import AssetMonitoringHistory
 from t2c_backend.schemas.v1.asset import (
     AssetResponse,
     CreateAsset,
@@ -33,7 +32,6 @@ class AssetService:
     def __init__(self, app, session) -> None:
         self.app = app
         self.repository = BaseRepository(app, session, self._model)
-        self.monitoring_history_repository = BaseRepository(app, session, AssetMonitoringHistory)
 
     async def create_asset(
         self,
