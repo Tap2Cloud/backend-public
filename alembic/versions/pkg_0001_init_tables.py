@@ -1,8 +1,8 @@
-"""update
+"""init_tables
 
-Revision ID: 5099d557d82a
-Revises: 1a386f695ecb
-Create Date: 2026-01-22 16:13:29.786642
+Revision ID: pkg_0001
+Revises:
+Create Date: 2026-03-05 12:25:38.028885
 
 """
 
@@ -14,8 +14,8 @@ import t2c_backend
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "5099d557d82a"
-down_revision: str | Sequence[str] | None = "1a386f695ecb"
+revision: str = "pkg_0001"
+down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -31,6 +31,13 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
+        "taxonomies",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("display_name", sa.Text(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "typeplate_images",
         sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
@@ -38,6 +45,62 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "organizations",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("taxonomy_id", sa.BigInteger(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("number", sa.Text(), nullable=False),
+        sa.Column("email", sa.Text(), nullable=False),
+        sa.Column("logo", t2c_backend.core.db.types.ImageType(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["taxonomy_id"], ["taxonomies.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "locations",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("organization_id", sa.BigInteger(), nullable=False),
+        sa.Column("street", sa.Text(), nullable=True),
+        sa.Column("postcode", sa.Text(), nullable=True),
+        sa.Column("city", sa.Text(), nullable=True),
+        sa.Column("country", sa.Text(), nullable=True),
+        sa.Column("region", sa.Text(), nullable=True),
+        sa.Column("tel_number", sa.Text(), nullable=True),
+        sa.Column("mobile_number", sa.Text(), nullable=True),
+        sa.Column("fax_number", sa.Text(), nullable=True),
+        sa.Column("email", sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "roles",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("organization_id", sa.BigInteger(), nullable=True),
+        sa.Column("name", sa.Text(), nullable=True),
+        sa.Column("permissions", sa.Numeric(), nullable=False),
+        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "users",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("location_id", sa.BigInteger(), nullable=True),
+        sa.Column("hashed_password", sa.Text(), nullable=False),
+        sa.Column("salt", sa.Text(), nullable=False),
+        sa.Column("first_name", sa.Text(), nullable=False),
+        sa.Column("last_name", sa.Text(), nullable=False),
+        sa.Column("email", sa.Text(), nullable=False),
+        sa.Column("is_active", sa.Boolean(), nullable=False),
+        sa.Column("is_email_verified", sa.Boolean(), nullable=False),
+        sa.Column("profile_avatar", t2c_backend.core.db.types.ImageType(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["location_id"], ["locations.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email"),
     )
     op.create_table(
         "asset_type_categories",
@@ -82,6 +145,51 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "name", "type", "location_id", name="_name_type_location_location_id_unique"
         ),
+    )
+    op.create_table(
+        "user_email_verification",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=True),
+        sa.Column("user_token", sa.Text(), nullable=False),
+        sa.Column("time", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "type",
+            sa.Enum("EmailVerificationToken", "ForgotPasswordToken", name="tokentype"),
+            nullable=True,
+        ),
+        sa.Column("is_used", sa.Boolean(), nullable=True),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        op.f("ix_user_email_verification_user_token"),
+        "user_email_verification",
+        ["user_token"],
+        unique=True,
+    )
+    op.create_table(
+        "user_invites",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("location_id", sa.BigInteger(), nullable=False),
+        sa.Column("inviter_id", sa.BigInteger(), nullable=False),
+        sa.Column("invitee_email", sa.Text(), nullable=False),
+        sa.Column("token", sa.Text(), nullable=False),
+        sa.Column(
+            "status", sa.Enum("pending", "accepted", "rejected", name="status"), nullable=False
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["inviter_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["location_id"], ["locations.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_user_invites_token"), "user_invites", ["token"], unique=True)
+    op.create_table(
+        "user_roles",
+        sa.Column("role_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["role_id"], ["roles.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("role_id", "user_id"),
     )
     op.create_table(
         "asset_type_category_fields",
@@ -150,6 +258,14 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
+        "user_invite_roles",
+        sa.Column("role_id", sa.BigInteger(), nullable=False),
+        sa.Column("invitee_id", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["invitee_id"], ["user_invites.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["role_id"], ["roles.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("role_id", "invitee_id"),
+    )
+    op.create_table(
         "asset_type_category_field_options",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("option_id", sa.Text(), nullable=False),
@@ -196,6 +312,44 @@ def upgrade() -> None:
         sa.UniqueConstraint("name", "asset_type_id", name="_name_asset_type_asset_type_id_unique"),
     )
     op.create_table(
+        "assets",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("pass_id", sa.Text(), nullable=False),
+        sa.Column("device_id", sa.Text(), nullable=False),
+        sa.Column("manufacturing_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "status",
+            sa.Enum(
+                "putting_into_service",
+                "placing_on_the_market",
+                "making_available_on_the_market",
+                "re_use",
+                "repair",
+                "maintenance",
+                "remanufacturing",
+                "repurposing",
+                "treatment",
+                "preparation_for_re_use",
+                "preparation_for_repurposing",
+                "preparation_for_recycling",
+                "recycling",
+                "waste_management",
+                name="assetstatus",
+            ),
+            nullable=False,
+        ),
+        sa.Column("serial_no", sa.Text(), nullable=True),
+        sa.Column("economic_operator", sa.Text(), nullable=True),
+        sa.Column("asset_type_id", sa.BigInteger(), nullable=False),
+        sa.Column("location_id", sa.BigInteger(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["asset_type_id"], ["asset_types.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["location_id"], ["locations.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("device_id", "location_id", name="_unique_device_id_location_id"),
+    )
+    op.create_table(
         "typeplates",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("test_results", sa.Text(), nullable=True),
@@ -223,6 +377,30 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
+        "audits",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("inspection_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("valid_until", sa.Date(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("asset_id", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "services",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("contact", sa.Text(), nullable=True),
+        sa.Column("expire_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("service_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("web", sa.Text(), nullable=True),
+        sa.Column("email", sa.Text(), nullable=True),
+        sa.Column("service_type", sa.Enum("premium", "basic", name="servicetypes"), nullable=False),
+        sa.Column("asset_id", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["asset_id"], ["assets.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "typelate_image_mapping",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("typeplate_id", sa.BigInteger(), nullable=False),
@@ -246,23 +424,62 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["typeplate_id"], ["typeplates.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_table(
+        "audit_tasks",
+        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("task_name", sa.Text(), nullable=False),
+        sa.Column("status", sa.Enum("SUCCEEDED", "FAILED", name="audittaskstatus"), nullable=False),
+        sa.Column("audit_id", sa.BigInteger(), nullable=True),
+        sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "audit_task_documents",
+        sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("content_type", sa.Text(), nullable=False),
+        sa.Column("audit_task_id", sa.BigInteger(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["audit_task_id"], ["audit_tasks.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name", "audit_task_id", name="_name_audit_task_audit_task_id_unique"),
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table("audit_task_documents")
+    op.drop_table("audit_tasks")
     op.drop_table("typeplate_documents")
     op.drop_table("typelate_image_mapping")
+    op.drop_table("services")
+    op.drop_table("audits")
     op.drop_table("asset_type_field_options")
     op.drop_table("typeplates")
+    op.drop_table("assets")
     op.drop_table("asset_types_documents")
     op.drop_table("asset_type_fields")
     op.drop_table("asset_type_category_field_options")
+    op.drop_table("user_invite_roles")
     op.drop_table("asset_types")
     op.drop_table("asset_type_category_fields")
+    op.drop_table("user_roles")
+    op.drop_index(op.f("ix_user_invites_token"), table_name="user_invites")
+    op.drop_table("user_invites")
+    op.drop_index(
+        op.f("ix_user_email_verification_user_token"), table_name="user_email_verification"
+    )
+    op.drop_table("user_email_verification")
     op.drop_table("documents")
     op.drop_table("asset_type_categories")
+    op.drop_table("users")
+    op.drop_table("roles")
+    op.drop_table("locations")
+    op.drop_table("organizations")
     op.drop_table("typeplate_images")
+    op.drop_table("taxonomies")
     op.drop_table("asset_type_category_group")
     # ### end Alembic commands ###

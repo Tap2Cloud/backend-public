@@ -1,8 +1,8 @@
-"""Insert static data
+"""insert_static_data
 
-Revision ID: f3d11e8e0535
-Revises: 5099d557d82a
-Create Date: 2025-12-09 12:12:01.475318
+Revision ID: pkg_0002
+Revises: pkg_0001
+Create Date: 2026-03-05 12:25:38.028895
 
 """
 
@@ -20,13 +20,14 @@ from t2c_backend.schemas.v1.image import Image
 from t2c_backend.utils.enums import Role as RoleEnum
 
 # revision identifiers, used by Alembic.
-revision: str = "f3d11e8e0535"
-down_revision: str | Sequence[str] | None = "5099d557d82a"
+revision: str = "pkg_0002"
+down_revision: str | Sequence[str] | None = "pkg_0001"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    """Upgrade schema."""
     bind = op.get_bind()
     session = Session(bind=bind)
 
