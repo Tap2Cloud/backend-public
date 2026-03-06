@@ -16,7 +16,7 @@ from alembic import op
 # revision identifiers, used by Alembic.
 revision: str = "pkg_0001"
 down_revision: str | Sequence[str] | None = None
-branch_labels: str | Sequence[str] | None = None
+branch_labels = ('base_pkg',)
 depends_on: str | Sequence[str] | None = None
 
 
