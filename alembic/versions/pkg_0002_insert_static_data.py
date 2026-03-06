@@ -22,7 +22,7 @@ from t2c_backend.utils.enums import Role as RoleEnum
 # revision identifiers, used by Alembic.
 revision: str = "pkg_0002"
 down_revision: str | Sequence[str] | None = "pkg_0001"
-branch_labels: str | Sequence[str] | None = None
+branch_labels = ('base_pkg',)
 depends_on: str | Sequence[str] | None = None
 
 
