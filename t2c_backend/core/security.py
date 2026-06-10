@@ -113,7 +113,7 @@ class JWTWebSocketAccessTokenBearer(JWTWebSocketBearer):
             access_token = AccessToken(app.clients.token_backend, jwt_token)
             access_token.update_payload(
                 await UserService(app, session).get_user_org_location_and_roles(
-                    session,
+                    access_token.user_id,
                 ),
             )
             return access_token

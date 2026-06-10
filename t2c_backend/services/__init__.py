@@ -49,7 +49,7 @@ __services__ = [
     (TaxonomyService, setup_taxonomy),
 ]
 
-from core.db import get_db_session
+from t2c_backend.core.db import get_db_session
 
 
 async def get_services(request: Request, session=Depends(get_db_session)):

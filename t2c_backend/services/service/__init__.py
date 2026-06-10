@@ -62,6 +62,7 @@ class ServiceService:
 
         update_fields = service_data.model_dump()
         update_fields["expire_date"] = datetime.fromtimestamp(service_data.expire_date)
+        update_fields["service_date"] = datetime.fromtimestamp(service_data.service_date)
 
         for key, value in update_fields.items():
             setattr(service, key, value)
