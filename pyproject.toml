@@ -1,5 +1,5 @@
 [project]
-name = "tap2cloud-backend"
+name = "tap2cloud-backend-opensource"
 version = "0.1.0"
 description = "Open source t2c backend base"
 readme = "README.md"
