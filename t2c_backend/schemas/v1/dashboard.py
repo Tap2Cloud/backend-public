@@ -15,15 +15,23 @@ class DashboardResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @staticmethod
-    def convert(data) -> "DashboardResponse":
+    def convert(
+        asset_type_count,
+        typeplate_count,
+        asset_count,
+        service_count,
+        instruction_manual_count,
+        inspection,
+        shop,
+    ) -> "DashboardResponse":
         return DashboardResponse(
-            assetType=data.asset_type_count,
-            typeplate=data.typeplate_count,
-            asset=data.asset_count,
-            service=data.service_count,
-            shop=0,
-            instructionManual=data.instruction_manual_count,
-            inspection=0,
+            assetType=asset_type_count,
+            typeplate=typeplate_count,
+            asset=asset_count,
+            service=service_count,
+            shop=shop,
+            instructionManual=instruction_manual_count,
+            inspection=inspection,
             timeRecording=0,
             iot=0,
         )

@@ -69,6 +69,8 @@ async def list_service(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
 ):
+    # todo searching asset through QRcode(asset_id) is left
+
     return await services.service_service.list_services(
         q=q,
         sort_by=sort_by,

@@ -8,7 +8,8 @@ from starlette.datastructures import UploadFile
 from t2c_backend.models import Audit as AuditModel
 from t2c_backend.models import AuditTask as AuditTaskModel
 from t2c_backend.models import AuditTaskDocument as AuditTaskDocumentModel
-from t2c_backend.utils.enums import AuditTaskStatus
+from t2c_backend.utils.enums import AuditTaskStatus, TaskType
+from t2c_backend.utils.errors import BadRequestError
 
 
 class AuditTaskDocument(BaseModel):
@@ -46,7 +47,12 @@ class AuditTaskDocument(BaseModel):
 
 class CreateAuditTask(BaseModel):
     task_name: str = Field(..., alias="taskName")
+    task_type: TaskType = Field(..., alias="taskType")
     status: AuditTaskStatus
+    performed_by_org: str = Field(..., alias="performedByOrg")
+    role_of_org: str = Field(..., alias="roleOfOrg")
+    first_name: str = Field(..., alias="firstName")
+    last_name: str = Field(..., alias="lastName")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,7 +70,12 @@ class CreateAuditTask(BaseModel):
 class AuditTaskResponse(BaseModel):
     id: int
     task_name: str = Field(..., alias="taskName")
+    task_type: str = Field(..., alias="taskType")
     status: str
+    performed_by_org: str = Field(..., alias="performedByOrg")
+    role_of_org: str = Field(..., alias="roleOfOrg")
+    first_name: str = Field(..., alias="firstName")
+    last_name: str = Field(..., alias="lastName")
     documents: list[AuditTaskDocument] = []
 
     model_config = ConfigDict(from_attributes=True)
@@ -74,7 +85,12 @@ class AuditTaskResponse(BaseModel):
         atr = AuditTaskResponse(
             id=audit_task.id,
             taskName=audit_task.task_name,
+            taskType=audit_task.task_type,
             status=audit_task.status,
+            performedByOrg=audit_task.performed_by_org,
+            roleOfOrg=audit_task.role_of_org,
+            firstName=audit_task.first_name,
+            lastName=audit_task.last_name,
         )
 
         if audit_task_documents:
@@ -89,7 +105,12 @@ class AuditTaskResponse(BaseModel):
         return AuditTaskModel(
             id=audit_task_obj.id,
             task_name=audit_task_obj.task_name,
+            task_type=audit_task_obj.task_type,
             status=audit_task_obj.status,
+            performed_by_org=audit_task_obj.performed_by_org,
+            role_of_org=audit_task_obj.role_of_org,
+            first_name=audit_task_obj.first_name,
+            last_name=audit_task_obj.last_name,
             documents=[
                 AuditTaskDocument.to_orm(doc_response) for doc_response in audit_task_obj.documents
             ]
@@ -104,6 +125,13 @@ class CreateAudit(BaseModel):
     audit_tasks: list[AuditTaskResponse] = Field(..., alias="auditTasks")
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_to_json(cls, data):
+        if data.get("validUntil") < data.get("inspectionDate"):
+            raise BadRequestError("validate date must be greater than inspection date")
+        return data
 
 
 class AuditResponse(BaseModel):

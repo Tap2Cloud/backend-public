@@ -3,9 +3,11 @@ import sys
 from collections.abc import AsyncGenerator
 
 import aiofiles
+import aiofiles.os
 from fastapi import UploadFile
 
 from t2c_backend.clients.storage.interface import StorageInterface
+from t2c_backend.utils.enums import DocumentFor
 
 
 class DiskStorage(StorageInterface):
@@ -51,29 +53,61 @@ class DiskStorage(StorageInterface):
 
         return file
 
+    async def delete(
+        self,
+        file_path: str,
+        filename: str,
+    ) -> bool:
+        root_path = os.path.join(str(self.app.config.project_root_path), self.config.BUCKET)
+        final_file_path = os.path.join(root_path, file_path, filename)
+
+        if not os.path.exists(final_file_path):
+            return False
+
+        await aiofiles.os.remove(final_file_path)
+
+        parent_dir = os.path.dirname(final_file_path)
+        if os.path.isdir(parent_dir) and not os.listdir(parent_dir):
+            os.rmdir(parent_dir)
+
+        return True
+
     async def get(self, final_file_path: str, chunk_size: int) -> AsyncGenerator[bytes, None]:
         async with aiofiles.open(final_file_path, mode="rb") as f:
             while content := await f.read(chunk_size):
                 yield content
 
-    async def save_audit_task_document(
-        self, organization_id: int, task_id: int, file: UploadFile
+    async def save_document(
+        self, organization_id: int, document_for: DocumentFor, file_id: int, file: UploadFile
     ) -> UploadFile:
         return await self.save(
-            os.path.join(str(organization_id), "audit_task_documents", str(task_id)),
+            os.path.join(str(organization_id), str(document_for), str(file_id)),
             file,
         )
 
-    async def get_audit_task_document(
-        self, organization_id: int, task_id: int, file_name: str, chunk_size: int = 4096
+    async def delete_document(
+        self, organization_id: int, document_for: DocumentFor, file_id: int, filename: str
+    ) -> bool:
+        return await self.delete(
+            os.path.join(str(organization_id), str(document_for), str(file_id)),
+            filename,
+        )
+
+    async def get_document(
+        self,
+        organization_id: int,
+        document_for: DocumentFor,
+        file_id: int,
+        file_name: str,
+        chunk_size: int = 4096,
     ) -> AsyncGenerator[bytes, None]:
         async for chunk in self.get(
             os.path.join(
                 str(self.app.config.project_root_path),
                 self.config.BUCKET,
                 str(organization_id),
-                "audit_task_documents",
-                str(task_id),
+                str(document_for),
+                str(file_id),
                 file_name,
             ),
             chunk_size,

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os.path
 import sys
@@ -8,11 +7,10 @@ from gunicorn.app.base import BaseApplication
 from gunicorn.glogging import Logger
 from loguru import logger
 
-from t2c_backend.main import CustomFastAPI
+from t2c_backend.main import app
 from t2c_backend.utils.enums import ENVIRONMENT
 
 BASE_DIR = Path(__file__).resolve().parent
-app = asyncio.run(CustomFastAPI.create(project_root=BASE_DIR))
 
 log_level_mapping = {
     ENVIRONMENT.DEVELOPMENT: logging.DEBUG,

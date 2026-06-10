@@ -2,7 +2,7 @@
 
 Revision ID: pkg_0001
 Revises:
-Create Date: 2026-03-05 12:25:38.028885
+Create Date: 2026-06-10 12:49:03.639876
 
 """
 
@@ -10,13 +10,13 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 
-import t2c_backend
+import t2c_backend.core
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "pkg_0001"
 down_revision: str | Sequence[str] | None = None
-branch_labels = ('base_pkg',)
+branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
@@ -354,13 +354,11 @@ def upgrade() -> None:
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("test_results", sa.Text(), nullable=True),
         sa.Column("eu_id", sa.Text(), nullable=True),
-        sa.Column("eu_file_id", sa.Uuid(), nullable=True),
         sa.Column("carbon_footprint_label", sa.Text(), nullable=True),
         sa.Column("asset_type_id", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["asset_type_id"], ["asset_types.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["eu_file_id"], ["documents.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -415,21 +413,34 @@ def upgrade() -> None:
     )
     op.create_table(
         "typeplate_documents",
-        sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("gen_random_uuid()"), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("content_type", sa.Text(), nullable=False),
         sa.Column("typeplate_id", sa.BigInteger(), nullable=False),
-        sa.Column("document_id", sa.Uuid(), nullable=False),
+        sa.Column("location_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["location_id"], ["locations.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["typeplate_id"], ["typeplates.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "audit_tasks",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("task_name", sa.Text(), nullable=False),
-        sa.Column("status", sa.Enum("SUCCEEDED", "FAILED", name="audittaskstatus"), nullable=False),
+        sa.Column("task_type", sa.Enum("audit", "inspection", name="tasktype"), nullable=False),
+        sa.Column(
+            "status",
+            sa.Enum("PASSED", "FAILED", "CONDITIONAL", name="audittaskstatus"),
+            nullable=False,
+        ),
         sa.Column("audit_id", sa.BigInteger(), nullable=True),
+        sa.Column("performed_by_org", sa.Text(), nullable=False),
+        sa.Column("role_of_org", sa.Text(), nullable=False),
+        sa.Column("first_name", sa.Text(), nullable=False),
+        sa.Column("last_name", sa.Text(), nullable=False),
         sa.ForeignKeyConstraint(["audit_id"], ["audits.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )

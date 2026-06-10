@@ -1,9 +1,9 @@
-from enum import Enum
+import enum
 
 from t2c_backend.core.i18n import _
 
 
-class ENVIRONMENT(str, Enum):
+class ENVIRONMENT(enum.StrEnum):
     TEST = "test"
     DEVELOPMENT = "development"
     STAGING = "staging"
@@ -13,7 +13,7 @@ class ENVIRONMENT(str, Enum):
         return self.value
 
 
-class ErrorMessageCodes(str, Enum):
+class ErrorMessageCodes(enum.StrEnum):
     NOT_FOUND = "NOT_FOUND"
     ALREADY_EXIST = "ALREADY_EXIST"
     NOT_AUTHORIZED = "NOT_AUTHORIZED"
@@ -24,33 +24,29 @@ class ErrorMessageCodes(str, Enum):
     TOKEN_EXPIRED = "TOKEN_EXPIRED"
 
 
-class Language(str, Enum):
-    en = "en"
-    de = "de"
-
-    @classmethod
-    def from_value(cls, value) -> "Language":
-        """
-        Resolves a role from a string or integer value.
-        Defaults to Role.User if the value is invalid.
-        """
-        if isinstance(value, str) and value in cls.__members__:
-            return cls[value]
-        return cls.en
-
-
-class TokenType(int, Enum):
+class TokenType(enum.IntEnum):
     EmailVerificationToken = 1
     ForgotPasswordToken = 2
 
 
-class Status(str, Enum):
-    pending = "pending"
-    accepted = "accepted"
-    rejected = "rejected"
+class InputType(enum.StrEnum):
+    time = "time"
+    url = "url"
+    text = "text"
+    radio = "radio"
+    password = "password"
+    number = "number"
+    image = "image"
+    file = "file"
+    email = "email"
+    date = "date"
+    datetime = "datetime"
+    checkbox = "checkbox"
+    multiselect = "multiselect"
+    select = "select"
 
 
-class Role(str, Enum):
+class Role(enum.StrEnum):
     member = "Member"
     admin = "Admin"
     owner = "Owner"
@@ -86,42 +82,41 @@ class Role(str, Enum):
         return cls.member
 
 
-class SortBy(str, Enum):
-    Latest = "latest"
-    Oldest = "oldest"
+class Language(enum.StrEnum):
+    en = "en"
+    de = "de"
+
+    @classmethod
+    def from_value(cls, value) -> "Language":
+        """
+        Resolves a role from a string or integer value.
+        Defaults to Role.User if the value is invalid.
+        """
+        if isinstance(value, str) and value in cls.__members__:
+            return cls[value]
+        return cls.en
 
 
-class InputType(str, Enum):
-    time = "time"
-    url = "url"
-    text = "text"
-    radio = "radio"
-    password = "password"
-    number = "number"
-    image = "image"
-    file = "file"
-    email = "email"
-    date = "date"
-    datetime = "datetime"
-    checkbox = "checkbox"
-    multiselect = "multiselect"
-    select = "select"
-
-
-class DocumentStatus(str, Enum):
+class DocumentStatus(enum.StrEnum):
     released = "released"
     pending = "pending"
     rejected = "rejected"
 
 
-class DocumentType(str, Enum):
+class DocumentType(enum.StrEnum):
     instruction_manual = "instruction_manual"
     inspection = "inspection"
     typeplate = "typeplate"
     declaration_file = "declaration_file"
 
 
-class AssetStatus(str, Enum):
+class Status(enum.StrEnum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+
+
+class AssetStatus(enum.StrEnum):
     putting_into_service = "putting_into_service"
     placing_on_the_market = "placing_on_the_market"
     making_available_on_the_market = "making_available_on_the_market"
@@ -138,18 +133,40 @@ class AssetStatus(str, Enum):
     waste_management = "waste_management"
 
 
-class ServiceTypes(str, Enum):
+class UserStatus(enum.StrEnum):
+    ACTIVE = "ACTIVE"
+    BANNED = "BANNED"
+
+
+class SortBy(enum.StrEnum):
+    Latest = "latest"
+    Oldest = "oldest"
+
+
+class ServiceTypes(enum.StrEnum):
     premium = "premium"
     basic = "basic"
 
 
-class AuditTaskStatus(str, Enum):
-    SUCCEEDED = _("SUCCEEDED")
+class AuditTaskStatus(enum.StrEnum):
+    PASSED = _("PASSED")
     FAILED = _("FAILED")
+    CONDITIONAL = _("CONDITIONAL")
 
 
-class UserStatus(str, Enum):
-    ACTIVE = "ACTIVE"
-    INVITED = "INVITED"
-    BANNED = "BANNED"
-    REJECTED = "REJECTED"
+class TaskType(enum.StrEnum):
+    audit = "audit"
+    inspection = "inspection"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class DocumentFor(enum.StrEnum):
+    AuditTaskDocuments = "audit_task_documents"
+    InstructionManualDocuments = "instruction_manual_documents"
+    EuFiles = "eu_files"
+    AssetTypeFieldSpecificDocuments = "asset_type_field_specific_documents"
+
+    def __str__(self) -> str:
+        return self.value

@@ -61,6 +61,7 @@ class AssetTypeCategory(
         cascade="all, delete",
         passive_deletes=True,
         lazy="selectin",
+        order_by="AssetTypeCategoryField.field_order",
     )
     asset_type = relationship(
         "AssetType",
@@ -101,6 +102,7 @@ class AssetTypeCategoryField(BigIntPrimaryKey, CommonTableAttributes, AdvancedDe
 
     asset_type_category_group: Mapped["AssetTypeCategoryGroup"] = relationship(
         "AssetTypeCategoryGroup",
+        lazy="selectin",
     )
 
     asset_type_category: Mapped["AssetTypeCategory"] = relationship(

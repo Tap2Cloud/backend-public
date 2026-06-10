@@ -1,5 +1,5 @@
 networks:
-  t2c-backend:
+  t2c:
     driver: bridge
     ipam:
       driver: default
@@ -9,20 +9,20 @@ networks:
 
 services:
 
-  t2c-backend-postgresql:
-    image: postgres:17.5-alpine
-    container_name: t2c-backend-postgresql
-    hostname: t2c-backend-postgresql
+  t2c-postgresql:
+    image: postgres:18.4-alpine
+    container_name: t2c-postgresql
+    hostname: t2c-postgresql
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=${DATABASE_USER:-temp_user}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-t2cTemp}
-      - POSTGRES_DB=${DATABASE_NAME:-temp_master}
+      - POSTGRES_USER=${DATABASE_USER:-t2c_user}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-root}
+      - POSTGRES_DB=${DATABASE_NAME:-t2c_master}
     volumes:
-      - t2c_backend_postgresql_data:/var/lib/postgresql/data
+      - t2c_postgresql_data:/var/lib/postgresql
     networks:
-      - t2c-backend
+      - t2c
 
 volumes:
-  t2c_backend_postgresql_data:
+  t2c_postgresql_data:

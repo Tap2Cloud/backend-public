@@ -108,7 +108,13 @@ class OrganizationService:
         return await self.repository.save(organization)
 
     async def get_organization(self, organization_id: int):
-        return await self.repository.get_one_or_none(id=organization_id)
+        add_location_count(self._model)
+        add_user_count(self._model)
+        add_role_count(self._model)
+        organization_detail = await self.repository.get_one_or_none(id=organization_id)
+        if not organization_detail:
+            raise NotFoundError("Organization not found")
+        return organization_detail
 
     async def delete_organization(self, organization_id: int) -> bool:
         await self.repository.delete(id=organization_id)

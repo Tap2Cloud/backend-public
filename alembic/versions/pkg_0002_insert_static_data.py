@@ -2,7 +2,7 @@
 
 Revision ID: pkg_0002
 Revises: pkg_0001
-Create Date: 2026-03-05 12:25:38.028895
+Create Date: 2026-06-10 12:51:48.005282
 
 """
 
@@ -22,20 +22,33 @@ from t2c_backend.utils.enums import Role as RoleEnum
 # revision identifiers, used by Alembic.
 revision: str = "pkg_0002"
 down_revision: str | Sequence[str] | None = "pkg_0001"
-branch_labels = ('base_pkg',)
+branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     bind = op.get_bind()
     session = Session(bind=bind)
+
+    with open("data/asset_type_category_group.json") as f:
+        asset_type_category_group_list = json.load(f)
+
+    new_asset_type_category_group_list = [
+        AssetTypeCategoryGroup(
+            id=asset_type_category_group["id"],
+            name=asset_type_category_group["name"],
+            order=asset_type_category_group["order"],
+        )
+        for asset_type_category_group in asset_type_category_group_list
+    ]
 
     with open("data/taxonomies.json") as f:
         taxonomies_list = json.load(f)
 
     new_taxonomies_list = [
-        Taxonomy(name=taxonomies["name"], display_name=taxonomies["display_name"])
+        Taxonomy(
+            id=taxonomies["id"], name=taxonomies["name"], display_name=taxonomies["display_name"]
+        )
         for taxonomies in taxonomies_list
     ]
 
@@ -64,18 +77,6 @@ def upgrade() -> None:
         )
 
         new_typeplate_images.append(TypeplateImage(name=filename, image=image_obj))
-
-    with open("data/asset_type_category_group.json") as f:
-        asset_type_category_group_list = json.load(f)
-
-    new_asset_type_category_group_list = [
-        AssetTypeCategoryGroup(
-            id=asset_type_category_group["id"],
-            name=asset_type_category_group["name"],
-            order=asset_type_category_group["order"],
-        )
-        for asset_type_category_group in asset_type_category_group_list
-    ]
 
     session.add_all(new_asset_type_category_group_list)
     session.add_all(new_taxonomies_list)

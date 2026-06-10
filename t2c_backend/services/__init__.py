@@ -13,6 +13,8 @@ from .audit import AuditService
 from .audit import setup as setup_audit
 from .authentication import Authentication
 from .authentication import setup as setup_authentication
+from .dashboard import DashboardService
+from .dashboard import setup as setup_dashboard
 from .location import LocationService
 from .location import setup as setup_location
 from .organization import OrganizationService
@@ -31,22 +33,23 @@ from .user_email_token import UserEmailTokenService
 from .user_email_token import setup as setup_user_email_token
 
 __services__ = [
-    (Authentication, setup_authentication),
-    (AssetTypeCategoryService, setup_asset_type_category),
-    (AssetTypeService, setup_asset_type),
-    (AuditService, setup_audit),
     (AssetService, setup_asset),
+    (AssetTypeService, setup_asset_type),
+    (AssetTypeCategoryService, setup_asset_type_category),
+    (AuditService, setup_audit),
+    (Authentication, setup_authentication),
+    (DashboardService, setup_dashboard),
     (LocationService, setup_location),
     (OrganizationService, setup_organization),
     (RoleService, setup_role),
-    (ServiceService, setup_service),
-    (TaxonomyService, setup_taxonomy),
-    (TypeplateService, setup_typeplate_documents),
     (UserService, setup_user),
     (UserEmailTokenService, setup_user_email_token),
+    (TypeplateService, setup_typeplate_documents),
+    (ServiceService, setup_service),
+    (TaxonomyService, setup_taxonomy),
 ]
 
-from t2c_backend.core.db import get_db_session
+from core.db import get_db_session
 
 
 async def get_services(request: Request, session=Depends(get_db_session)):

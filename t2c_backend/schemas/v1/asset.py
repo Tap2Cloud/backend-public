@@ -2,9 +2,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from t2c_backend.models import Asset as AssetModel
 from t2c_backend.schemas.v1.asset_type import AssetTypeResponse, DisplayAssetType
-from t2c_backend.schemas.v1.asset_type_category import AssetTypeCategoryResponse
+from t2c_backend.schemas.v1.asset_type_category import (
+    AssetTypeCategoryResponse,
+    DisplayAssetTypeCategory,
+)
+from t2c_backend.schemas.v1.audit import AuditResponse
 from t2c_backend.schemas.v1.location import LocationBaseResponse
 from t2c_backend.schemas.v1.taxonomy import Taxonomy
+from t2c_backend.utils.enums import AssetStatus
 
 
 class CreateAsset(BaseModel):
@@ -112,6 +117,7 @@ class DetailedAssetPassResponse(BaseModel):
     asset_pass: AssetPassResponse = Field(..., alias="assetPass")
     asset_type: AssetTypeResponse = Field(..., alias="assetType")
     asset_type_category: AssetTypeCategoryResponse = Field(..., alias="assetTypeCategory")
+    audit: list[AuditResponse]
     taxonomy: Taxonomy
 
     model_config = ConfigDict(from_attributes=True)
@@ -127,4 +133,27 @@ class DetailedAssetPassResponse(BaseModel):
                 asset.asset_type.asset_type_category
             ),
             taxonomy=Taxonomy.from_model(asset.location.organization.taxonomy),
+            audit=[AuditResponse.from_model(audit, audit.audit_tasks) for audit in asset.audit],
         )
+
+
+class DisplayFilterAssetResponse(BaseModel):
+    rented_assets: list["DisplayAsset"] = Field(default_factory=list, alias="rentedAssets")
+    owned_assets: list["DisplayAsset"] = Field(default_factory=list, alias="ownedAssets")
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @staticmethod
+    def from_model(owned_assets, organization_rented_assets) -> "DisplayFilterAssetResponse":
+        return DisplayFilterAssetResponse(
+            rentedAssets=[
+                DisplayAsset.from_model(rented_asset.asset)
+                for rented_asset in organization_rented_assets
+            ],
+            ownedAssets=[DisplayAsset.from_model(asset) for asset in owned_assets],
+        )
+
+
+class SelectiveFilters(BaseModel):
+    categories: list[DisplayAssetTypeCategory] | None = None
+    status: list[AssetStatus] | None = None

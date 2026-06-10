@@ -20,10 +20,11 @@ from t2c_backend.core.db import (
     CommonTableAttributes,
 )
 from t2c_backend.core.db.types import ImageType
-from t2c_backend.models import role
 from t2c_backend.schemas.v1.image import Image
-from t2c_backend.utils.enums import Role, Status, TokenType
+from t2c_backend.utils.enums import Status, TokenType
 from t2c_backend.utils.misc import get_full_name
+
+from .role import Role
 
 
 class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
@@ -54,7 +55,7 @@ class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Aud
         cascade="all, delete",
         passive_deletes=True,
     )
-    roles: Mapped[list["role.Role"]] = relationship(
+    roles: Mapped[list["Role"]] = relationship(
         "Role",
         secondary="user_roles",
         back_populates="users",

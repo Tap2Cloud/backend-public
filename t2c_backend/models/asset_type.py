@@ -44,7 +44,7 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
         default=datetime.now(UTC),
     )
     description: Mapped[str] = mapped_column(Text(), nullable=False)
-    weight: Mapped[int] = mapped_column(Numeric(), default=0, nullable=True)
+    weight: Mapped[float] = mapped_column(Numeric(), default=0, nullable=True)
     manufacturer: Mapped[str] = mapped_column(Text(), nullable=True)
     asset_type_category_id: Mapped[int] = mapped_column(
         ForeignKey("asset_type_categories.id", ondelete="CASCADE"),
@@ -56,7 +56,7 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
     fields: Mapped[list["AssetTypeField"]] = relationship(
         "AssetTypeField",
         back_populates="asset_type",
-        cascade="all, delete",
+        cascade="all, delete, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
     )
@@ -64,6 +64,7 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
         "Typeplate",
         back_populates="asset_type",
         uselist=False,
+        lazy="selectin",
     )
     documents: Mapped[list["AssetTypeDocument"]] = relationship(
         "AssetTypeDocument",

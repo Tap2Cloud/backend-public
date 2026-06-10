@@ -76,3 +76,21 @@ class DetailedOrganization(DisplayOrganization):
     role_count: int = Field(..., alias="roleCount")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrganizationDetails(DetailedOrganization):
+    ...
+
+    @staticmethod
+    def from_model(organization) -> "OrganizationDetails":
+        return OrganizationDetails(
+            id=organization.id,
+            name=organization.name,
+            number=organization.number,
+            email=organization.email,
+            createdAt=int(organization.created_at.timestamp()),
+            logo=organization.logo.get_string() if organization.logo is not None else None,
+            locationCount=organization.location_count,
+            userCount=organization.user_count,
+            roleCount=organization.role_count,
+        )

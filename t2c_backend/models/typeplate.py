@@ -19,7 +19,8 @@ from t2c_backend.core.db import (
     CommonTableAttributes,
 )
 from t2c_backend.core.db.types import ImageType
-from t2c_backend.models.documents import Document
+from t2c_backend.models.location import Location
+from t2c_backend.models.user import User
 from t2c_backend.schemas.v1.image import Image
 
 if TYPE_CHECKING:
@@ -31,23 +32,23 @@ class Typeplate(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
 
     test_results: Mapped[str] = mapped_column(Text(), nullable=True)
     eu_id: Mapped[str] = mapped_column(Text(), nullable=True)
-    eu_file_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("documents.id", ondelete="CASCADE"), nullable=True
-    )
     carbon_footprint_label: Mapped[str] = mapped_column(Text(), nullable=True)
     asset_type_id: Mapped[int] = mapped_column(ForeignKey("asset_types.id", ondelete="CASCADE"))
 
     asset_type: Mapped["AssetType"] = relationship("AssetType")
-    eu_file: Mapped["Document"] = relationship("Document")
-    typeplate_documents = relationship(
+    documents: Mapped[list["TypeplateDocument"]] = relationship(
         "TypeplateDocument",
         back_populates="typeplate",
+        cascade="all, delete-orphan",
         uselist=True,
+        lazy="selectin",
     )
     typeplate_images: Mapped[list["TypelateImageMapping"]] = relationship(
         "TypelateImageMapping",
         back_populates="typeplate",
+        cascade="all, delete-orphan",
         uselist=True,
+        lazy="selectin",
     )
 
 
@@ -56,11 +57,17 @@ class TypeplateDocument(
 ):
     __tablename__ = "typeplate_documents"
 
-    typeplate_id: Mapped[int] = mapped_column(ForeignKey("typeplates.id", ondelete="CASCADE"))
-    document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=func.gen_random_uuid())
+    name: Mapped[str] = mapped_column(Text(), nullable=False)
+    content_type: Mapped[str] = mapped_column(Text(), nullable=False)
 
-    typeplate: Mapped["Typeplate"] = relationship("Typeplate")
-    document: Mapped["Document"] = relationship("Document")
+    typeplate_id: Mapped[int] = mapped_column(ForeignKey("typeplates.id", ondelete="CASCADE"))
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+
+    typeplate: Mapped["Typeplate"] = relationship("Typeplate", back_populates="documents")
+    location: Mapped["Location"] = relationship("Location")
+    user: Mapped["User"] = relationship("User")
 
 
 class TypeplateImage(CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
@@ -80,5 +87,5 @@ class TypelateImageMapping(
         ForeignKey("typeplate_images.id", ondelete="CASCADE")
     )
 
-    typeplate: Mapped["Typeplate"] = relationship("Typeplate")
-    typeplate_image: Mapped["TypeplateImage"] = relationship("TypeplateImage")
+    typeplate: Mapped["Typeplate"] = relationship("Typeplate", back_populates="typeplate_images")
+    typeplate_image: Mapped["TypeplateImage"] = relationship("TypeplateImage", lazy="selectin")

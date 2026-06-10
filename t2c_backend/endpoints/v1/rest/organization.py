@@ -5,6 +5,7 @@ from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.location import Location, LocationCreateRequest
 from t2c_backend.schemas.v1.organization import (
     DetailedOrganization,
+    OrganizationDetails,
     UpdateOrganizationResponse,
 )
 from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
@@ -18,7 +19,9 @@ from t2c_backend.utils.misc import DictContainer
 router = APIRouter()
 
 
-@router.post("/organization", response_model=Location, status_code=200)
+@router.post(
+    "/organization", operation_id="create organization", response_model=Location, status_code=200
+)
 async def create_organization_with_location(
     name: str = Form(...),
     number: str = Form(...),
@@ -45,7 +48,31 @@ async def create_organization_with_location(
     return Location.convert(location=location, organization=org)
 
 
-@router.put("/organization", response_model=UpdateOrganizationResponse, status_code=200)
+@router.get(
+    "/organizations",
+    operation_id="get all organizations",
+    response_model=CustomPage[DetailedOrganization],
+    status_code=200,
+)
+async def get_all_organizations(
+    q: str | None = None,
+    sort_by: SortBy | None = SortBy.Latest,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.organization_service.list_organizations(
+        q=q, sort_by=sort_by, page=page, page_size=page_size
+    )
+
+
+@router.put(
+    "/organization",
+    operation_id="update organization",
+    response_model=UpdateOrganizationResponse,
+    status_code=200,
+)
 async def update_organization(
     name: str = Form(...),
     number: str | None = Form(None),
@@ -72,7 +99,12 @@ async def update_organization(
     )
 
 
-@router.get("/organization/roles", response_model=list[RoleBase], status_code=200)
+@router.get(
+    "/organization/roles",
+    operation_id="get organization roles",
+    response_model=list[RoleBase],
+    status_code=200,
+)
 async def get_organization_roles(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
@@ -87,7 +119,12 @@ async def get_organization_roles(
     return RoleBase.convert(roles=roles)
 
 
-@router.post("/organization/roles", response_model=RoleBase, status_code=200)
+@router.post(
+    "/organization/roles",
+    operation_id="create organizations roles",
+    response_model=RoleBase,
+    status_code=200,
+)
 async def create_organization_roles(
     role_data: RoleCreate,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -104,7 +141,9 @@ async def create_organization_roles(
     return RoleBase.convert_(role=role)
 
 
-@router.delete("/organization/{organizationId}", status_code=200)
+@router.delete(
+    "/organization/{organizationId}", operation_id="delete organization", status_code=200
+)
 async def delete_organization(
     organization_id: int = Path(..., alias="organizationId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -114,15 +153,17 @@ async def delete_organization(
     return Response(status_code=200)
 
 
-@router.get("/organization", response_model=CustomPage[DetailedOrganization], status_code=200)
-async def get_all_organizations(
-    q: str | None = None,
-    sort_by: SortBy | None = SortBy.Latest,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
+@router.get(
+    "/organization",
+    operation_id="get organization details",
+    response_model=OrganizationDetails,
+    status_code=200,
+)
+async def get_organization_details(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
 ):
-    return await services.organization_service.list_organizations(
-        q=q, sort_by=sort_by, page=page, page_size=page_size
+    organization_details = await services.organization_service.get_organization(
+        token.organization_id
     )
+    return OrganizationDetails.from_model(organization_details)

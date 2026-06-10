@@ -6,21 +6,21 @@ from t2c_backend.schemas.v1.asset import (
     AssetResponse,
     CreateAsset,
     DetailedAssetPassResponse,
-    DisplayAsset,
+    SelectiveFilters,
     UpdateAsset,
 )
 from t2c_backend.schemas.v1.asset_type import DisplayAssetType
 from t2c_backend.schemas.v1.location import LocationBaseResponse
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
-from t2c_backend.utils.enums import AssetStatus, SortBy
+from t2c_backend.utils.enums import SortBy
 from t2c_backend.utils.errors import NotFoundError
 from t2c_backend.utils.misc import DictContainer
 
 router = APIRouter()
 
 
-@router.post("/asset", status_code=201)
+@router.post("/asset", operation_id="create asset", status_code=201)
 async def create_asset(
     asset_data: CreateAsset,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -46,7 +46,7 @@ async def create_asset(
     )
 
 
-@router.put("/asset/{assetId}", status_code=200)
+@router.put("/asset/{assetId}", operation_id="update asset", status_code=200)
 async def update_asset(
     asset_data: UpdateAsset,
     asset_id: int = Path(..., alias="assetId"),
@@ -56,7 +56,7 @@ async def update_asset(
     await services.asset_service.update_asset(updated_asset_data=asset_data, asset_id=asset_id)
 
 
-@router.delete("/asset/{assetId}")
+@router.delete("/asset/{assetId}", operation_id="delete asset")
 async def delete_asset_handler(
     asset_id: int = Path(..., alias="assetId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -66,12 +66,16 @@ async def delete_asset_handler(
     return Response(status_code=204)
 
 
-@router.get("/asset", response_model=CustomPage[AssetResponse], status_code=200)
+@router.put(
+    "/asset",
+    operation_id="list all asset",
+    response_model=CustomPage[AssetResponse],
+    status_code=200,
+)
 async def list_asset(
+    selective: SelectiveFilters,
     q: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
-    status: AssetStatus | None = None,
-    category: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -82,40 +86,33 @@ async def list_asset(
     return await services.asset_service.list_assets(
         q=q,
         sort_by=sort_by,
-        status=status,
-        category=category,
+        status=selective.status,
+        categories=selective.categories,
         page=page,
         page_size=page_size,
         location_id=token.location_id,
     )
 
 
-@router.get("/asset/{assetId}", response_model=AssetResponse, status_code=200)
+@router.get(
+    "/asset/{assetId:int}", operation_id="get asset", response_model=AssetResponse, status_code=200
+)
 async def get_asset(
     asset_id: int = Path(..., alias="assetId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
 ):
-    asset = await services.asset_service.get_asset_by_organization_id(
-        asset_id, token.organization_id
+    return AssetResponse.convert(
+        await services.asset_service.get_asset_by_organization_id(asset_id, token.organization_id)
     )
-    return AssetResponse.convert(asset)
 
 
-@router.get("/filter/asset", response_model=list[DisplayAsset], status_code=200)
-async def get_filtered_assets(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
-    services: DictContainer = Depends(get_services),
-):
-    return [
-        DisplayAsset.from_model(asset)
-        for asset in await services.asset_service.list_assets_by_location_id(
-            location_id=token.location_id
-        )
-    ]
-
-
-@router.get("/asset-pass", response_model=CustomPage[DetailedAssetPassResponse], status_code=200)
+@router.get(
+    "/asset-pass",
+    operation_id="list asset pass",
+    response_model=CustomPage[DetailedAssetPassResponse],
+    status_code=200,
+)
 async def list_asset_pass(
     q: str | None = None,
     page: int = Query(1, ge=1),
@@ -129,7 +126,12 @@ async def list_asset_pass(
     )
 
 
-@router.get("/asset-pass/{passId}", response_model=DetailedAssetPassResponse, status_code=200)
+@router.get(
+    "/asset-pass/{passId}",
+    operation_id="get asset pass",
+    response_model=DetailedAssetPassResponse,
+    status_code=200,
+)
 async def get_asset_pass_by_pass_id(
     pass_id: str = Path(..., alias="passId"),
     services: DictContainer = Depends(get_services),

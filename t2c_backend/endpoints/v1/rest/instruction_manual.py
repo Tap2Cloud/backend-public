@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Query
+import uuid
+
+from fastapi import APIRouter, Depends, File, Path, Query, Response, UploadFile
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
@@ -35,3 +37,48 @@ async def list_instruction_manual(
         page_size=page_size,
         organization_id=token.organization_id,
     )
+
+
+@router.post(
+    "/asset-type/{assetTypeId}/documents",
+    operation_id="save asset type document",
+    response_model=InstructionManualAssetTypeResponse,
+    status_code=201,
+)
+async def save_asset_type_document(
+    documents: list[UploadFile] = File(...),
+    asset_type_id: int = Path(..., alias="assetTypeId"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    asset_type_details = await services.asset_type_service.save_asset_type_document(
+        asset_type_id=asset_type_id,
+        documents=documents,
+        user_id=token.user_id,
+        location_id=token.location_id,
+        organization_id=token.organization_id,
+    )
+    return InstructionManualAssetTypeResponse.convert(
+        asset_type=asset_type_details,
+        instruction_manuals_data=[document for document in asset_type_details.documents],
+    )
+
+
+@router.delete(
+    "/instruction-manual/{assetTypeId}",
+    operation_id="delete asset type document",
+    status_code=204,
+)
+async def delete_asset_type_document(
+    asset_type_id: int = Path(..., alias="assetTypeId"),
+    instruction_manual_ids: list[uuid.UUID] = Query(..., alias="instructionManualId"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    for instruction_manual in instruction_manual_ids:
+        await services.asset_type_service.delete_asset_type_document(
+            asset_type_id=asset_type_id,
+            document_id=instruction_manual,
+            organization_id=token.organization_id,
+        )
+    return Response(status_code=204)

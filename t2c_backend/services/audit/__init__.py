@@ -1,5 +1,5 @@
 import io
-from datetime import datetime
+from datetime import datetime, time
 
 from babel.dates import format_date
 from fastapi import UploadFile
@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4, landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -27,7 +28,7 @@ from t2c_backend.schemas.v1.audit import (
 from t2c_backend.schemas.v1.audit import (
     AuditTaskDocument as AuditTaskDocumentSchema,
 )
-from t2c_backend.utils.enums import AuditTaskStatus, Language, SortBy
+from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
 
 
@@ -46,15 +47,23 @@ class AuditService:
         audit_task = await self.task_repository.save(
             AuditTask(
                 task_name=task.task_name,
+                task_type=TaskType(task.task_type),
                 status=AuditTaskStatus(task.status),
+                performed_by_org=task.performed_by_org,
+                role_of_org=task.role_of_org,
+                first_name=task.first_name,
+                last_name=task.last_name,
             )
         )
 
         saved_documents = []
 
         for document in documents if documents is not None else []:
-            saved_document = await self.app.clients.storage.save_audit_task_document(
-                organization_id, audit_task.id, document
+            saved_document = await self.app.clients.storage.save_document(
+                organization_id=organization_id,
+                document_for=DocumentFor.AuditTaskDocuments,
+                file_id=audit_task.id,
+                file=document,
             )
             saved_documents.append(
                 await self.task_document_repository.save(
@@ -93,6 +102,8 @@ class AuditService:
 
         audit_tasks = []
         for audit_task in audit_task_data:
+            if not await self.task_repository.exists(id=audit_task.id):
+                raise BadRequestError(f"Audit task {audit_task.task_name} not found.")
             audit_task.audit_id = audit.id
             documents = []
 
@@ -130,6 +141,8 @@ class AuditService:
         audit_filters = []
 
         if inspection_start_date and inspection_end_date:
+            inspection_start_date = datetime.combine(inspection_start_date, time.min)
+            inspection_end_date = datetime.combine(inspection_end_date, time.max)
             filters = self._model.inspection_date.between(
                 inspection_start_date, inspection_end_date
             )
@@ -137,6 +150,8 @@ class AuditService:
             asset_filters.append(model.audit.any(filters))
 
         if valid_until_start_date and valid_until_end_date:
+            valid_until_start_date = datetime.combine(valid_until_start_date, time.min)
+            valid_until_end_date = datetime.combine(valid_until_end_date, time.max)
             filters = self._model.valid_until.between(valid_until_start_date, valid_until_end_date)
             audit_filters.append(filters)
             asset_filters.append(model.audit.any(filters))
@@ -223,8 +238,11 @@ class AuditService:
             raise NotFoundError("Document not found")
 
         return StreamingResponse(
-            self.app.clients.storage.get_audit_task_document(
-                organization_id, task.id, document.name
+            self.app.clients.storage.get_document(
+                organization_id=organization_id,
+                document_for=DocumentFor.AuditTaskDocuments,
+                file_id=task.id,
+                file_name=document.name,
             ),
             media_type=document.content_type,
         )
@@ -253,7 +271,7 @@ class AuditService:
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
-            buffer, pagesize=letter, topMargin=70, leftMargin=40, rightMargin=40
+            buffer, pagesize=landscape(A4), topMargin=70, leftMargin=40, rightMargin=40
         )
         elements = []
         styles = getSampleStyleSheet()
@@ -262,14 +280,32 @@ class AuditService:
             name="NormalBigger", parent=styles["Normal"], fontSize=11, leading=14
         )
         green_bold = ParagraphStyle(
-            "GreenBold", parent=styles["Normal"], textColor=colors.green, fontSize=11, leading=14
+            "GreenBold",
+            parent=styles["Normal"],
+            alignment=TA_CENTER,
+            textColor=colors.green,
+            fontSize=11,
+            leading=14,
         )
         red_bold = ParagraphStyle(
-            "RedBold", parent=styles["Normal"], textColor=colors.red, fontSize=11, leading=14
+            "RedBold",
+            parent=styles["Normal"],
+            alignment=TA_CENTER,
+            textColor=colors.red,
+            fontSize=11,
+            leading=14,
+        )
+        orange_bold = ParagraphStyle(
+            "OrangeBold",
+            parent=styles["Normal"],
+            alignment=TA_CENTER,
+            textColor=colors.orange,
+            fontSize=11,
+            leading=14,
         )
 
         asset_info_data = [
-            [Paragraph(f"<b>{_('Asset Details:')}</b>", styles["Heading4"])],
+            [Paragraph(f"<b>{_('Asset Details:-')}</b>", styles["Heading4"])],
             [
                 Paragraph(
                     f"<b>{_('Manufacturing Date:')}</b> "
@@ -300,7 +336,7 @@ class AuditService:
                 )
             ]
         )
-        asset_table = Table(asset_info_data, colWidths=[590])
+        asset_table = Table(asset_info_data, colWidths=[590], hAlign="LEFT")
         asset_table.setStyle(
             TableStyle(
                 [
@@ -317,17 +353,24 @@ class AuditService:
         data = [
             [
                 "#",
-                _("Task Name"),
+                _("Task Name & \nType"),
                 _("Status"),
+                _("Organization"),
+                _("Role"),
+                _("Full Name"),
                 _("Inspection Date"),
                 _("Valid Until"),
                 _("Documents"),
             ]
         ]
         for index, task in enumerate(audit.audit_tasks):
-            if task.status == AuditTaskStatus.SUCCEEDED:
+            if task.status == AuditTaskStatus.PASSED:
                 status_para = Paragraph(
                     f"{_(AuditTaskStatus(task.status).value)}", style=green_bold
+                )
+            elif task.status == AuditTaskStatus.CONDITIONAL:
+                status_para = Paragraph(
+                    f"{_(AuditTaskStatus(task.status).value)}", style=orange_bold
                 )
             else:
                 status_para = Paragraph(f"{_(AuditTaskStatus(task.status).value)}", style=red_bold)
@@ -340,8 +383,11 @@ class AuditService:
             data.append(
                 [
                     index + 1,
-                    task.task_name,
+                    Paragraph(f"{task.task_name} - {TaskType(task.task_type)}"),
                     status_para,
+                    task.performed_by_org,
+                    task.role_of_org,
+                    task.get_full_name(),
                     format_date(
                         audit.inspection_date.date(), format="long", locale=Language(language).value
                     ),
@@ -350,7 +396,7 @@ class AuditService:
                 ]
             )
 
-        column_widths = [30, 100, 90, 100, 100, 180]
+        column_widths = [30, 80, 90, 100, 80, 90, 100, 100, 150]
         table = Table(data, colWidths=column_widths, repeatRows=1)
 
         table.setStyle(

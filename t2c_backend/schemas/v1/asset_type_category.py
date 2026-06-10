@@ -56,6 +56,7 @@ class BaseField(BaseModel):
     def check_options(cls, data: Any) -> Any:
         field_type = data.get("fieldType")
         options = data.get("options", [])
+        field_order = data.get("fieldOrder")
 
         if field_type in ["text", "number"] and options:
             raise ValueError(f"`options` must be empty for field type '{field_type}'.")
@@ -63,6 +64,8 @@ class BaseField(BaseModel):
             raise ValueError(
                 f"`options` must have more than one item for field type '{field_type}'.",
             )
+        if field_order <= 0:
+            raise ValueError("fieldOrder must be greater than 0.")
 
         return data
 
@@ -73,6 +76,58 @@ class CreateAssetTypeCategoryRequest(BaseModel):
     name: str
     has_typeplates: bool = PydanticField(..., alias="hasTypeplates")
     fields: conlist(BaseField, min_length=1)
+
+    # noinspection PyNestedDecorators
+    @model_validator(mode="before")
+    @classmethod
+    def check_fields(cls, data: Any) -> Any:
+        seen_orders, seen_names = set(), set()
+        for field in data["fields"]:
+            field_order = field.get("fieldOrder")
+            field_name = field.get("fieldName")
+            if field_order in seen_orders:
+                raise ValueError(f"Multiple fields have the same field order '{field_order}'.")
+            if field_name in seen_names:
+                raise ValueError(f"Multiple fields have the same field name '{field_name}'.")
+            seen_orders.add(field_order)
+            seen_names.add(field_name)
+        return data
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UpdateBaseFieldOption(BaseModel):
+    id: int
+    option_id: str | None = PydanticField(None, alias="optionId")
+    option_label: str | None = PydanticField(None, alias="optionLabel")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UpdateBaseFields(BaseModel):
+    id: int
+    field_name: str | None = PydanticField(None, alias="fieldName")
+    field_place_holder: str | None = PydanticField(None, alias="fieldPlaceHolder")
+    field_display_name: str | None = PydanticField(None, alias="fieldDisplayName")
+    field_order: int | None = PydanticField(None, alias="fieldOrder")
+    asset_type_category_group_id: int | None = PydanticField(None, alias="fieldGroupId")
+    options: list["UpdateBaseFieldOption"]
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_options(cls, data: Any) -> Any:
+        field_order = data.get("fieldOrder")
+        if field_order <= 0:
+            raise ValueError("fieldOrder must be greater than 0.")
+
+        return data
+
+
+class UpdateAssetTypeCategoryRequest(BaseModel):
+    name: str | None
+    fields: conlist(UpdateBaseFields, min_length=1)
 
     # noinspection PyNestedDecorators
     @model_validator(mode="before")

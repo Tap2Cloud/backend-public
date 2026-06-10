@@ -7,6 +7,7 @@ from t2c_backend.schemas.v1.asset_type_category import (
     AssetTypeCategoryResponse,
     CreateAssetTypeCategoryRequest,
     DisplayAssetTypeCategory,
+    UpdateAssetTypeCategoryRequest,
 )
 from t2c_backend.schemas.v1.filter_asset_type_category_mapping import (
     DisplayAssetTypeCategoryMapping,
@@ -19,7 +20,12 @@ from t2c_backend.utils.misc import DictContainer
 router = APIRouter()
 
 
-@router.post("/asset-type-category", response_model=AssetTypeCategoryResponse, status_code=200)
+@router.post(
+    "/asset-type-category",
+    operation_id="create asset type category",
+    response_model=AssetTypeCategoryResponse,
+    status_code=200,
+)
 async def create_asset_type_category(
     form_data: CreateAssetTypeCategoryRequest,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -33,10 +39,13 @@ async def create_asset_type_category(
 
 
 @router.get(
-    "/asset-type-category", response_model=CustomPage[AssetTypeCategoryResponse], status_code=200
+    "/asset-type-category",
+    operation_id="get asset type category",
+    response_model=CustomPage[AssetTypeCategoryResponse],
+    status_code=200,
 )
 async def get_asset_type_categories(
-    q: str | None = None,
+    query: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
@@ -44,7 +53,7 @@ async def get_asset_type_categories(
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_category_service.list_asset_type_categories(
-        q=q,
+        q=query,
         sort_by=sort_by,
         page=page,
         page_size=page_size,
@@ -52,7 +61,32 @@ async def get_asset_type_categories(
     )
 
 
-@router.delete("/asset-type-category/{assetTypeCategoryId}", status_code=200)
+@router.patch(
+    "/asset-type-category/{assetTypeCategoryId}",
+    operation_id="update asset type category",
+    response_model=AssetTypeCategoryResponse,
+    status_code=200,
+)
+async def update_asset_type_category(
+    updated_asset_type_category: UpdateAssetTypeCategoryRequest,
+    asset_type_category_id: int = Path(..., alias="assetTypeCategoryId"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    return AssetTypeCategoryResponse.convert(
+        await services.asset_type_category_service.update_asset_type_category(
+            asset_type_category_id=asset_type_category_id,
+            updated_asset_type_category_data=updated_asset_type_category,
+            organization_id=token.organization_id,
+        )
+    )
+
+
+@router.delete(
+    "/asset-type-category/{assetTypeCategoryId}",
+    operation_id="delete asset type category",
+    status_code=200,
+)
 async def delete_asset_type_category(
     asset_type_category_id: int = Path(..., alias="assetTypeCategoryId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -64,6 +98,7 @@ async def delete_asset_type_category(
 
 @router.get(
     "/asset-type-category-group",
+    operation_id="get asset type category groups",
     response_model=list[AssetTypeCategoryGroupResponse],
     status_code=200,
 )
@@ -78,6 +113,7 @@ async def get_asset_type_category_groups(
 
 @router.get(
     "/filter/asset-type-category",
+    operation_id="list asset type category",
     response_model=list[DisplayAssetTypeCategory],
     status_code=200,
 )
@@ -95,6 +131,7 @@ async def list_asset_type_categories(
 
 @router.get(
     "/asset-type-category/{assetTypeCategoryId}",
+    operation_id="get asset type category by id",
     response_model=AssetTypeCategoryResponse,
     status_code=200,
 )
@@ -112,6 +149,7 @@ async def get_asset_type_category(
 
 @router.get(
     "/filter/asset-type-category/mapping",
+    operation_id="get asset type category mapping",
     response_model=list[DisplayAssetTypeCategoryMapping],
     status_code=200,
 )
@@ -121,5 +159,7 @@ async def filter_asset_type(
 ):
     return [
         DisplayAssetTypeCategoryMapping.from_model(asset_type)
-        for asset_type in await services.asset_type_category_service.list_asset_type_category()
+        for asset_type in await services.asset_type_category_service.list_asset_type_category(
+            organization_id=token.organization_id
+        )
     ]

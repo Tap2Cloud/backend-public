@@ -1,20 +1,22 @@
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
-from pydantic import EmailStr
+from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile
 
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.schemas.v1.user import (
     ChangePasswordRequest,
+    OrganizationUser,
+    OrganizationUsersCustomPage,
     UserResponse,
 )
 from t2c_backend.services import get_services
+from t2c_backend.utils.enums import UserStatus
 from t2c_backend.utils.errors import NotFoundError
 from t2c_backend.utils.misc import DictContainer
 
 router = APIRouter()
 
 
-@router.delete("/user")
+@router.delete("/user", operation_id="delete user")
 async def delete_user_handler(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
@@ -23,9 +25,30 @@ async def delete_user_handler(
     return Response(status_code=204)
 
 
-@router.put("/user/profile/", response_model=UserResponse)
+@router.delete("/user/{userID}", operation_id="delete user by id", status_code=200)
+async def delete_user(
+    user_id: int = Path(..., alias="userID"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    await services.user_service.delete_users(user_id)
+    return Response(status_code=200)
+
+
+@router.get("/user/profile", operation_id="get user profile", response_model=UserResponse)
+async def user_profile_handler(
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    user = await services.user_service.get_user_profile(
+        token.user_id,
+    )
+
+    return UserResponse.convert(user)
+
+
+@router.put("/user/profile/", operation_id="update user profile", response_model=UserResponse)
 async def user_profile_update_handler(
-    email: EmailStr = Form(...),
     picture: UploadFile = File(None),
     first_name: str = Form(..., alias="firstName", validation_alias="firstName"),
     last_name: str = Form(..., alias="lastName", validation_alias="lastName"),
@@ -34,7 +57,6 @@ async def user_profile_update_handler(
 ):
     user = await services.user_service.update_user_profile(
         token.user_id,
-        email,
         picture,
         first_name,
         last_name,
@@ -46,7 +68,32 @@ async def user_profile_update_handler(
     return UserResponse.convert(user)
 
 
-@router.post("/user/password/change", name="change-user-password")
+@router.get(
+    "/organization/users",
+    operation_id="get organization users",
+    response_model=OrganizationUsersCustomPage[OrganizationUser],
+    status_code=200,
+)
+async def organization_users_handler(
+    query: str | None = None,
+    roles: list[str] = Query(None),
+    status: UserStatus | None = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.user_service.organization_user_handler(
+        query=query,
+        roles=roles,
+        status=status,
+        page=page,
+        page_size=page_size,
+        organization_id=token.organization_id,
+    )
+
+
+@router.post("/user/password/change", operation_id="change password", name="change-user-password")
 async def change_user_password(
     passwords: ChangePasswordRequest,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -58,15 +105,3 @@ async def change_user_password(
         user_id=token.user_id,
     )
     return Response(status_code=200)
-
-
-@router.get("/user/profile", response_model=UserResponse)
-async def user_profile_handler(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
-    services: DictContainer = Depends(get_services),
-):
-    user = await services.user_service.get_user_profile(
-        token.user_id,
-    )
-
-    return UserResponse.convert(user)

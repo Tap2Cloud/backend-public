@@ -15,7 +15,8 @@ from t2c_backend.core.db import (
     CommonTableAttributes,
 )
 from t2c_backend.models.user import User
-from t2c_backend.utils.enums import AuditTaskStatus
+from t2c_backend.utils.enums import AuditTaskStatus, TaskType
+from t2c_backend.utils.misc import get_full_name
 
 
 class Audit(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
@@ -38,13 +39,21 @@ class AuditTask(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
     __tablename__ = "audit_tasks"
 
     task_name: Mapped[str] = mapped_column(Text(), nullable=False)
+    task_type: Mapped[TaskType] = mapped_column(Enum(TaskType), nullable=False)
     status: Mapped[AuditTaskStatus] = mapped_column(Enum(AuditTaskStatus), nullable=False)
     audit_id: Mapped[int] = mapped_column(
         ForeignKey("audits.id", ondelete="CASCADE"), nullable=True
     )
+    performed_by_org: Mapped[str] = mapped_column(Text(), default=False)
+    role_of_org: Mapped[str] = mapped_column(Text(), default=False)
+    first_name: Mapped[str] = mapped_column(Text())
+    last_name: Mapped[str] = mapped_column(Text())
 
     documents: Mapped[list["AuditTaskDocument"]] = relationship("AuditTaskDocument")
     audit: Mapped["Audit"] = relationship("Audit", back_populates="audit_tasks")
+
+    def get_full_name(self):
+        return get_full_name(self.first_name, self.last_name)
 
 
 class AuditTaskDocument(CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):

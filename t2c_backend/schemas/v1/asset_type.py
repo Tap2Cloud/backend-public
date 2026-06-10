@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from pydantic import BaseModel, ConfigDict, conlist, model_validator
@@ -7,7 +8,11 @@ from t2c_backend.models import AssetType as AssetTypeModel
 from t2c_backend.models import AssetTypeField as AssetTypeFieldModel
 from t2c_backend.models import AssetTypeFieldOptions as AssetTypeFieldOptionsModel
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory, Field
-from t2c_backend.schemas.v1.typeplates import TypeplateRequest
+from t2c_backend.schemas.v1.typeplates import (
+    TypeplateImageRequest,
+    TypeplateRequest,
+    TypeplateResponse,
+)
 
 
 class BaseFieldOptions(BaseModel):
@@ -33,11 +38,14 @@ class CreateAssetTypeRequest(BaseModel):
     web_link: str | None = PydanticField(..., alias="webLink")
     web_link_title: str | None = PydanticField(..., alias="webLinkTitle")
     description: str
-    weight: int | None
+    weight: float | None
     manufacturer: str | None
     asset_type_category_id: int = PydanticField(..., alias="assetTypeCategoryId")
     fields: conlist(BaseField, min_length=1)
     typeplate_details: TypeplateRequest = PydanticField(None, alias="typeplateDetails")
+    typeplate_images: list[TypeplateImageRequest] | None = PydanticField(
+        None, alias="typeplateImages"
+    )
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -46,8 +54,20 @@ class CreateAssetTypeRequest(BaseModel):
     @classmethod
     def validate_to_json(cls, value):
         if isinstance(value, str):
-            return cls.model_validate_json(value)
-        return value
+            return json.loads(value)
+        return json.loads(value.file.read())
+
+
+class UpdateAssetTypeRequest(BaseModel):
+    name: str
+    video_links: str | None = PydanticField(..., alias="videoLinks")
+    video_title: str | None = PydanticField(..., alias="videoTitle")
+    web_link: str | None = PydanticField(..., alias="webLink")
+    web_link_title: str | None = PydanticField(..., alias="webLinkTitle")
+    description: str
+    weight: float | None
+    manufacturer: str | None
+    fields: conlist(BaseField, min_length=1)
 
 
 class AssetTypeFieldOptions(BaseFieldOptions):
@@ -124,12 +144,12 @@ class AssetTypeResponse(BaseModel):
     web_link: str | None = PydanticField(alias="webLink")
     web_link_title: str | None = PydanticField(alias="webLinkTitle")
     description: str
-    weight: int | None
+    weight: float | None
     manufacturer: str | None
-    asset_type_category_id: int = PydanticField(alias="assetTypeCategoryId")
     form: conlist(FormData, min_length=1)
     instruction_manuals: list[AssetTypeDocument] = PydanticField(None, alias="instructionManuals")
     asset_type_category: DisplayAssetTypeCategory = PydanticField(alias="assetTypeCategory")
+    typeplates: TypeplateResponse | None = PydanticField(None)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,12 +168,18 @@ class AssetTypeResponse(BaseModel):
             description=asset_type.description,
             weight=asset_type.weight,
             manufacturer=asset_type.manufacturer,
-            assetTypeCategoryId=asset_type.asset_type_category_id,
             form=[FormData.from_model(atf) for atf in asset_type.fields],
             instructionManuals=[
                 AssetTypeDocument.from_model(doc) for doc in instruction_manuals_data
             ],
             assetTypeCategory=DisplayAssetTypeCategory.from_model(asset_type.asset_type_category),
+            typeplates=TypeplateResponse.convert(
+                asset_type.typeplate,
+                asset_type.typeplate.documents,
+                [img.typeplate_image for img in asset_type.typeplate.typeplate_images],
+            )
+            if asset_type.typeplate
+            else None,
         )
 
         return atr
@@ -210,3 +236,7 @@ class InstructionManualAssetTypeResponse(BaseModel):
                 AssetTypeDocument.from_model(doc) for doc in instruction_manuals_data
             ],
         )
+
+
+class SelectiveFilters(BaseModel):
+    categories: list[DisplayAssetTypeCategory] | None = None

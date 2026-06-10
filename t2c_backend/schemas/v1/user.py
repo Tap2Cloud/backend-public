@@ -5,17 +5,9 @@ from t2c_backend.models import User as UserModel
 from t2c_backend.schemas.v1.location import Location, LocationBaseResponse
 from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
+from t2c_backend.utils.enums import Role as RoleEnum
 from t2c_backend.utils.enums import Status, UserStatus
 from t2c_backend.utils.misc import get_full_name
-
-
-class UserRegisterRequest(BaseModel):
-    email: EmailStr = Field(...)
-    password: str = Field(...)
-    first_name: str = Field(..., alias="firstName")
-    last_name: str = Field(..., alias="lastName")
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserBase(BaseModel):
@@ -29,9 +21,15 @@ class UserLogin(UserBase): ...
 class UserLoginResponse(TokenResponse): ...
 
 
-class ChangePasswordRequest(BaseModel):
-    old_password: str = Field(..., alias="oldPassword")
-    new_password: str = Field(..., alias="newPassword")
+class UserCount(BaseModel):
+    active: int
+    banned: int
+
+
+class OrganizationUsersCustomPage(CustomPage):
+    __qualname__ = "Page"
+
+    extra: UserCount
 
 
 class DisplayUser(BaseModel):
@@ -90,6 +88,47 @@ class UserResponse(DisplayUser):
         )
 
 
+class OrganizationUser(DisplayUser):
+    roles: list[RoleBase]
+    status: UserStatus
+    location: LocationBaseResponse | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @staticmethod
+    def convert(row) -> "OrganizationUser":
+        return OrganizationUser(
+            id=row.get("id"),
+            email=row.get("email"),
+            firstName=row.get("first_name"),
+            lastName=row.get("last_name"),
+            fullName=get_full_name(row.get("first_name"), row.get("last_name")),
+            createdAt=int(row.get("created_at").timestamp()),
+            location=LocationBaseResponse.convert(row.get("location"), row.get("organization")),
+            roles=[
+                RoleBase(
+                    id=role.get("id"),
+                    name=RoleEnum[role.get("name")].value,
+                    permissions=role.get("permissions"),
+                )
+                for role in row.get("roles")
+            ],
+            status=row.get("status"),
+            profileAvatar=row.get("profile_avatar")
+            if row.get("profile_avatar") is not None
+            else None,
+        )
+
+
+class UserRegisterRequest(BaseModel):
+    email: EmailStr = Field(...)
+    password: str = Field(...)
+    first_name: str = Field(..., alias="firstName")
+    last_name: str = Field(..., alias="lastName")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserInviteRequest(BaseModel):
     email: EmailStr = Field(...)
     roles: conlist(RoleBase, min_length=1)
@@ -136,41 +175,6 @@ class UserAcceptInviteRequest(UserReInviteRequest):
     last_name: str = Field(..., alias="lastName")
 
 
-class UserCount(BaseModel):
-    active: int
-    invited: int
-    banned: int
-    rejected: int
-
-
-class OrganizationUsersCustomPage(CustomPage):
-    __qualname__ = "Page"
-
-    extra: UserCount
-
-
-class OrganizationUser(DisplayUser):
-    roles: list[RoleBase]
-    status: UserStatus
-    location: LocationBaseResponse | None
-
-    model_config = ConfigDict(from_attributes=True)
-
-    @staticmethod
-    def convert(row) -> "OrganizationUser":
-        return OrganizationUser(
-            id=row.get("id"),
-            email=row.get("email"),
-            firstName=row.get("first_name"),
-            lastName=row.get("last_name"),
-            fullName=get_full_name(row.get("first_name"), row.get("last_name")),
-            createdAt=int(row.get("created_at").timestamp()),
-            location=LocationBaseResponse.convert(
-                row.get("location"), row.get("organization"), row.get("organizationCredit")
-            ),
-            roles=[],
-            status=row.get("status"),
-            profileAvatar=row.get("profile_avatar")
-            if row.get("profile_avatar") is not None
-            else None,
-        )
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., alias="oldPassword")
+    new_password: str = Field(..., alias="newPassword")
