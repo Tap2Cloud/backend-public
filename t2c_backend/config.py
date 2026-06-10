@@ -2,7 +2,7 @@ import os
 from dataclasses import field
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .utils.enums import ENVIRONMENT
@@ -10,15 +10,12 @@ from .utils.misc import get_project_meta
 
 
 class Config(BaseSettings):
-    project_root: Path
+    project_root: Path = Path(__file__).resolve().parents[1]
     ENVIRONMENT: ENVIRONMENT
     API_STR: str = "/api"
 
     BACKEND_CORS_ORIGINS: list[str] = field(default_factory=lambda: ["*"])
     REQUEST_ID_HEADER_NAME: str = "X-Request-Id"
-
-    JSON_LOGS: bool
-    GUNICORN_WORKERS: int
 
     # noinspection PyNestedDecorators
     @field_validator("BACKEND_CORS_ORIGINS")
@@ -32,8 +29,19 @@ class Config(BaseSettings):
 
     PROJECT_NAME: str
 
+    DATABASE_HOST: str
+    DATABASE_PORT: int = 5432
+    DATABASE_USER: str
+    DATABASE_PASSWORD: str
+    DATABASE_NAME: str
+
     APP_HOST: str
     APP_PORT: int
+
+    JSON_LOGS: bool
+    GUNICORN_WORKERS: int
+
+    FRONTEND_URL: AnyHttpUrl
 
     @property
     def project_root_path(self):

@@ -1,10 +1,10 @@
+import asyncio
 import importlib.machinery
 import importlib.util
 import logging
 import sys
 import traceback
 import types
-from pathlib import Path
 from uuid import uuid4
 
 from asgi_correlation_id import CorrelationIdMiddleware
@@ -12,18 +12,51 @@ from asgi_correlation_id.middleware import is_valid_uuid4
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
-from .config import Config
-from .core.error_handlers import application_exception_handler
-from .core.event_handlers import start_app_handler, stop_app_handler
-from .core.middlewares.language import LanguageMiddleware
-from .core.middlewares.sqlalchemy import SQLAlchemyMiddleware
-from .endpoints.router import api_router
-from .utils.enums import ENVIRONMENT
-from .utils.errors import ApplicationError
-from .utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
+from t2c_backend.config import Config
+from t2c_backend.core.error_handlers import application_exception_handler
+from t2c_backend.core.event_handlers import lifespan
+from t2c_backend.core.middlewares.language import LanguageMiddleware
+from t2c_backend.core.middlewares.sqlalchemy import SQLAlchemyMiddleware
+from t2c_backend.endpoints.router import api_router
+from t2c_backend.utils.enums import ENVIRONMENT
+from t2c_backend.utils.errors import ApplicationError
+from t2c_backend.utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
 
-initial_clients = []
+initial_clients = [
+    "t2c_backend.clients.token_backend",
+    "t2c_backend.clients.cryptography",
+    "t2c_backend.clients.storage",
+]
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.config.PROJECT_NAME,
+        version=app.config.project_meta["version"],
+        routes=app.routes,
+    )
+
+    def fix_binary(node):
+        if isinstance(node, dict):
+            if (
+                node.get("contentMediaType") == "application/octet-stream"
+                and node.get("type") == "string"
+            ):
+                node.pop("contentMediaType", None)
+                node["format"] = "binary"
+            for v in node.values():
+                fix_binary(v)
+        elif isinstance(node, list):
+            for v in node:
+                fix_binary(v)
+
+    fix_binary(schema)
+    app.openapi_schema = schema
+    return schema
 
 
 def get_middleware_stack(app_config):
@@ -53,9 +86,9 @@ class CustomFastAPI(FastAPI):
     Custom FastAPI class that encapsulates the app setup and configuration.
     """
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(self) -> None:
         # Initialize the parent FastAPI class
-        self.config = Config(project_root=project_root)
+        self.config = Config()
 
         super().__init__(
             title=self.config.PROJECT_NAME,
@@ -63,6 +96,7 @@ class CustomFastAPI(FastAPI):
             debug=self.config.ENVIRONMENT != ENVIRONMENT.PRODUCTION,
             swagger_ui_parameters={"defaultModelsExpandDepth": -1},
             middleware=get_middleware_stack(self.config),
+            lifespan=lifespan,
         )
 
         self.__extensions = {}
@@ -74,10 +108,6 @@ class CustomFastAPI(FastAPI):
 
         # Add exception handlers
         self.add_exception_handler(ApplicationError, application_exception_handler)
-
-        # Add event handlers
-        self.add_event_handler("startup", start_app_handler(self))
-        self.add_event_handler("shutdown", stop_app_handler(self))
 
     async def setup_hook(self) -> None:
         for extension in initial_clients:
@@ -165,7 +195,11 @@ class CustomFastAPI(FastAPI):
         await self._load_from_module_spec(spec, name)
 
     @classmethod
-    async def create(cls, project_root: Path):
-        instance = cls(project_root=project_root)
+    async def create(cls):
+        instance = cls()
         await instance.setup_hook()
         return instance
+
+
+app = asyncio.run(CustomFastAPI.create())
+app.openapi = custom_openapi

@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "name": "General information",
+    "order": 1
+  },
+  {
+    "id": 2,
+    "name": "Material and composition",
+    "order": 2
+  },
+  {
+    "id": 3,
+    "name": "Capacity",
+    "order": 3
+  },
+  {
+    "id": 4,
+    "name": "Energy",
+    "order": 4
+  },
+  {
+    "id": 5,
+    "name": "Power capability",
+    "order": 5
+  },
+  {
+    "id": 6,
+    "name": "Round trip energy efficiency and self-discharge",
+    "order": 6
+  },
+  {
+    "id": 7,
+    "name": "Carbon footprint",
+    "order": 7
+  },
+  {
+    "id": 8,
+    "name": "Battery lifetime",
+    "order": 8
+  },
+  {
+    "id": 9,
+    "name": "Temperature conditions",
+    "order": 9
+  }
+]
