@@ -86,9 +86,11 @@ class CustomFastAPI(FastAPI):
     Custom FastAPI class that encapsulates the app setup and configuration.
     """
 
+    config_class = Config
+
     def __init__(self) -> None:
         # Initialize the parent FastAPI class
-        self.config = Config()
+        self.config = self.config_class()
 
         super().__init__(
             title=self.config.PROJECT_NAME,
