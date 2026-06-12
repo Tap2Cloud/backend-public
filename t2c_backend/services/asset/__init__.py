@@ -114,30 +114,6 @@ class AssetService:
             raise NotFoundError("Asset not found")
         return db_asset
 
-    # async def list_assets_by_location_id(self, location_id: int, organization_id: int):
-    #     organization_rented_assets = (
-    #         await self.app.services.organization_service.rented_asset_repository.list(
-    #             organization_id=organization_id,
-    #         )
-    #     )
-    #     rented_assets = await self.app.services.organization_service.rented_asset_repository.list(
-    #         organization_id__ne=organization_id,
-    #         options=[joinedload(OrganizationRentedAsset.asset).joinedload(Asset.location)],
-    #     )
-    #     rented_asset_list = [
-    #         item.asset.id
-    #         for item in rented_assets
-    #         if item.asset.location.organization_id == organization_id
-    #     ]
-    #     owned_assets = await self.repository.list(
-    #         location_id=location_id,
-    #         options=[
-    #             joinedload(self._model.asset_type),
-    #         ],
-    #         id__not_in=rented_asset_list,
-    #     )
-    #     return organization_rented_assets, owned_assets
-
     async def list_assets(
         self,
         q: str | None,
@@ -364,12 +340,6 @@ class AssetService:
         if asset is None:
             raise NotFoundError(msg="Asset not found")
         return asset
-
-    async def get_asset_by_device_id(self, device_id: str):
-        asset_details = await self.repository.get_one_or_none(device_id=device_id)
-        if asset_details:
-            return asset_details
-        return False
 
 
 def setup(app, session, *args, **kwargs):
