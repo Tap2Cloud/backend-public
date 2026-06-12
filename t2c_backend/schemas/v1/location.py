@@ -37,17 +37,8 @@ class LocationUpdateRequest(LocationCreateRequest):
     pass
 
 
-class LocationBaseResponse(BaseModel):
+class LocationBaseResponse(LocationCreateRequest):
     id: int
-    street: str | None
-    postcode: str | None
-    city: str | None
-    country: str | None
-    region: str | None
-    tel_number: str | None = Field(..., alias="telNumber")
-    mobile_number: str | None = Field(..., alias="mobileNumber")
-    fax_number: str | None = Field(..., alias="faxNumber")
-    email: str | None
     organization: DisplayOrganization
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, conlist
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.models import User as UserModel
@@ -6,7 +6,7 @@ from t2c_backend.schemas.v1.location import Location, LocationBaseResponse
 from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
 from t2c_backend.utils.enums import Role as RoleEnum
-from t2c_backend.utils.enums import Status, UserStatus
+from t2c_backend.utils.enums import UserStatus
 from t2c_backend.utils.misc import get_full_name
 
 
@@ -127,52 +127,6 @@ class UserRegisterRequest(BaseModel):
     last_name: str = Field(..., alias="lastName")
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class UserInviteRequest(BaseModel):
-    email: EmailStr = Field(...)
-    roles: conlist(RoleBase, min_length=1)
-    location: LocationBaseResponse
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class UserInviteResponse(BaseModel):
-    id: int
-    email: str
-    roles: list[RoleBase]
-    location: LocationBaseResponse
-    token: str
-    status: Status
-    created_at: int = Field(..., alias="createdAt")
-
-    model_config = ConfigDict(from_attributes=True)
-
-    @staticmethod
-    def convert(user_invite, roles, location) -> "UserInviteResponse":
-        return UserInviteResponse(
-            id=user_invite.id,
-            email=user_invite.invitee_email,
-            roles=roles,
-            location=location,
-            token=user_invite.token,
-            status=user_invite.status,
-            createdAt=int(user_invite.created_at.timestamp()),
-        )
-
-
-class UserReInviteRequest(BaseModel):
-    token: str
-
-
-class UserRejectInviteRequest(UserReInviteRequest):
-    pass
-
-
-class UserAcceptInviteRequest(UserReInviteRequest):
-    password: str
-    first_name: str = Field(..., alias="firstName")
-    last_name: str = Field(..., alias="lastName")
 
 
 class ChangePasswordRequest(BaseModel):
