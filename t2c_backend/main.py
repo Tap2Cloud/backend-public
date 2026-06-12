@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from asgi_correlation_id import CorrelationIdMiddleware
 from asgi_correlation_id.middleware import is_valid_uuid4
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -88,6 +88,11 @@ class CustomFastAPI(FastAPI):
 
     config_class = Config
 
+    def get_api_router(self) -> APIRouter:
+        """Return the router registered under API_STR. Override in subclasses
+        to replace the route table instead of stacking a second one on top."""
+        return api_router
+
     def __init__(self) -> None:
         # Initialize the parent FastAPI class
         self.config = self.config_class()
@@ -106,7 +111,7 @@ class CustomFastAPI(FastAPI):
         self.clients = DictContainer(package_type="Client")
 
         # Include routers
-        self.include_router(api_router, prefix=self.config.API_STR)
+        self.include_router(self.get_api_router(), prefix=self.config.API_STR)
 
         # Add exception handlers
         self.add_exception_handler(ApplicationError, application_exception_handler)
