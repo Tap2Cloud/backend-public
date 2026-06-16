@@ -31,32 +31,19 @@ initial_clients = [
 ]
 
 
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    schema = get_openapi(
-        title=app.config.PROJECT_NAME,
-        version=app.config.project_meta["version"],
-        routes=app.routes,
-    )
-
-    def fix_binary(node):
-        if isinstance(node, dict):
-            if (
-                node.get("contentMediaType") == "application/octet-stream"
-                and node.get("type") == "string"
-            ):
-                node.pop("contentMediaType", None)
-                node["format"] = "binary"
-            for v in node.values():
-                fix_binary(v)
-        elif isinstance(node, list):
-            for v in node:
-                fix_binary(v)
-
-    fix_binary(schema)
-    app.openapi_schema = schema
-    return schema
+def _fix_binary(node):
+    if isinstance(node, dict):
+        if (
+            node.get("contentMediaType") == "application/octet-stream"
+            and node.get("type") == "string"
+        ):
+            node.pop("contentMediaType", None)
+            node["format"] = "binary"
+        for v in node.values():
+            _fix_binary(v)
+    elif isinstance(node, list):
+        for v in node:
+            _fix_binary(v)
 
 
 def get_middleware_stack(app_config):
@@ -201,6 +188,18 @@ class CustomFastAPI(FastAPI):
 
         await self._load_from_module_spec(spec, name)
 
+    def openapi(self):
+        if self.openapi_schema:
+            return self.openapi_schema
+        schema = get_openapi(
+            title=self.config.PROJECT_NAME,
+            version=self.config.project_meta["version"],
+            routes=self.routes,
+        )
+        _fix_binary(schema)
+        self.openapi_schema = schema
+        return schema
+
     @classmethod
     async def create(cls):
         instance = cls()
@@ -208,5 +207,16 @@ class CustomFastAPI(FastAPI):
         return instance
 
 
-app = asyncio.run(CustomFastAPI.create())
-app.openapi = custom_openapi
+def __getattr__(name):
+    # Build the standalone app lazily, only when `app` is explicitly imported
+    # (e.g. by this package's own launcher). Importing CustomFastAPI or any other
+    # name must NOT build an app: downstream projects install this package as a
+    # library, subclass CustomFastAPI, and build their own app with their own
+    # Config. Eagerly creating an app here used the base Config, whose
+    # project_meta reads `<package>/pyproject.toml` — which does not exist once
+    # installed into site-packages.
+    if name == "app":
+        app = asyncio.run(CustomFastAPI.create())
+        globals()["app"] = app
+        return app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
