@@ -208,5 +208,17 @@ class CustomFastAPI(FastAPI):
         return instance
 
 
-app = asyncio.run(CustomFastAPI.create())
-app.openapi = custom_openapi
+def __getattr__(name):
+    # Build the standalone app lazily, only when `app` is explicitly imported
+    # (e.g. by this package's own launcher). Importing CustomFastAPI or any other
+    # name must NOT build an app: downstream projects install this package as a
+    # library, subclass CustomFastAPI, and build their own app with their own
+    # Config. Eagerly creating an app here used the base Config, whose
+    # project_meta reads `<package>/pyproject.toml` — which does not exist once
+    # installed into site-packages.
+    if name == "app":
+        app = asyncio.run(CustomFastAPI.create())
+        app.openapi = custom_openapi
+        globals()["app"] = app
+        return app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
