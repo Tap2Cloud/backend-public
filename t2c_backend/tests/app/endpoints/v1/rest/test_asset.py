@@ -7,7 +7,7 @@ from utils.enums import AssetStatus
 
 
 @pytest.mark.order(40)
-def test_create_non_rented_asset(
+def test_create_asset(
     authenticated_client: TestClient,
     fake: Faker,
     asset,
@@ -33,7 +33,7 @@ def test_create_non_rented_asset(
 
 
 @pytest.mark.order(41)
-def test_create_non_rented_asset_for_second_user(
+def test_create_asset_for_second_user(
     authenticated_client: TestClient,
     fake: Faker,
     second_user_data,
