@@ -126,10 +126,10 @@ class CreateAudit(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     @classmethod
     def validate_to_json(cls, data):
-        if data.get("validUntil") < data.get("inspectionDate"):
+        if data.inspection_date > data.valid_until:
             raise BadRequestError("validate date must be greater than inspection date")
         return data
 

@@ -1,13 +1,13 @@
-from datetime import datetime
+from datetime import datetime, time
 
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
+from models import Asset, AssetType, Location
 from sqlalchemy import asc, desc, or_, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
 from t2c_backend.core.repository import BaseRepository
-from t2c_backend.models import Asset, AssetType
 from t2c_backend.models.service import Service
 from t2c_backend.schemas.v1.service import AssetServiceResponse, CreateService
 from t2c_backend.utils.enums import ServiceTypes, SortBy
@@ -103,11 +103,15 @@ class ServiceService:
         service_filters = []
 
         if service_start_date and service_end_date:
+            service_start_date = datetime.combine(service_start_date, time.min)
+            service_end_date = datetime.combine(service_end_date, time.min)
             filters = Service.service_date.between(service_start_date, service_end_date)
             service_filters.append(filters)
             asset_filters.append(Asset.services.any(filters))
 
         if expire_start_date and expire_end_date:
+            expire_start_date = datetime.combine(expire_start_date, time.min)
+            expire_end_date = datetime.combine(expire_end_date, time.min)
             filters = Service.expire_date.between(expire_start_date, expire_end_date)
             service_filters.append(filters)
             asset_filters.append(Asset.services.any(filters))
@@ -142,6 +146,24 @@ class ServiceService:
             config=Config(page_cls=CustomPage),
             transformer=lambda assets: [AssetServiceResponse.convert(asset) for asset in assets],
         )
+
+    async def get_service_by_id(self, service_id: int, organization_id: int):
+        select_query = (
+            select(Asset)
+            .options(
+                joinedload(Asset.asset_type),
+                contains_eager(Asset.services),
+            )
+            .join(Location, Location.id == Asset.location_id)
+            .join(Service, Service.asset_id == Asset.id)
+            .where((Location.organization_id == organization_id) & (Service.id == service_id))
+        )
+
+        result = await self.repository.execute(select_query)
+        assets = result.unique().scalar_one_or_none()
+        if not assets:
+            raise NotFoundError("service not found")
+        return assets
 
 
 def setup(app, session, *args, **kwargs):
