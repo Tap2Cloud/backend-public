@@ -2,12 +2,12 @@ from datetime import datetime, time
 
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from models import Asset, AssetType, Location
 from sqlalchemy import asc, desc, or_, select
 from sqlalchemy.orm import contains_eager, joinedload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
 from t2c_backend.core.repository import BaseRepository
+from t2c_backend.models import Asset, AssetType, Location
 from t2c_backend.models.service import Service
 from t2c_backend.schemas.v1.service import AssetServiceResponse, CreateService
 from t2c_backend.utils.enums import ServiceTypes, SortBy
