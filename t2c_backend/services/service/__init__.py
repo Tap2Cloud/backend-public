@@ -104,14 +104,14 @@ class ServiceService:
 
         if service_start_date and service_end_date:
             service_start_date = datetime.combine(service_start_date, time.min)
-            service_end_date = datetime.combine(service_end_date, time.min)
+            service_end_date = datetime.combine(service_end_date, time.max)
             filters = Service.service_date.between(service_start_date, service_end_date)
             service_filters.append(filters)
             asset_filters.append(Asset.services.any(filters))
 
         if expire_start_date and expire_end_date:
             expire_start_date = datetime.combine(expire_start_date, time.min)
-            expire_end_date = datetime.combine(expire_end_date, time.min)
+            expire_end_date = datetime.combine(expire_end_date, time.max)
             filters = Service.expire_date.between(expire_start_date, expire_end_date)
             service_filters.append(filters)
             asset_filters.append(Asset.services.any(filters))
