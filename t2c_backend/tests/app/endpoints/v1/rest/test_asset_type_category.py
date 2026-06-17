@@ -468,11 +468,11 @@ def test_get_asset_type_category_mapping(
 
 
 def test_get_asset_type_category_by_unauthenticated_client(
-    authenticated_client: TestClient,
+    client: TestClient,
 ):
-    response = authenticated_client.get("/api/v1/asset-type-category", headers={"language": "en"})
+    response = client.get("/api/v1/asset-type-category", headers={"language": "en"})
 
-    assert response.status_code == 200
+    assert response.status_code == 401
 
 
 def test_create_asset_type_category_string_with_unauthenticated_client(
