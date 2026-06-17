@@ -86,6 +86,24 @@ def test_get_service_with_queries(
     assert response.status_code == 200
 
 
+@pytest.mark.order(121)
+def test_get_service_with_id(authenticated_client: TestClient, service_container):
+    service_id = service_container[0]["id"]
+    response = authenticated_client.get(f"/api/v1/service/{service_id}")
+
+    assert response.status_code == 200
+
+
+def test_get_service_with_invalid_id(authenticated_client: TestClient):
+    response = authenticated_client.get("/api/v1/service/-1")
+    assert response.status_code == 404
+
+
+def test_get_service_with_unauthenticated(client: TestClient):
+    response = client.get("/api/v1/service/-1")
+    assert response.status_code == 401
+
+
 @pytest.mark.order(122)
 def test_update_service(authenticated_client: TestClient, service_container, asset_service):
     service_id = service_container[0]["id"]
