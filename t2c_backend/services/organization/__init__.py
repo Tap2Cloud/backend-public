@@ -102,8 +102,7 @@ class OrganizationService:
 
         # Update fields dynamically if the values are not None
         for field, value in update_fields.items():
-            if value is not None:
-                setattr(organization, field, value)
+            setattr(organization, field, value)
 
         return await self.repository.save(organization)
 
