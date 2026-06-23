@@ -88,7 +88,7 @@ class OrganizationService:
         update_fields = {
             "name": name,
             "number": number,
-            "email": email,
+            # "email": email,
             "logo": await Image.from_file(logo) if logo else None,
         }
 
