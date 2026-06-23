@@ -53,8 +53,8 @@ async def create_organization_with_location(
 )
 async def update_organization(
     name: str = Form(...),
-    number: str | None = Form(None),
-    email: str | None = Form(None),
+    number: str = Form(...),
+    email: str = Form(...),
     logo: UploadFile = File(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
