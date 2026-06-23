@@ -10,15 +10,16 @@ from t2c_backend.schemas.v1.taxonomy import Taxonomy
 
 
 class LocationCreateRequest(BaseModel):
+    name: str
     street: str | None
     postcode: str | None
-    city: str | None
-    country: str | None
+    city: str
+    country: str
     region: str | None
     tel_number: str | None = Field(..., alias="telNumber")
-    mobile_number: str | None = Field(..., alias="mobileNumber")
+    mobile_number: str = Field(..., alias="mobileNumber")
     fax_number: str | None = Field(..., alias="faxNumber")
-    email: str | None
+    email: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -49,6 +50,7 @@ class LocationBaseResponse(LocationCreateRequest):
         organization: OrganizationModel,
     ) -> "LocationBaseResponse":
         return LocationBaseResponse(
+            name=location.name,
             id=location.id,
             street=location.street,
             postcode=location.postcode,
@@ -85,6 +87,7 @@ class Location(LocationBaseResponse):
     @staticmethod
     def convert(location: LocationModel, organization: OrganizationModel) -> "Location":
         return Location(
+            name=location.name,
             id=location.id,
             street=location.street,
             postcode=location.postcode,

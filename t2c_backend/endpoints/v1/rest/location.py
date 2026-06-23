@@ -9,7 +9,12 @@ from t2c_backend.utils.misc import DictContainer
 router = APIRouter()
 
 
-@router.put("/location", response_model=LocationBaseResponse, status_code=200)
+@router.put(
+    "/location",
+    operation_id="update location",
+    response_model=LocationBaseResponse,
+    status_code=200,
+)
 async def update_location(
     location_data: LocationCreateRequest,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),

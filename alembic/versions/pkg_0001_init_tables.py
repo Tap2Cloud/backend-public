@@ -2,7 +2,7 @@
 
 Revision ID: pkg_0001
 Revises:
-Create Date: 2026-06-10 12:49:03.639876
+Create Date: 2026-06-18 10:47:42.080656
 
 """
 
@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 
-import t2c_backend.core
+import t2c_backend
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -63,15 +63,16 @@ def upgrade() -> None:
         "locations",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("organization_id", sa.BigInteger(), nullable=False),
+        sa.Column("name", sa.Text(), nullable=False),
         sa.Column("street", sa.Text(), nullable=True),
         sa.Column("postcode", sa.Text(), nullable=True),
-        sa.Column("city", sa.Text(), nullable=True),
-        sa.Column("country", sa.Text(), nullable=True),
+        sa.Column("city", sa.Text(), nullable=False),
+        sa.Column("country", sa.Text(), nullable=False),
         sa.Column("region", sa.Text(), nullable=True),
         sa.Column("tel_number", sa.Text(), nullable=True),
-        sa.Column("mobile_number", sa.Text(), nullable=True),
+        sa.Column("mobile_number", sa.Text(), nullable=False),
         sa.Column("fax_number", sa.Text(), nullable=True),
-        sa.Column("email", sa.Text(), nullable=True),
+        sa.Column("email", sa.Text(), nullable=False),
         sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )

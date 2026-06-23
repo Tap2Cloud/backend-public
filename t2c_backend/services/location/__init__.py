@@ -21,6 +21,7 @@ class LocationService:
         user,
     ):
         location = Location(
+            name=location_data.name,
             organization_id=organization.id,
             street=location_data.street,
             postcode=location_data.postcode,
