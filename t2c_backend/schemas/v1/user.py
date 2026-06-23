@@ -91,7 +91,7 @@ class UserResponse(DisplayUser):
 class OrganizationUser(DisplayUser):
     roles: list[RoleBase]
     status: UserStatus
-    location: LocationBaseResponse | None
+    location: LocationBaseResponse
 
     model_config = ConfigDict(from_attributes=True)
 

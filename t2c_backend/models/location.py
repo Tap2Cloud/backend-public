@@ -16,16 +16,17 @@ class Location(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase)
 
     organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"))
 
+    name: Mapped[str] = mapped_column(Text())
     street: Mapped[str] = mapped_column(Text(), nullable=True)
     postcode: Mapped[str] = mapped_column(Text(), nullable=True)
-    city: Mapped[str] = mapped_column(Text(), nullable=True)
-    country: Mapped[str] = mapped_column(Text(), nullable=True)
+    city: Mapped[str] = mapped_column(Text())
+    country: Mapped[str] = mapped_column(Text())
     region: Mapped[str] = mapped_column(Text(), nullable=True)
 
     tel_number: Mapped[str] = mapped_column(Text(), nullable=True)
-    mobile_number: Mapped[str] = mapped_column(Text(), nullable=True)
+    mobile_number: Mapped[str] = mapped_column(Text())
     fax_number: Mapped[str] = mapped_column(Text(), nullable=True)
-    email: Mapped[str] = mapped_column(Text(), nullable=True)
+    email: Mapped[str] = mapped_column(Text())
 
     organization = relationship("Organization")
     asset = relationship(
