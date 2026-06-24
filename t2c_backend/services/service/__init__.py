@@ -35,6 +35,8 @@ class ServiceService:
             raise NotFoundError(msg="Asset not found")
 
         service = Service(
+            service_name=service_data.service_name,
+            service_provider_name=service_data.service_provider_name,
             contact=service_data.contact,
             expire_date=datetime.fromtimestamp(service_data.expire_date),
             service_date=datetime.fromtimestamp(service_data.service_date),

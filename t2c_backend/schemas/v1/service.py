@@ -5,6 +5,8 @@ from t2c_backend.utils.enums import ServiceTypes
 
 
 class CreateService(BaseModel):
+    service_name: str = Field(..., alias="serviceName")
+    service_provider_name: str = Field(..., alias="serviceProviderName")
     contact: str
     expire_date: int = Field(..., alias="expireDate")
     service_date: int = Field(..., alias="serviceDate")
@@ -26,6 +28,8 @@ class UpdateService(BaseModel):
 
 class ServiceResponse(BaseModel):
     id: int
+    service_name: str = Field(..., alias="serviceName")
+    service_provider_name: str = Field(..., alias="serviceProviderName")
     contact: str
     expire_date: int = Field(..., alias="expireDate")
     service_date: int = Field(..., alias="serviceDate")
@@ -39,6 +43,8 @@ class ServiceResponse(BaseModel):
     def convert(service_data: ServiceModel) -> "ServiceResponse":
         return ServiceResponse(
             id=service_data.id,
+            serviceName=service_data.service_name,
+            serviceProviderName=service_data.service_provider_name,
             contact=service_data.contact,
             expireDate=int(service_data.expire_date.timestamp()),
             serviceDate=int(service_data.service_date.timestamp()),

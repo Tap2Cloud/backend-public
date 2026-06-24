@@ -13,6 +13,8 @@ from t2c_backend.utils.enums import ServiceTypes
 
 class Service(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
     __tablename__ = "services"
+    service_name: Mapped[str] = mapped_column(Text())
+    service_provider_name: Mapped[str] = mapped_column(Text())
     contact: Mapped[str] = mapped_column(Text(), nullable=True)
     expire_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     service_date: Mapped[datetime] = mapped_column(
