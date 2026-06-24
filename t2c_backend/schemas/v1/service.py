@@ -1,7 +1,8 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from t2c_backend.models.service import Service as ServiceModel
 from t2c_backend.utils.enums import ServiceTypes
+from t2c_backend.utils.errors import BadRequestError
 
 
 class CreateService(BaseModel):
@@ -15,6 +16,13 @@ class CreateService(BaseModel):
     email: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_to_json(cls, data):
+        if data.get("expireDate") < data.get("serviceDate"):
+            raise BadRequestError("expire date must be greater than service date")
+        return data
 
 
 class UpdateService(BaseModel):
