@@ -294,6 +294,8 @@ def asset_container():
 @pytest.fixture(scope="function")
 def asset_service(fake: Faker):
     return {
+        "serviceName": fake.name(),
+        "serviceProviderName": fake.name(),
         "contact": fake.phone_number(),
         "expireDate": int((fake.date_time()).timestamp()),
         "serviceDate": int((fake.date_time()).timestamp()),
