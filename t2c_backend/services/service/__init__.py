@@ -11,7 +11,8 @@ from t2c_backend.models import Asset, AssetType, Location
 from t2c_backend.models.service import Service
 from t2c_backend.schemas.v1.service import AssetServiceResponse, CreateService
 from t2c_backend.utils.enums import ServiceTypes, SortBy
-from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.errors import BadRequestError, NotFoundError
+from t2c_backend.utils.misc import aware_utcnow
 
 
 class ServiceService:
@@ -61,6 +62,9 @@ class ServiceService:
 
         if not service:
             raise NotFoundError(msg="Service not found")
+
+        if service.expire_date <= aware_utcnow():
+            raise BadRequestError("Expired service details can not update")
 
         update_fields = service_data.model_dump()
         update_fields["expire_date"] = datetime.fromtimestamp(service_data.expire_date)
