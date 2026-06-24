@@ -16,6 +16,7 @@ from utils.enums import (
     ServiceTypes,
     TaskType,
 )
+from utils.misc import aware_utcnow
 
 
 @pytest.fixture(scope="session")
@@ -293,10 +294,13 @@ def asset_container():
 
 @pytest.fixture(scope="function")
 def asset_service(fake: Faker):
+    service_date = int((fake.date_time()).timestamp()) + int(aware_utcnow().timestamp())
     return {
+        "serviceName": fake.name(),
+        "serviceProviderName": fake.name(),
         "contact": fake.phone_number(),
-        "expireDate": int((fake.date_time()).timestamp()),
-        "serviceDate": int((fake.date_time()).timestamp()),
+        "expireDate": service_date + 3600 * 24,
+        "serviceDate": service_date,
         "serviceType": ServiceTypes.basic,
         "web": fake.url(),
         "email": fake.email(),

@@ -18,7 +18,12 @@ from t2c_backend.utils.misc import DictContainer
 router = APIRouter()
 
 
-@router.post("/asset/{assetId}/create/service", response_model=ServiceResponse, status_code=201)
+@router.post(
+    "/asset/{assetId}/create/service",
+    operation_id="create service",
+    response_model=ServiceResponse,
+    status_code=201,
+)
 async def create_service(
     service_data: CreateService,
     asset_id: int = Path(..., alias="assetId"),
@@ -32,7 +37,12 @@ async def create_service(
     )
 
 
-@router.put("/asset/{serviceId}/update/service", response_model=ServiceResponse, status_code=200)
+@router.put(
+    "/asset/{serviceId}/update/service",
+    operation_id="update service",
+    response_model=ServiceResponse,
+    status_code=200,
+)
 async def update_service(
     service_data: UpdateService,
     service_id: int = Path(..., alias="serviceId"),
@@ -46,7 +56,7 @@ async def update_service(
     )
 
 
-@router.delete("/service/{serviceId}")
+@router.delete("/service/{serviceId}", operation_id="delete service", status_code=204)
 async def delete_service_handler(
     service_id: int = Path(..., alias="serviceId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -56,7 +66,12 @@ async def delete_service_handler(
     return Response(status_code=204)
 
 
-@router.get("/service", response_model=CustomPage[AssetServiceResponse], status_code=200)
+@router.get(
+    "/service",
+    operation_id="list all services",
+    response_model=CustomPage[AssetServiceResponse],
+    status_code=200,
+)
 async def list_service(
     q: str = None,
     sort_by: SortBy | None = SortBy.Latest,
@@ -81,4 +96,20 @@ async def list_service(
         page=page,
         page_size=page_size,
         location_id=token.location_id,
+    )
+
+
+@router.get(
+    "/service/{serviceId}",
+    operation_id="get service by id",
+    response_model=AssetServiceResponse,
+    status_code=200,
+)
+async def get_service_details(
+    service_id: int = Path(..., alias="serviceId"),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    services: DictContainer = Depends(get_services),
+):
+    return AssetServiceResponse.convert(
+        await services.service_service.get_service_by_id(service_id, token.organization_id)
     )

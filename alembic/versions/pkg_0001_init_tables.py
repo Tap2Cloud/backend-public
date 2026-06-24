@@ -2,7 +2,7 @@
 
 Revision ID: pkg_0001
 Revises:
-Create Date: 2026-06-18 10:47:42.080656
+Create Date: 2026-06-24 11:33:29.358785
 
 """
 
@@ -389,6 +389,8 @@ def upgrade() -> None:
     op.create_table(
         "services",
         sa.Column("id", sa.BigInteger(), nullable=False),
+        sa.Column("service_name", sa.Text(), nullable=False),
+        sa.Column("service_provider_name", sa.Text(), nullable=False),
         sa.Column("contact", sa.Text(), nullable=True),
         sa.Column("expire_date", sa.DateTime(timezone=True), nullable=False),
         sa.Column("service_date", sa.DateTime(timezone=True), nullable=False),
