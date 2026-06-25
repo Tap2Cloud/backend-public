@@ -20,7 +20,9 @@ class BaseJWTAPIBearer:
         raise NotImplementedError("Subclasses must implement `verify_jwt`.")
 
     def check_role(self, token: "Token") -> bool:
-        return all(role in {user_role["name"] for user_role in token.roles} for role in self.roles)
+        return all(
+            str(role) in {user_role["name"] for user_role in token.roles} for role in self.roles
+        )
 
     def check_permission(self, token: "Token") -> bool:
         user_permissions = {
