@@ -37,7 +37,7 @@ async def delete_user(
 
 @router.get("/user/profile", operation_id="get user profile", response_model=UserResponse)
 async def user_profile_handler(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_read": True})),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
 ):
     user = await services.user_service.get_user_profile(
