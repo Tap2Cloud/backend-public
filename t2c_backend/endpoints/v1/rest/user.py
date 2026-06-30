@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.delete("/user", operation_id="delete user")
 async def delete_user_handler(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.user_service.delete_user(token.user_id, token.location_id)
@@ -28,7 +28,7 @@ async def delete_user_handler(
 @router.delete("/user/{userID}", operation_id="delete user by id", status_code=200)
 async def delete_user(
     user_id: int = Path(..., alias="userID"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"org_user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.user_service.delete_users(user_id)
@@ -37,7 +37,7 @@ async def delete_user(
 
 @router.get("/user/profile", operation_id="get user profile", response_model=UserResponse)
 async def user_profile_handler(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     user = await services.user_service.get_user_profile(
@@ -52,7 +52,7 @@ async def user_profile_update_handler(
     picture: UploadFile = File(None),
     first_name: str = Form(..., alias="firstName", validation_alias="firstName"),
     last_name: str = Form(..., alias="lastName", validation_alias="lastName"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     user = await services.user_service.update_user_profile(
@@ -80,7 +80,7 @@ async def organization_users_handler(
     status: UserStatus | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.user_service.organization_user_handler(
@@ -96,7 +96,9 @@ async def organization_users_handler(
 @router.post("/user/password/change", operation_id="change password", name="change-user-password")
 async def change_user_password(
     passwords: ChangePasswordRequest,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"change_user_password": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     await services.user_service.change_password(

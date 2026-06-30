@@ -23,7 +23,7 @@ router = APIRouter()
 @router.post("/asset", operation_id="create asset", status_code=201)
 async def create_asset(
     asset_data: CreateAsset,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_create": True})),
     services: DictContainer = Depends(get_services),
 ):
     # todo if we remove the query, the issue aries when converting Pydantic models to ORM
@@ -50,7 +50,7 @@ async def create_asset(
 async def update_asset(
     asset_data: UpdateAsset,
     asset_id: int = Path(..., alias="assetId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.asset_service.update_asset(updated_asset_data=asset_data, asset_id=asset_id)
@@ -59,7 +59,7 @@ async def update_asset(
 @router.delete("/asset/{assetId}", operation_id="delete asset")
 async def delete_asset_handler(
     asset_id: int = Path(..., alias="assetId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.asset_service.delete_asset(asset_id, token.location_id)
@@ -78,7 +78,7 @@ async def list_asset(
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     # todo searching asset through QRcode(asset_id) is left
@@ -99,7 +99,7 @@ async def list_asset(
 )
 async def get_asset(
     asset_id: int = Path(..., alias="assetId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return AssetResponse.convert(
@@ -118,7 +118,7 @@ async def list_asset_pass(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     sort_by: SortBy | None = SortBy.Latest,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"list_asset_pass": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_service.list_asset_pass(

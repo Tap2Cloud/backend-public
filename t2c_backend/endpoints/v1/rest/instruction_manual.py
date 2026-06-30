@@ -25,7 +25,9 @@ async def list_instruction_manual(
     is_document: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"instruction_manual_read": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_service.list_asset_type_documents(
@@ -48,7 +50,9 @@ async def list_instruction_manual(
 async def save_asset_type_document(
     documents: list[UploadFile] = File(...),
     asset_type_id: int = Path(..., alias="assetTypeId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"instruction_manual_update": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     asset_type_details = await services.asset_type_service.save_asset_type_document(
@@ -72,7 +76,9 @@ async def save_asset_type_document(
 async def delete_asset_type_document(
     asset_type_id: int = Path(..., alias="assetTypeId"),
     instruction_manual_ids: list[uuid.UUID] = Query(..., alias="instructionManualId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"instruction_manual_delete": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     for instruction_manual in instruction_manual_ids:

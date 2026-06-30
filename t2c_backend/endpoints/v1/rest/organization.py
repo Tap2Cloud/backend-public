@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Path, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
 
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.location import Location, LocationCreateRequest
@@ -56,7 +56,9 @@ async def update_organization(
     number: str = Form(...),
     email: str = Form(...),
     logo: UploadFile = File(None),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"organization_update": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     organization = await services.organization_service.update_organization(
@@ -84,7 +86,7 @@ async def update_organization(
     status_code=200,
 )
 async def get_organization_roles(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"get_role": True})),
     services: DictContainer = Depends(get_services),
 ):
     if token.organization_id is None:
@@ -105,7 +107,7 @@ async def get_organization_roles(
 )
 async def create_organization_roles(
     role_data: RoleCreate,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"create_role": True})),
     services: DictContainer = Depends(get_services),
 ):
     if token.organization_id is None:
@@ -119,15 +121,14 @@ async def create_organization_roles(
     return RoleBase.convert_(role=role)
 
 
-@router.delete(
-    "/organization/{organizationId}", operation_id="delete organization", status_code=200
-)
+@router.delete("/organization", operation_id="delete organization", status_code=200)
 async def delete_organization(
-    organization_id: int = Path(..., alias="organizationId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"organization_delete": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
-    await services.organization_service.delete_organization(organization_id)
+    await services.organization_service.delete_organization(token.organization_id)
     return Response(status_code=200)
 
 
@@ -138,7 +139,7 @@ async def delete_organization(
     status_code=200,
 )
 async def get_organization_details(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"organization_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     organization_details = await services.organization_service.get_organization(
