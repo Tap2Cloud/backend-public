@@ -57,7 +57,7 @@ class OrganizationService:
         )
 
         roles = {
-            name: Role(name=name, organization_id=organization.id)
+            name: Role(name=name, organization_id=organization.id, permissions=2199023255551)
             for name, value in RoleEnum.organization_roles()
         }
 
