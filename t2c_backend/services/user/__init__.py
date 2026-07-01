@@ -12,6 +12,7 @@ from t2c_backend.models import (
     User,
     UserRole,
 )
+from t2c_backend.models.taxonomy import Taxonomy
 from t2c_backend.models.user import UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.user import OrganizationUser, OrganizationUsersCustomPage, UserCount
@@ -233,6 +234,16 @@ class UserService:
                 func.array_agg(
                     func.jsonb_build_object(
                         "id",
+                        Taxonomy.id,
+                        "name",
+                        Taxonomy.name,
+                        "display_name",
+                        Taxonomy.display_name,
+                    )
+                ).label("organization_taxonomy"),
+                func.array_agg(
+                    func.jsonb_build_object(
+                        "id",
                         Role.id,
                         "name",
                         Role.name,
@@ -246,6 +257,7 @@ class UserService:
             .where(Location.organization_id == organization_id)
             .join(UserRole, UserRole.user_id == self._model.id)
             .join(Role, Role.id == UserRole.role_id)
+            .join(Taxonomy, Taxonomy.id == Organization.taxonomy_id)
             .group_by(User.id, Location.id, Organization.id)
         )
 
@@ -317,6 +329,11 @@ class UserService:
                             number=user.organization_number,
                             email=user.organization_email,
                             created_at=user.organization_created_at,
+                            taxonomy=Taxonomy(
+                                id=user.organization_taxonomy[0].get("id"),
+                                name=user.organization_taxonomy[0].get("name"),
+                                display_name=user.organization_taxonomy[0].get("display_name"),
+                            ),
                         ),
                     }
                 )
