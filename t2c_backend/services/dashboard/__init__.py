@@ -7,7 +7,6 @@ from t2c_backend.models import (
     Audit,
     AuditTask,
     Location,
-    Organization,
     Typeplate,
     User,
 )
@@ -74,22 +73,6 @@ class DashboardService:
         )
         audit_count = audit_count_result.scalar() or 0
 
-        organization_taxonomy = (
-            select(Organization.taxonomy_id)
-            .where(Organization.id == organization_id)
-            .scalar_subquery()
-        )
-
-        shop_count_result = await self.session.execute(
-            select(func.count(Asset.id))
-            .outerjoin(Location, Location.id == Asset.location_id)
-            .outerjoin(Organization, Location.organization_id == Organization.id)
-            .where(Location.organization_id != organization_id)
-            .where(Organization.taxonomy_id == organization_taxonomy)
-        )
-
-        shop = shop_count_result.scalar() or 0
-
         return (
             asset_count,
             asset_type_count,
@@ -97,7 +80,6 @@ class DashboardService:
             instruction_manual_count,
             service_count,
             audit_count,
-            shop,
         )
 
 
