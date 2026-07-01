@@ -122,7 +122,7 @@ async def create_organization_roles(
 
 
 @router.delete("/organization", operation_id="delete organization", status_code=200)
-async def delete_organization(
+async def delete_organization_handler(
     token: AccessToken = Depends(
         JWTAPIAccessTokenBearer(permissions={"organization_delete": True})
     ),
