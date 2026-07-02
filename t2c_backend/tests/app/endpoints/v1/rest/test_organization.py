@@ -121,7 +121,7 @@ def test_get_organization_roles_with_unauthenticated_client(client: TestClient):
 
 
 @pytest.mark.order(124)
-def test_get_organization_with_id(authenticated_client: TestClient, organization_container):
+def test_get_organization(authenticated_client: TestClient, organization_container):
     response = authenticated_client.get(
         "/api/v1/organization",
     )
@@ -157,4 +157,23 @@ def test_update_organization_with_unauthenticated_client(client: TestClient, org
         data={**organization, "logo": None},
     )
 
+    assert response.status_code == 401
+
+
+@pytest.mark.order(126)
+def test_create_organization_role(authenticated_client: TestClient, organization_role):
+    response = authenticated_client.post(
+        "/api/v1/organization/roles",
+        json=organization_role,
+    )
+    assert response.status_code == 200
+
+
+def test_create_organization_role_with_unauthenticated_client(
+    client: TestClient, organization_role
+):
+    response = client.post(
+        "/api/v1/organization/roles",
+        json=organization_role,
+    )
     assert response.status_code == 401
