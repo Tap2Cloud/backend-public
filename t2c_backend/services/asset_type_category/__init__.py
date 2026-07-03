@@ -141,7 +141,16 @@ class AssetTypeCategoryService:
     async def get_asset_type_category_by_id(self, asset_type_category_id: int, user_id: int):
         return await self.repository.get_one_or_none(user_id=user_id, id=asset_type_category_id)
 
-    async def delete_asset_type_category(self, asset_type_category_id: int):
+    async def delete_asset_type_category(self, asset_type_category_id: int, organization_id: int):
+        db_asset_type_category = await self.repository.get_one_or_none(
+            id=asset_type_category_id,
+            options=[
+                joinedload(self._model.user),
+                joinedload(self._model.user).joinedload(User.location),
+            ],
+        )
+        if db_asset_type_category.user.location.organization_id != organization_id:
+            raise NotFoundError("Asset type category not found")
         return await self.repository.delete(id=asset_type_category_id)
 
     async def list_asset_type_category(self, organization_id: int):

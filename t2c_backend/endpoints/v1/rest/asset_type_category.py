@@ -100,7 +100,9 @@ async def delete_asset_type_category(
     ),
     services: DictContainer = Depends(get_services),
 ):
-    await services.asset_type_category_service.delete_asset_type_category(asset_type_category_id)
+    await services.asset_type_category_service.delete_asset_type_category(
+        asset_type_category_id, token.organization_id
+    )
     return Response(status_code=200)
 
 
