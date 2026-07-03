@@ -777,3 +777,28 @@ def test_asset_type_category_with_invalid_group_id(
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.order(162)
+def test_delete_asset_type_category(authenticated_client: TestClient, container):
+    existing_category = container.get("radio_asset_type_category")
+
+    response = authenticated_client.delete(f"/api/v1/asset-type-category/{existing_category['id']}")
+
+    assert response.status_code == 200
+
+
+def test_delete_asset_type_category_with_unauthenticated_client(client: TestClient, container):
+    existing_category = container.get("radio_asset_type_category")
+
+    response = client.delete(f"/api/v1/asset-type-category/{existing_category['id']}")
+
+    assert response.status_code == 401
+
+
+def test_delete_asset_type_category_with_invalid_id(
+    authenticated_client: TestClient,
+):
+    response = authenticated_client.delete("/api/v1/asset-type-category/-1")
+
+    assert response.status_code == 404

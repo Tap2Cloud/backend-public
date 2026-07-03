@@ -149,7 +149,10 @@ class AssetTypeCategoryService:
                 joinedload(self._model.user).joinedload(User.location),
             ],
         )
-        if db_asset_type_category.user.location.organization_id != organization_id:
+        if (
+            not db_asset_type_category
+            or db_asset_type_category.user.location.organization_id != organization_id
+        ):
             raise NotFoundError("Asset type category not found")
         return await self.repository.delete(id=asset_type_category_id)
 
