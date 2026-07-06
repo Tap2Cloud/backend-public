@@ -97,7 +97,7 @@ class CreateAssetTypeCategoryRequest(BaseModel):
 
 
 class UpdateBaseFieldOption(BaseModel):
-    id: int
+    id: int | None
     option_id: str | None = PydanticField(None, alias="optionId")
     option_label: str | None = PydanticField(None, alias="optionLabel")
 
@@ -105,23 +105,39 @@ class UpdateBaseFieldOption(BaseModel):
 
 
 class UpdateBaseFields(BaseModel):
-    id: int
-    field_name: str | None = PydanticField(None, alias="fieldName")
-    field_place_holder: str | None = PydanticField(None, alias="fieldPlaceHolder")
-    field_display_name: str | None = PydanticField(None, alias="fieldDisplayName")
-    field_order: int | None = PydanticField(None, alias="fieldOrder")
-    asset_type_category_group_id: int | None = PydanticField(None, alias="fieldGroupId")
+    id: int | None
+    field_name: str = PydanticField(..., alias="fieldName")
+    field_place_holder: str = PydanticField(..., alias="fieldPlaceHolder")
+    field_display_name: str = PydanticField(..., alias="fieldDisplayName")
+    field_order: int = PydanticField(..., alias="fieldOrder")
+    asset_type_category_group_id: int = PydanticField(..., alias="fieldGroupId")
     options: list["UpdateBaseFieldOption"]
+    field_type: InputType = PydanticField(..., alias="fieldType")
+    field_is_required: bool = PydanticField(..., alias="fieldIsRequired")
 
     model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="before")
     @classmethod
     def check_options(cls, data: Any) -> Any:
+        seen_option_ids = set()
         field_order = data.get("fieldOrder")
         if field_order <= 0:
             raise ValueError("fieldOrder must be greater than 0.")
-
+        field_type = data.get("fieldType")
+        options = data.get("options")
+        for option in options:
+            option_id = option.get("id")
+            if option_id is None:
+                continue
+            if option_id in seen_option_ids:
+                raise ValueError(f"Multiple options have the same option id '{option_id}'.")
+            seen_option_ids.add(option_id)
+        if field_type in {"radio", "checkbox", "multiselect", "select"}:
+            if not options:
+                raise ValueError("Field requires at least one option")
+        elif options:
+            raise ValueError(f"Option should empty for this field type {field_type}")
         return data
 
 
@@ -133,14 +149,20 @@ class UpdateAssetTypeCategoryRequest(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_fields(cls, data: Any) -> Any:
-        seen_orders, seen_names = set(), set()
+        seen_orders, seen_names, seen_field_ids = set(), set(), set()
         for field in data["fields"]:
             field_order = field.get("fieldOrder")
             field_name = field.get("fieldName")
+            field_id = field.get("id")
             if field_order in seen_orders:
                 raise ValueError(f"Multiple fields have the same field order '{field_order}'.")
             if field_name in seen_names:
                 raise ValueError(f"Multiple fields have the same field name '{field_name}'.")
+            if field_id in seen_field_ids:
+                raise ValueError(f"Multiple fields have the same field id '{field_id}'.")
+            if field_id is not None:
+                seen_field_ids.add(field_id)
+
             seen_orders.add(field_order)
             seen_names.add(field_name)
         return data

@@ -58,7 +58,7 @@ class AssetTypeCategory(
     fields: Mapped[list["AssetTypeCategoryField"]] = relationship(
         "AssetTypeCategoryField",
         back_populates="asset_type_category",
-        cascade="all, delete",
+        cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
         order_by="AssetTypeCategoryField.field_order",
@@ -111,7 +111,7 @@ class AssetTypeCategoryField(BigIntPrimaryKey, CommonTableAttributes, AdvancedDe
     )
     options: Mapped[list["AssetTypeCategoryFieldOption"]] = relationship(
         back_populates="field",
-        cascade="all, delete",
+        cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
         order_by="AssetTypeCategoryFieldOption.id",

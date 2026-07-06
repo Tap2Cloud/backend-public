@@ -99,44 +99,108 @@ class AssetTypeCategoryService:
         ).items():
             setattr(db_asset_type_details, key, value)
 
+        incoming_field_ids = {
+            field.id for field in updated_asset_type_category_data.fields if field.id is not None
+        }
+        fields_to_remove = [
+            field
+            for field in db_asset_type_details.fields
+            if field.id not in incoming_field_ids and field.id is not None
+        ]
+        for field in fields_to_remove:
+            db_asset_type_details.fields.remove(field)
+        await self.repository.save(db_asset_type_details)
+
         for category_field in updated_asset_type_category_data.fields:
-            asset_type_category_field = next(
-                (f for f in db_asset_type_details.fields if f.id == category_field.id), None
-            )
-            if not asset_type_category_field:
-                raise NotFoundError("Asset type category field not found")
             if not await self.asset_type_category_groups_repository.get_one_or_none(
                 id=category_field.asset_type_category_group_id
             ):
                 raise NotFoundError("Asset type category group not found")
-
-            for key, value in category_field.model_dump(
-                exclude={"id", "options"}, exclude_none=True
-            ).items():
-                if key == "field_order":
-                    setattr(asset_type_category_field, key, -value)
-                else:
-                    setattr(asset_type_category_field, key, value)
-
-            for option in category_field.options:
-                asset_type_category_field_option = next(
-                    (o for o in asset_type_category_field.options if o.id == option.id), None
+            if category_field.id is None:
+                new_field = AssetTypeCategoryField(
+                    field_name=category_field.field_name,
+                    field_place_holder=category_field.field_place_holder,
+                    field_display_name=category_field.field_display_name,
+                    field_order=-category_field.field_order,
+                    field_type=category_field.field_type,
+                    field_is_required=category_field.field_is_required,
+                    asset_type_category_group_id=category_field.asset_type_category_group_id,
+                    asset_type_category_id=db_asset_type_details.id,
                 )
-                if not asset_type_category_field_option:
-                    raise NotFoundError("Asset type category field options not found")
-                for key, value in option.model_dump(exclude={"id"}, exclude_none=True).items():
-                    setattr(asset_type_category_field_option, key, value)
+                for option in category_field.options:
+                    new_field.options.append(
+                        AssetTypeCategoryFieldOption(
+                            option_id=option.option_id,
+                            option_label=option.option_label,
+                        )
+                    )
+                db_asset_type_details.fields.append(new_field)
+            else:
+                asset_type_category_field = next(
+                    (f for f in db_asset_type_details.fields if f.id == category_field.id),
+                    None,
+                )
 
-            await self.fields_repository.save(asset_type_category_field)
+                if not asset_type_category_field:
+                    raise NotFoundError("Asset type category field not found")
 
+                for key, value in category_field.model_dump(
+                    exclude={"id", "options", "field_type", "field_is_required"}, exclude_none=True
+                ).items():
+                    if key == "field_order":
+                        setattr(asset_type_category_field, key, -value)
+                    else:
+                        setattr(asset_type_category_field, key, value)
+
+                incoming_option_ids = {
+                    option.id for option in category_field.options if option.id is not None
+                }
+                options_to_remove = [
+                    option
+                    for option in asset_type_category_field.options
+                    if option.id is not None and option.id not in incoming_option_ids
+                ]
+                for option in options_to_remove:
+                    asset_type_category_field.options.remove(option)
+                await self.repository.save(asset_type_category_field)
+                for option_data in category_field.options:
+                    if option_data.id is None:
+                        asset_type_category_field.options.append(
+                            AssetTypeCategoryFieldOption(
+                                option_id=option_data.option_id,
+                                option_label=option_data.option_label,
+                            )
+                        )
+                    else:
+                        existing_option = next(
+                            (
+                                o
+                                for o in asset_type_category_field.options
+                                if o.id == option_data.id
+                            ),
+                            None,
+                        )
+                        if existing_option is None:
+                            raise NotFoundError("Asset type category field option not found")
+                        existing_option.option_id = option_data.option_id
+                        existing_option.option_label = option_data.option_label
         all_field_orders = []
         for field in db_asset_type_details.fields:
-            if field.field_order in all_field_orders:
+            normalized_order = abs(field.field_order)
+            if normalized_order in all_field_orders:
                 raise BadRequestError("Duplicate field order found")
-            all_field_orders.append(field.field_order)
-            field.field_order = abs(field.field_order)
+            all_field_orders.append(normalized_order)
+            field.field_order = normalized_order
+        await self.repository.save(db_asset_type_details)
+        db_asset_type_details = await self.repository.get_one_or_none(
+            id=asset_type_category_id,
+            options=[
+                joinedload(self._model.user),
+                joinedload(self._model.user).joinedload(User.location),
+            ],
+        )
+        return db_asset_type_details
 
-        return await self.repository.save(db_asset_type_details)
 
     async def get_asset_type_category_by_id(self, asset_type_category_id: int, user_id: int):
         return await self.repository.get_one_or_none(user_id=user_id, id=asset_type_category_id)
