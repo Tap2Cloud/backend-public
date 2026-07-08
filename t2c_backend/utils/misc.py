@@ -125,3 +125,15 @@ def underscore(word: str) -> str:
 
 def get_full_name(first_name, last_name):
     return f"{first_name} {last_name}".strip()
+
+
+def gtin_check_digit(first13: str) -> int:
+    """Mod-10, alternating weights 3/1 from the right."""
+    total = 0
+    for i, ch in enumerate(reversed(first13)):
+        total += int(ch) * (3 if i % 2 == 0 else 1)
+    return (10 - (total % 10)) % 10
+
+
+def is_valid_gtin(gtin: str) -> bool:
+    return len(gtin) == 14 and gtin.isdigit() and int(gtin[-1]) == gtin_check_digit(gtin[:13])

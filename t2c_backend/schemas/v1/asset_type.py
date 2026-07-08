@@ -3,6 +3,7 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, conlist, model_validator
 from pydantic import Field as PydanticField
+from utils.misc import is_valid_gtin
 
 from t2c_backend.models import AssetType as AssetTypeModel
 from t2c_backend.models import AssetTypeField as AssetTypeFieldModel
@@ -58,6 +59,13 @@ class CreateAssetTypeRequest(BaseModel):
             return json.loads(value)
         return json.loads(value.file.read())
 
+    @model_validator(mode="after")
+    @classmethod
+    def validate_json(cls, value):
+        if value.gtin and not is_valid_gtin(value.gtin):
+            raise ValueError("Invalid GTIN format")
+        return value
+
 
 class UpdateAssetTypeRequest(BaseModel):
     name: str
@@ -70,6 +78,13 @@ class UpdateAssetTypeRequest(BaseModel):
     manufacturer: str | None
     gtin: str | None
     fields: conlist(BaseField, min_length=1)
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_json(cls, value):
+        if value.gtin and not is_valid_gtin(value.gtin):
+            raise ValueError("Invalid GTIN format")
+        return value
 
 
 class AssetTypeFieldOptions(BaseFieldOptions):
