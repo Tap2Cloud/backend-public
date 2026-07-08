@@ -17,7 +17,7 @@ class CreateAsset(BaseModel):
     device_id: str = Field(..., alias="deviceId")
     status: str
     serial_no: str | None = Field(..., alias="serialNo")
-    economic_operator: str | None = Field(..., alias="economicOperator")
+    economic_operator: str = Field(..., alias="economicOperator")
     manufacturing_date: int = Field(..., alias="manufacturingDate")
     asset_type: DisplayAssetType = Field(..., alias="assetType")
 
@@ -27,7 +27,7 @@ class CreateAsset(BaseModel):
 class UpdateAsset(BaseModel):
     status: str
     serial_no: str | None = Field(..., alias="serialNo")
-    economic_operator: str | None = Field(..., alias="economicOperator")
+    economic_operator: str = Field(..., alias="economicOperator")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,7 +40,7 @@ class AssetResponse(BaseModel):
     asset_type: AssetTypeResponse = Field(..., alias="assetType")
     status: str
     serial_no: str | None = Field(..., alias="serialNo")
-    economic_operator: str | None = Field(..., alias="economicOperator")
+    economic_operator: str = Field(..., alias="economicOperator")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -90,7 +90,7 @@ class DisplayAsset(BaseModel):
 class AssetPassResponse(BaseModel):
     id: int
     serial_no: str | None = Field(..., alias="serialNo")
-    economic_operator: str | None = Field(..., alias="economicOperator")
+    economic_operator: str = Field(..., alias="economicOperator")
     device_id: str = Field(..., alias="deviceId")
     pass_id: str = Field(..., alias="passId")
     asset_type: DisplayAssetType = Field(..., alias="assetType")
