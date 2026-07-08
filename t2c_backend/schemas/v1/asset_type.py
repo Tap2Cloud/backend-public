@@ -40,6 +40,7 @@ class CreateAssetTypeRequest(BaseModel):
     description: str
     weight: float | None
     manufacturer: str | None
+    gtin: str | None
     asset_type_category_id: int = PydanticField(..., alias="assetTypeCategoryId")
     fields: conlist(BaseField, min_length=1)
     typeplate_details: TypeplateRequest = PydanticField(None, alias="typeplateDetails")
@@ -67,6 +68,7 @@ class UpdateAssetTypeRequest(BaseModel):
     description: str
     weight: float | None
     manufacturer: str | None
+    gtin: str | None
     fields: conlist(BaseField, min_length=1)
 
 
@@ -146,6 +148,7 @@ class AssetTypeResponse(BaseModel):
     description: str
     weight: float | None
     manufacturer: str | None
+    gtin: str | None
     form: conlist(FormData, min_length=1)
     instruction_manuals: list[AssetTypeDocument] = PydanticField(None, alias="instructionManuals")
     asset_type_category: DisplayAssetTypeCategory = PydanticField(alias="assetTypeCategory")
@@ -168,6 +171,7 @@ class AssetTypeResponse(BaseModel):
             description=asset_type.description,
             weight=asset_type.weight,
             manufacturer=asset_type.manufacturer,
+            gtin=asset_type.gtin,
             form=[FormData.from_model(atf) for atf in asset_type.fields],
             instructionManuals=[
                 AssetTypeDocument.from_model(doc) for doc in instruction_manuals_data

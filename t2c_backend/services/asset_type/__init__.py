@@ -91,6 +91,7 @@ class AssetTypeService:
             description=asset_type_data.get("description"),
             weight=asset_type_data.get("weight"),
             manufacturer=asset_type_data.get("manufacturer"),
+            gtin=asset_type_data.get("gtin"),
             asset_type_category_id=asset_type_form.id,
             typeplate=typeplate,
         )
@@ -212,6 +213,7 @@ class AssetTypeService:
         db_asset_type.description = asset_type_details.description
         db_asset_type.weight = asset_type_details.weight
         db_asset_type.manufacturer = asset_type_details.manufacturer
+        db_asset_type.gtin = asset_type_details.gtin
 
         excluded_types = [InputType.image, InputType.file]
         db_asset_type.fields = [
