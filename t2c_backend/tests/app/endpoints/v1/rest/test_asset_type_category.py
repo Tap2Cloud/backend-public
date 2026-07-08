@@ -4,7 +4,7 @@ import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
 
-from utils.enums import InputType
+from t2c_backend.utils.enums import InputType
 
 
 @pytest.mark.order(5)

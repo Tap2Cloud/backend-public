@@ -145,7 +145,7 @@ class AssetTypeCategoryService:
                     raise NotFoundError("Asset type category field not found")
 
                 for key, value in category_field.model_dump(
-                    exclude={"id", "options", "field_type", "field_is_required"}, exclude_none=True
+                    exclude={"id", "options", "field_type"}, exclude_none=True
                 ).items():
                     if key == "field_order":
                         setattr(asset_type_category_field, key, -value)
@@ -200,7 +200,6 @@ class AssetTypeCategoryService:
             ],
         )
         return db_asset_type_details
-
 
     async def get_asset_type_category_by_id(self, asset_type_category_id: int, user_id: int):
         return await self.repository.get_one_or_none(user_id=user_id, id=asset_type_category_id)
