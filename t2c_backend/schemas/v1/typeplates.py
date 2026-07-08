@@ -16,7 +16,7 @@ class TypeplateImageRequest(BaseModel):
 
 class TypeplateRequest(BaseModel):
     test_results: str | None = Field(..., alias="testResults")
-    eu_id: str | None = Field(..., alias="euId")
+    eu_id: str = Field(..., alias="euId")
     carbon_footprint_label: str | None = Field(..., alias="carbonFootprintLabel")
 
     model_config = ConfigDict(from_attributes=True)
@@ -24,7 +24,7 @@ class TypeplateRequest(BaseModel):
 
 class UpdateTypeplateRequest(BaseModel):
     test_results: str | None = Field(..., alias="testResults")
-    eu_id: str | None = Field(..., alias="euId")
+    eu_id: str = Field(..., alias="euId")
     carbon_footprint_label: str | None = Field(..., alias="carbonFootprintLabel")
     typeplate_images: list[TypeplateImageRequest] | None = Field(None, alias="typeplateImages")
 
@@ -92,7 +92,7 @@ class TypeplateDocument(BaseModel):
 class TypeplateResponse(BaseModel):
     id: int
     test_results: str | None = Field(..., alias="testResults")
-    eu_id: str | None = Field(..., alias="euId")
+    eu_id: str = Field(..., alias="euId")
     carbon_footprint_label: str | None = Field(..., alias="carbonFootprintLabel")
     eu_file: TypeplateDocument | None = Field(..., alias="euFile")
     typeplate_images: list[TypeplateImage] | None = Field(..., alias="typeplateImages")
