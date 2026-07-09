@@ -213,6 +213,7 @@ def asset_type(fake: Faker) -> dict[str, str]:
         "description": fake.name(),
         "weight": fake.random_int(),
         "manufacturer": fake.name(),
+        "gtin": "09506000140445",
     }
 
 
@@ -227,6 +228,7 @@ def updated_asset_type(fake: Faker) -> dict[str, str]:
         "description": fake.name(),
         "weight": fake.random_int(),
         "manufacturer": fake.name(),
+        "gtin": "09506000140445",
     }
 
 

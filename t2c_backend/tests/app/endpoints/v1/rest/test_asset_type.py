@@ -23,14 +23,7 @@ def test_create_asset_type_string(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -70,14 +63,7 @@ def test_create_asset_type_string_for_second_user(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["second_string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -111,14 +97,7 @@ def test_create_asset_type_integer(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["integer_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -151,14 +130,7 @@ def test_create_asset_type_time(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["time_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -191,14 +163,7 @@ def test_create_asset_type_url(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["url_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -231,14 +196,7 @@ def test_create_asset_type_password(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["password_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -274,14 +232,7 @@ def test_create_asset_type_image(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["image_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -318,14 +269,7 @@ def test_create_asset_type_file(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["file_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -359,14 +303,7 @@ def test_create_asset_type_email(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["email_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -399,14 +336,7 @@ def test_create_asset_type_date(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["date_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -439,14 +369,7 @@ def test_create_asset_type_datetime(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["datetime_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -486,14 +409,7 @@ def test_create_asset_type_radio(
     asset_type_field["assetTypeFieldOptions"] = asset_type_field_options
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["radio_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -532,14 +448,7 @@ def test_create_asset_type_multiselect(
     asset_type_field["assetTypeFieldOptions"] = asset_type_field_options
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["multiselect_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -578,14 +487,7 @@ def test_create_asset_type_checkbox(
     asset_type_field["assetTypeFieldOptions"] = asset_type_field_options
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["checkbox_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -624,14 +526,7 @@ def test_create_asset_type_select(
     asset_type_field["assetTypeFieldOptions"] = asset_type_field_options
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["select_type_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -663,14 +558,7 @@ def test_create_asset_type_with_unauthenticated_client(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -702,14 +590,7 @@ def test_create_asset_type_with_false_typeplate_image(
         asset_type_field["fieldId"] = field["id"]
 
     asset_type_data = {
-        "name": asset_type["name"],
-        "videoTitle": asset_type["videoTitle"],
-        "videoLinks": asset_type["videoLinks"],
-        "webLink": asset_type["webLink"],
-        "webLinkTitle": asset_type["webLinkTitle"],
-        "description": asset_type["description"],
-        "weight": asset_type["weight"],
-        "manufacturer": asset_type["manufacturer"],
+        **asset_type,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplate_images": [{"id": "598f366d-5f24-4a08-ba30-afb411fb4c5e"}],
