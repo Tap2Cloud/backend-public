@@ -8,9 +8,9 @@ from inspect import isawaitable
 import tomlkit
 from schemas.v1.asset_pass import ResolvedRef
 from utils.enums import Gs1Standards, Scheme
-from utils.errors import BadRequestError
 
 from t2c_backend.core.db.session import get_session_context
+from t2c_backend.utils.errors import BadRequestError
 
 
 async def maybe_coroutine(func, *args, **kwargs):
