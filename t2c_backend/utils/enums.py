@@ -170,3 +170,17 @@ class DocumentFor(enum.StrEnum):
 
     def __str__(self) -> str:
         return self.value
+
+
+class Gs1Standards(enum.StrEnum):
+    AI_GTIN = "01"  # primary key: Global Trade Item Number
+    AI_SERIAL = "21"  # qualifier: serial number (unit-level)
+    AI_GIAI = "8004"  # primary key: Global Individual Asset Identifier
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class Scheme(enum.StrEnum):
+    GTIN = "GTIN"
+    GIAI = "GIAI"

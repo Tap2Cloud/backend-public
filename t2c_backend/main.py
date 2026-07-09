@@ -19,6 +19,7 @@ from t2c_backend.core.error_handlers import application_exception_handler
 from t2c_backend.core.event_handlers import lifespan
 from t2c_backend.core.middlewares.language import LanguageMiddleware
 from t2c_backend.core.middlewares.sqlalchemy import SQLAlchemyMiddleware
+from t2c_backend.endpoints import open_router as asset_pass_router
 from t2c_backend.endpoints.router import api_router
 from t2c_backend.utils.enums import ENVIRONMENT
 from t2c_backend.utils.errors import ApplicationError
@@ -80,6 +81,9 @@ class CustomFastAPI(FastAPI):
         to replace the route table instead of stacking a second one on top."""
         return api_router
 
+    def get_asset_pass_router(self):
+        return asset_pass_router
+
     def __init__(self) -> None:
         # Initialize the parent FastAPI class
         self.config = self.config_class()
@@ -99,6 +103,7 @@ class CustomFastAPI(FastAPI):
 
         # Include routers
         self.include_router(self.get_api_router(), prefix=self.config.API_STR)
+        self.include_router(self.get_asset_pass_router())
 
         # Add exception handlers
         self.add_exception_handler(ApplicationError, application_exception_handler)

@@ -6,6 +6,9 @@ from datetime import UTC, datetime
 from inspect import isawaitable
 
 import tomlkit
+from schemas.v1.asset_pass import ResolvedRef
+from utils.enums import Gs1Standards, Scheme
+from utils.errors import BadRequestError
 
 from t2c_backend.core.db.session import get_session_context
 
@@ -137,3 +140,32 @@ def gtin_check_digit(first13: str) -> int:
 
 def is_valid_gtin(gtin: str) -> bool:
     return len(gtin) == 14 and gtin.isdigit() and int(gtin[-1]) == gtin_check_digit(gtin[:13])
+
+
+def parse_pairs(gs1_path: str) -> list[tuple[str, str]]:
+    """'/01/x/21/y' -> [('01', 'x'), ('21', 'y')]. Path must be (AI, value) pairs."""
+    segs = [s for s in gs1_path.strip("/").split("/") if s]
+    if not segs or len(segs) % 2 != 0:
+        raise BadRequestError("malformed GS1 Digital Link path")
+    return [(segs[i], segs[i + 1]) for i in range(0, len(segs), 2)]
+
+
+def interpret(gs1_path: str) -> ResolvedRef:
+    """Turn a raw path into a scheme + the token to look up."""
+    pairs = parse_pairs(gs1_path)
+    ai_map = dict(pairs)  # AIs are unique within a valid DL URI
+    primary_ai, primary_value = pairs[0]
+
+    if primary_ai == str(Gs1Standards.AI_GTIN):
+        if not is_valid_gtin(primary_value):
+            raise BadRequestError("invalid GTIN (length or check digit)")
+        serial = ai_map.get(str(Gs1Standards.AI_SERIAL))
+        if not serial:
+            raise BadRequestError("GTIN asset requires a serial (AI 21)")
+        return ResolvedRef(scheme=Scheme.GTIN, token=serial, gtin=primary_value)
+
+    if primary_ai == str(Gs1Standards.AI_GIAI):
+        # GIAI is unit-level on its own — no serial qualifier expected.
+        return ResolvedRef(scheme=Scheme.GIAI, token=primary_value)
+
+    raise BadRequestError(f"unsupported primary identifier '{primary_ai}'")
