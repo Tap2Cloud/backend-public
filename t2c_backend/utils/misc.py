@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from inspect import isawaitable
 
 import tomlkit
-from fastapi import Request
 
 from t2c_backend.core.db.session import get_session_context
 from t2c_backend.schemas.v1.asset_pass import ResolvedRef
@@ -170,7 +169,3 @@ def interpret(gs1_path: str) -> ResolvedRef:
         return ResolvedRef(scheme=Scheme.GIAI, token=primary_value)
 
     raise BadRequestError(f"unsupported primary identifier '{primary_ai}'")
-
-
-async def real_ip(request: Request) -> str:
-    return request.headers.get("X-Forwarded-For", request.client.host).split(",")[0].strip()
