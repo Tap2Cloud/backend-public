@@ -80,7 +80,7 @@ def test_update_user_profile_without_image(
 @pytest.mark.order(80)
 def test_change_user_password(authenticated_client: TestClient, user_data, user_data_factory):
     response = authenticated_client.post(
-        "/api/v1/user/password/change/",
+        "/api/v1/user/password/change",
         json={
             "oldPassword": user_data["credentials"]["password"],
             "newPassword": user_data_factory()["credentials"]["password"],

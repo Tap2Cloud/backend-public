@@ -171,7 +171,7 @@ def test_get_asset_with_query_asset_type_name(
         [assettype["name"] for assettype in asset_type_container["asset_types"]["items"]]
     )
     response = authenticated_client.put(
-        f"/api/v1/asset/?q={asset_type_name}", json={"categories": None, "status": None}
+        f"/api/v1/asset?q={asset_type_name}", json={"categories": None, "status": None}
     )
 
     assert response.status_code == 200
@@ -181,7 +181,7 @@ def test_get_asset_with_query_asset_type_name(
 def test_get_asset_with_query_serial_no(authenticated_client: TestClient, asset_container):
     serial_no = random.choice([assets["serialNo"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.put(
-        f"/api/v1/asset/?q={serial_no}", json={"categories": None, "status": None}
+        f"/api/v1/asset?q={serial_no}", json={"categories": None, "status": None}
     )
 
     assert response.status_code == 200
@@ -196,7 +196,7 @@ def test_get_asset_with_query_serial_no_and_asset_type_name(
     )
     serial_no = random.choice([assets["serialNo"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.put(
-        f"/api/v1/asset/?q={serial_no}&q={asset_type_name}",
+        f"/api/v1/asset?q={serial_no}&q={asset_type_name}",
         json={"categories": None, "status": None},
     )
 
