@@ -19,5 +19,5 @@ async def get_asset_pass_by_pass_id(
 ):
     ref = interpret(gs1_path)
     return DetailedAssetPassResponse.from_model(
-        await services.asset_service.get_asset_pass_by_pass_id(pass_id=ref.token)
+        await services.asset_service.get_asset_pass_by_pass_id(pass_id=ref.token, gtin=ref.gtin)
     )

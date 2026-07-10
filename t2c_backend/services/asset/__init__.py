@@ -271,7 +271,7 @@ class AssetService:
             ],
         )
 
-    async def get_asset_pass_by_pass_id(self, pass_id: int):
+    async def get_asset_pass_by_pass_id(self, pass_id: int, gtin: str | None):
         asset = await self.repository.get_one_or_none(
             pass_id=pass_id,
             options=[
@@ -311,6 +311,9 @@ class AssetService:
 
         if not asset:
             raise NotFoundError(msg="No asset found")
+
+        if gtin and asset.asset_type.gtin != gtin:
+            raise NotFoundError(f"No asset found for {gtin} gtin")
 
         return asset
 
