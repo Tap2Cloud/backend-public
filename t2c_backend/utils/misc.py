@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from inspect import isawaitable
 
 import tomlkit
-from schemas.v1.asset_pass import ResolvedRef
+from t2c_backend.schemas.v1.asset_pass import ResolvedRef
 from utils.enums import Gs1Standards, Scheme
 
 from t2c_backend.core.db.session import get_session_context
