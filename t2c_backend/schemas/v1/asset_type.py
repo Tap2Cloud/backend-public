@@ -3,7 +3,6 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, conlist, model_validator
 from pydantic import Field as PydanticField
-from utils.misc import is_valid_gtin
 
 from t2c_backend.models import AssetType as AssetTypeModel
 from t2c_backend.models import AssetTypeField as AssetTypeFieldModel
@@ -14,6 +13,7 @@ from t2c_backend.schemas.v1.typeplates import (
     TypeplateRequest,
     TypeplateResponse,
 )
+from t2c_backend.utils.misc import is_valid_gtin
 
 
 class BaseFieldOptions(BaseModel):
