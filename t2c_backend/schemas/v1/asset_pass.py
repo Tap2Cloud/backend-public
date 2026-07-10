@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from utils.enums import Scheme
+
+from t2c_backend.utils.enums import Scheme
 
 
 class ResolvedRef(BaseModel):
