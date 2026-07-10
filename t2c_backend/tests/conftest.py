@@ -378,3 +378,8 @@ def invalid_id(fake: Faker):
 @pytest.fixture(scope="function")
 def word_to_search(fake: Faker):
     return fake.domain_name()
+
+
+@pytest.fixture(scope="session")
+def asset_pass_container():
+    return {}

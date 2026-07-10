@@ -272,9 +272,10 @@ def test_update_asset_with_unauthenticated_client(
 
 
 @pytest.mark.order(105)
-def test_list_asset_pass(authenticated_client: TestClient):
+def test_list_asset_pass(authenticated_client: TestClient, asset_pass_container):
     response = authenticated_client.get("/api/v1/asset-pass")
 
+    asset_pass_container.update({"asset_pass": response.json()})
     assert response.status_code == 200
 
 
