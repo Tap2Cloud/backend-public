@@ -13,6 +13,8 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from waygate.core.engine import WaygateEngine
+from waygate.fastapi import WaygateMiddleware
 
 from t2c_backend.config import Config
 from t2c_backend.core.error_handlers import application_exception_handler
@@ -47,7 +49,7 @@ def _fix_binary(node):
             _fix_binary(v)
 
 
-def get_middleware_stack(app_config):
+def get_middleware_stack(app_config, waygate_engine):
     return [
         Middleware(
             CORSMiddleware,
@@ -56,6 +58,9 @@ def get_middleware_stack(app_config):
             allow_methods=["*"],
             allow_headers=["*"],
         ),
+        # Enforces the @rate_limit (and other waygate) decorators. Without this
+        # middleware the decorators only tag routes; nothing checks the tags.
+        Middleware(WaygateMiddleware, engine=waygate_engine),
         Middleware(
             CorrelationIdMiddleware,
             header_name=app_config.REQUEST_ID_HEADER_NAME,
@@ -88,12 +93,17 @@ class CustomFastAPI(FastAPI):
         # Initialize the parent FastAPI class
         self.config = self.config_class()
 
+        # Owns all rate-limit / route-lifecycle state. Uses the default
+        # in-memory backend; swap in a RedisBackend to share counters across
+        # multiple workers/instances.
+        self.waygate_engine = WaygateEngine(current_env=str(self.config.ENVIRONMENT))
+
         super().__init__(
             title=self.config.PROJECT_NAME,
             version=self.config.project_meta["version"],
             debug=self.config.ENVIRONMENT != ENVIRONMENT.PRODUCTION,
             swagger_ui_parameters={"defaultModelsExpandDepth": -1},
-            middleware=get_middleware_stack(self.config),
+            middleware=get_middleware_stack(self.config, self.waygate_engine),
             lifespan=lifespan,
         )
 

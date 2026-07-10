@@ -25,6 +25,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.51",
     "tomlkit>=0.15.0",
     "uvicorn>=0.49.0",
+    "waygate[flags,rate-limit]>=0.2.0",
 ]
 
 [dependency-groups]
