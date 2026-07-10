@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Path
-from schemas.v1.asset import DetailedAssetPassResponse
-from utils.misc import DictContainer, interpret
 
+from t2c_backend.schemas.v1.asset import DetailedAssetPassResponse
 from t2c_backend.services import get_services
+from t2c_backend.utils.misc import DictContainer, interpret
 
 router = APIRouter()
 
