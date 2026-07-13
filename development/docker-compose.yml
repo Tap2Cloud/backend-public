@@ -24,5 +24,18 @@ services:
     networks:
       - t2c
 
+  t2c-redis:
+    image: redis:8.2-alpine
+    container_name: t2c-redis
+    hostname: t2c-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - t2c_redis_data:/data
+    networks:
+      - t2c
+
 volumes:
   t2c_postgresql_data:
+  t2c_redis_data:

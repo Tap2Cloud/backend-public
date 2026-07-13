@@ -18,9 +18,17 @@ async def _startup(app) -> None:
         echo=app.config.ENVIRONMENT != ENVIRONMENT.PRODUCTION,
     )
 
+    # Bring up the waygate backend and start its background listeners. With the
+    # Redis backend these keep rate-limit policies / route state in sync across
+    # instances via pub/sub; with the in-memory backend the listeners exit
+    # silently, so this is safe regardless of which backend is configured.
+    await app.waygate_engine.backend.startup()
+    await app.waygate_engine.start()
+
 
 async def _shutdown(app) -> None:
-    pass
+    await app.waygate_engine.stop()
+    await app.waygate_engine.backend.shutdown()
 
 
 @asynccontextmanager

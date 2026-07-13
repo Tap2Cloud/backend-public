@@ -35,6 +35,13 @@ class Config(BaseSettings):
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
 
+    # Redis connection URL for the waygate backend. When set, rate-limit
+    # counters and route lifecycle state are stored in Redis so they are
+    # shared across every app instance/worker (required for correct rate
+    # limiting when running more than one instance). Leave unset to fall
+    # back to the in-memory backend (single-process only).
+    REDIS_URL: str | None = None
+
     APP_HOST: str
     APP_PORT: int
 

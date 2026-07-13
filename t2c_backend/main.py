@@ -93,10 +93,20 @@ class CustomFastAPI(FastAPI):
         # Initialize the parent FastAPI class
         self.config = self.config_class()
 
-        # Owns all rate-limit / route-lifecycle state. Uses the default
-        # in-memory backend; swap in a RedisBackend to share counters across
-        # multiple workers/instances.
-        self.waygate_engine = WaygateEngine(current_env=str(self.config.ENVIRONMENT))
+        # Owns all rate-limit / route-lifecycle state. With REDIS_URL set we
+        # use a RedisBackend so rate-limit counters (and route state) are shared
+        # across every worker/instance — waygate automatically routes counters
+        # to RedisRateLimitStorage using the same URL. Without it we fall back
+        # to the in-memory backend, which is correct only for a single process.
+        waygate_backend = None
+        if self.config.REDIS_URL:
+            from waygate.core.backends.redis import RedisBackend
+
+            waygate_backend = RedisBackend(url=self.config.REDIS_URL)
+        self.waygate_engine = WaygateEngine(
+            backend=waygate_backend,
+            current_env=str(self.config.ENVIRONMENT),
+        )
 
         super().__init__(
             title=self.config.PROJECT_NAME,
