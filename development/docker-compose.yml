@@ -30,7 +30,7 @@ services:
     hostname: t2c-redis
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-root}"]
     volumes:
       - t2c_redis_data:/data
     networks:
