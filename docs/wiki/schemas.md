@@ -32,7 +32,7 @@ Each domain has request and response schemas. Highlights:
 - **Asset Type Category** — `CreateAssetTypeCategoryRequest`/`UpdateAssetTypeCategoryRequest` with validators enforcing per-`InputType` option rules and rejecting duplicate field orders/names; `Field`/`FieldOption`, `AssetTypeCategoryResponse`, `DisplayAssetTypeCategory`.
 - **Audit** — `CreateAuditTask`, `CreateAudit` (validates `inspection_date <= valid_until`), `AuditResponse`, `AssetAuditResponse`.
 - **Service** — `CreateService` (validates `expireDate >= serviceDate`), `UpdateService`, `ServiceResponse`, `AssetServiceResponse`.
-- **Organization / Location / Taxonomy** — layered inheritance (`DisplayOrganization → Organization → DetailedOrganization → OrganizationDetails`; `LocationCreateRequest → LocationBaseResponse → Location`); `Taxonomy` is dual-use.
+- **Organization / Location / Taxonomy** — layered inheritance; `DisplayOrganization` is the common base with two branches off it: `Organization` (adds `taxonomy`) and `DetailedOrganization → OrganizationDetails` (adds `locationCount`/`userCount`/`roleCount`). `LocationCreateRequest → LocationBaseResponse → Location`; `Taxonomy` is dual-use.
 - **User** — `UserLogin`/`UserLoginResponse` (reuses `TokenResponse`), `UserRegisterRequest`, `ChangePasswordRequest`, `DisplayUser`/`UserResponse`/`OrganizationUser`, and `OrganizationUsersCustomPage` (a `CustomPage` subclass adding `extra: UserCount`).
 - **Dashboard / Documents / Health / Role** — flat counters (`DashboardResponse`), `DocumentResponse`, `Health` (the only schema without `from_attributes`), `RoleBase`/`RoleCreate`.
 
