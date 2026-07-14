@@ -13,6 +13,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from waygate.core.backends.redis import RedisBackend
 from waygate.core.engine import WaygateEngine
 from waygate.fastapi import WaygateMiddleware
 
@@ -98,13 +99,8 @@ class CustomFastAPI(FastAPI):
         # across every worker/instance — waygate automatically routes counters
         # to RedisRateLimitStorage using the same URL. Without it we fall back
         # to the in-memory backend, which is correct only for a single process.
-        waygate_backend = None
-        if self.config.REDIS_URL:
-            from waygate.core.backends.redis import RedisBackend
-
-            waygate_backend = RedisBackend(url=self.config.REDIS_URL)
         self.waygate_engine = WaygateEngine(
-            backend=waygate_backend,
+            backend=RedisBackend(url=self.config.REDIS_URL),
             current_env=str(self.config.ENVIRONMENT),
         )
 
@@ -232,16 +228,4 @@ class CustomFastAPI(FastAPI):
         return instance
 
 
-def __getattr__(name):
-    # Build the standalone app lazily, only when `app` is explicitly imported
-    # (e.g. by this package's own launcher). Importing CustomFastAPI or any other
-    # name must NOT build an app: downstream projects install this package as a
-    # library, subclass CustomFastAPI, and build their own app with their own
-    # Config. Eagerly creating an app here used the base Config, whose
-    # project_meta reads `<package>/pyproject.toml` — which does not exist once
-    # installed into site-packages.
-    if name == "app":
-        app = asyncio.run(CustomFastAPI.create())
-        globals()["app"] = app
-        return app
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+app = asyncio.run(CustomFastAPI.create())

@@ -40,7 +40,7 @@ class Config(BaseSettings):
     # shared across every app instance/worker (required for correct rate
     # limiting when running more than one instance). Leave unset to fall
     # back to the in-memory backend (single-process only).
-    REDIS_URL: str | None = None
+    REDIS_URL: str
 
     APP_HOST: str
     APP_PORT: int
