@@ -1,3 +1,4 @@
+import asyncio
 import random
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
@@ -7,7 +8,7 @@ import alembic.config
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from main import app
+from main import CustomFastAPI
 from tests.utils.misc import Pagination
 from utils.enums import (
     AssetStatus,
@@ -97,17 +98,31 @@ def database_migration() -> None:
     alembic.config.main(argv=alembic_args)
 
 
+def _build_app() -> CustomFastAPI:
+    """Build a fresh app instance.
+
+    Each test client gets its own app (and therefore its own waygate engine),
+    mirroring production where every worker process is a separate instance with
+    its own engine and event loop. Sharing a single app across two ``TestClient``
+    contexts starts/stops the same engine on two different event loops, so at
+    teardown ``waygate_engine.stop()`` awaits the global-config-listener task
+    from another loop and raises
+    ``RuntimeError: ... got Future ... attached to a different loop``.
+    """
+    return asyncio.run(CustomFastAPI.create())
+
+
 @pytest.fixture(scope="session")
 def client(database_migration) -> Generator:
-    """Return the test client."""
-    with TestClient(app) as c:
+    """Return the (unauthenticated) test client."""
+    with TestClient(_build_app()) as c:
         yield c
 
 
 @pytest.fixture(scope="session")
 def authenticated_client(database_migration, user_data) -> Generator:
     """Return the authenticated test client."""
-    with TestClient(app) as c:
+    with TestClient(_build_app()) as c:
         r = c.post("/api/v1/login", json=user_data["credentials"])
         c.headers.update({"Authorization": f"Bearer {r.json()['access_token']}"})
         yield c
