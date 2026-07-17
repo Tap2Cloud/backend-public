@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-13T00:00:00Z",
-  "commit_hash": "401ac3e135b6a6dc1738f89f1e733a2f31dc9670",
+  "generated_at": "2026-07-17T00:00:00Z",
+  "commit_hash": "4c081229665eefbb724ce3b9be010e7d8d79a18b",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
   "component_count": 315,
@@ -140,6 +140,15 @@
         "t2c_backend.tests.app.endpoints.v1.rest"
       ],
       "doc_file": "tests.md"
+    },
+    "Development Setup": {
+      "components": [
+        "development.docker-compose",
+        "pyproject.toml",
+        "uv.lock",
+        ".python-version"
+      ],
+      "doc_file": "development-setup.md"
     }
   },
   "files_generated": [
@@ -155,6 +164,7 @@
     "utilities.md",
     "database-migrations.md",
     "tests.md",
+    "development-setup.md",
     "extending.md"
   ]
 }
