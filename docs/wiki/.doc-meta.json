@@ -58,6 +58,7 @@
     "security-and-permissions.md",
     "clients.md",
     "utilities.md",
-    "database-migrations.md"
+    "database-migrations.md",
+    "extending.md"
   ]
 }

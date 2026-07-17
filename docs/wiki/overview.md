@@ -43,6 +43,7 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
 | [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
+| [Extending Tap2Cloud](extending.md) | How to install the core as a library and add your own models, schemas, services, clients, and endpoints in a private repo |
 
 ## Technology Stack
 
@@ -62,6 +63,6 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 2. **Database** — run `alembic upgrade head` to create the schema and seed static data. See [Database Migrations](database-migrations.md).
 3. **Run** — `python launcher.py` starts Gunicorn with Uvicorn workers; the OpenAPI docs are served by FastAPI under the app's `/api` prefix.
 4. **Orientation** — start with [Application Bootstrap](application-bootstrap.md) to understand how the app is assembled and how clients/services are registered, then read [Core Infrastructure](core-infrastructure.md) (sessions, repository) and [API Endpoints](api-endpoints.md) (request flow). The [Data Models](data-models.md) ER structure is the best map of the domain.
-5. **Extending** — install this package as a library, subclass `CustomFastAPI` with your own `config_class` and `get_api_router()`, and register additional clients/services via the extension `setup(app)` pattern.
+5. **Extending** — install this package as a library, subclass `CustomFastAPI` with your own `config_class` and `get_api_router()`, and register additional clients/services via the extension `setup(app)` pattern. See the full walkthrough in [Extending Tap2Cloud](extending.md).
 
 > **Open-core note:** some capabilities — parts of organizational management, advanced access control, enterprise identity, and the concrete S3 storage backend — are provided through separate proprietary modules and are not part of this repository.
