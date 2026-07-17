@@ -125,13 +125,6 @@ class UserService:
 
         return True
 
-    async def delete_users(self, user_id: int):
-        db_user = await self.repository.get_one_or_none(id=user_id)
-        if not db_user:
-            raise NotFoundError("User not found")
-        await self.repository.delete(id=user_id)
-        return True
-
     async def register_user(
         self,
         email: str,

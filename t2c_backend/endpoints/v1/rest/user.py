@@ -26,9 +26,11 @@ async def delete_user_handler(
     return Response(status_code=204)
 
 
-@router.delete("/org/user/{userID}/{cascadeOrg}", operation_id="delete user by id", status_code=200)
+@router.delete(
+    "/organization/user/{userId}/{cascadeOrg}", operation_id="delete user by id", status_code=200
+)
 async def delete_user(
-    user_id: int = Path(..., alias="userID"),
+    user_id: int = Path(..., alias="userId"),
     cascade_org: bool = Path(..., alias="cascadeOrg"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"org_user_delete": True})),
     services: DictContainer = Depends(get_services),
