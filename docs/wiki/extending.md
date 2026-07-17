@@ -520,15 +520,6 @@ in Step 2 — imports the module and calls its `setup(app)`. The client is then 
 the app: `app.clients.warranty_provider`. This is exactly how services reach the core clients, e.g.
 `self.app.clients.cryptography.encode(...)` in `AssetService`.
 
-> **`teardown` is optional — and does *not* run on app shutdown.** `load_extension` only *requires*
-> `setup`. A `teardown(app)` function, if present, is invoked by `_call_module_finalizers` **only when a
-> `setup()` raises** (to roll back a half-loaded extension) or if you explicitly unload the module. The
-> normal lifespan shutdown (`event_handlers._shutdown`) does not unload extensions, so a `teardown` you
-> write for cleanup will not fire at process exit. Because of this, do **not** allocate long-lived
-> resources (open sockets, `aiohttp.ClientSession`, pools) eagerly in `setup()` expecting `teardown` to
-> release them — create them lazily (as above) and/or register cleanup with FastAPI's own lifespan if you
-> truly need it. For most clients, `setup()` alone is all you need.
-
 ---
 
 ## Step 9 — Launcher
