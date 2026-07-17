@@ -101,20 +101,28 @@ class UserService:
 
         return user
 
-    async def delete_user(self, user_id: int, location_id: int) -> bool:
-        db_user = await self.repository.get_one_or_none(id=user_id)
+    async def delete_user(self, user_id: int, location_id: int, cascade_org: bool) -> bool:
+        db_user = await self.repository.get_one_or_none(
+            id=user_id, options=[joinedload(User.location)]
+        )
 
-        if not db_user:
+        if not db_user or db_user.location_id != location_id:
             raise NotFoundError("User not found")
 
         user_locations = await self.repository.exists(
             id__ne=user_id,
             location_id=location_id,
         )
-        if not user_locations:
+
+        if user_locations:
+            await self.repository.delete(id=db_user.id)
+        elif cascade_org:
+            await self.app.services.organization_service.delete_organization(
+                organization_id=db_user.location.organization_id
+            )
+        else:
             raise BadRequestError(msg="Unable to delete this user")
 
-        await self.repository.delete(id=db_user.id)
         return True
 
     async def delete_users(self, user_id: int):
