@@ -43,6 +43,7 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
 | [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
+| [Tests](tests.md) | End-to-end integration test suite: ordered, stateful `TestClient` scenarios over a migrated database, with Faker fixtures and shared container pipelines |
 | [Extending Tap2Cloud](extending.md) | How to install the core as a library and add your own models, schemas, services, clients, and endpoints in a private repo |
 
 ## Technology Stack
