@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-07-17T00:00:00Z",
+  "commit_hash": "4c081229665eefbb724ce3b9be010e7d8d79a18b",
+  "repo_name": "backend-public",
+  "output_path": "docs/wiki",
+  "component_count": 315,
+  "languages": [
+    "python",
+    "javascript"
+  ],
+  "module_tree": {
+    "Application Bootstrap": {
+      "components": [
+        "t2c_backend.main.CustomFastAPI",
+        "t2c_backend.config.Config",
+        "t2c_backend.core.event_handlers.lifespan",
+        "t2c_backend.core.error_handlers.application_exception_handler",
+        "launcher.StandaloneApplication",
+        "launcher.setup_logging"
+      ],
+      "doc_file": "application-bootstrap.md"
+    },
+    "Core Infrastructure": {
+      "components": [
+        "t2c_backend.core.db.engine.Engine",
+        "t2c_backend.core.db.session",
+        "t2c_backend.core.db.base",
+        "t2c_backend.core.repository.BaseRepository",
+        "t2c_backend.core.pagination.CustomPage",
+        "t2c_backend.core.middlewares.sqlalchemy.SQLAlchemyMiddleware",
+        "t2c_backend.core.middlewares.language.LanguageMiddleware",
+        "t2c_backend.core.i18n.TranslationWrapper"
+      ],
+      "doc_file": "core-infrastructure.md"
+    },
+    "Data Models": {
+      "components": [
+        "t2c_backend.models.organization.Organization",
+        "t2c_backend.models.location.Location",
+        "t2c_backend.models.user.User",
+        "t2c_backend.models.role.Role",
+        "t2c_backend.models.asset.Asset",
+        "t2c_backend.models.asset_type.AssetType",
+        "t2c_backend.models.asset_type_category.AssetTypeCategory",
+        "t2c_backend.models.typeplate.Typeplate",
+        "t2c_backend.models.audit.Audit",
+        "t2c_backend.models.service.Service",
+        "t2c_backend.models.taxonomy.Taxonomy",
+        "t2c_backend.models.documents.Document"
+      ],
+      "doc_file": "data-models.md"
+    },
+    "Schemas": {
+      "components": [
+        "t2c_backend.schemas.v1.token.Token",
+        "t2c_backend.schemas.v1.token.AccessToken",
+        "t2c_backend.schemas.v1.token.RefreshToken",
+        "t2c_backend.schemas.v1.asset",
+        "t2c_backend.schemas.v1.asset_type",
+        "t2c_backend.schemas.v1.user",
+        "t2c_backend.schemas.v1.image.Image"
+      ],
+      "doc_file": "schemas.md"
+    },
+    "API Endpoints": {
+      "components": [
+        "t2c_backend.endpoints.router.api_router",
+        "t2c_backend.endpoints.v1.rest.authentication",
+        "t2c_backend.endpoints.v1.rest.register",
+        "t2c_backend.endpoints.v1.rest.token",
+        "t2c_backend.endpoints.v1.rest.asset",
+        "t2c_backend.endpoints.v1.rest.asset_type",
+        "t2c_backend.endpoints.v1.rest.organization",
+        "t2c_backend.endpoints.v1.rest.user"
+      ],
+      "doc_file": "api-endpoints.md"
+    },
+    "Services": {
+      "components": [
+        "t2c_backend.services.authentication.Authentication",
+        "t2c_backend.services.user.UserService",
+        "t2c_backend.services.user_email_token.UserEmailTokenService",
+        "t2c_backend.services.organization.OrganizationService",
+        "t2c_backend.services.location.LocationService",
+        "t2c_backend.services.role.RoleService",
+        "t2c_backend.services.asset.AssetService",
+        "t2c_backend.services.asset_type.AssetTypeService",
+        "t2c_backend.services.asset_type_category.AssetTypeCategoryService",
+        "t2c_backend.services.typeplate.TypeplateService",
+        "t2c_backend.services.service.ServiceService",
+        "t2c_backend.services.audit.AuditService",
+        "t2c_backend.services.dashboard.DashboardService",
+        "t2c_backend.services.taxonomy.TaxonomyService"
+      ],
+      "doc_file": "services.md"
+    },
+    "Security & Permissions": {
+      "components": [
+        "t2c_backend.core.security.JWTAPIBearer",
+        "t2c_backend.core.security.JWTAPIAccessTokenBearer",
+        "t2c_backend.core.security.JWTAPIRefreshTokenBearer",
+        "t2c_backend.core.permissions.Permissions",
+        "t2c_backend.core.permissions.BaseFlags"
+      ],
+      "doc_file": "security-and-permissions.md"
+    },
+    "Clients": {
+      "components": [
+        "t2c_backend.clients.token_backend.TokenBackend",
+        "t2c_backend.clients.cryptography.Cryptography",
+        "t2c_backend.clients.storage.Storage",
+        "t2c_backend.clients.storage.disk.DiskStorage",
+        "t2c_backend.clients.storage.s3.S3Storage",
+        "t2c_backend.clients.storage.interface.StorageInterface"
+      ],
+      "doc_file": "clients.md"
+    },
+    "Utilities": {
+      "components": [
+        "t2c_backend.utils.enums",
+        "t2c_backend.utils.errors.ApplicationError",
+        "t2c_backend.utils.misc.DictContainer",
+        "t2c_backend.utils.misc.underscore"
+      ],
+      "doc_file": "utilities.md"
+    },
+    "Database Migrations": {
+      "components": [
+        "alembic.env.run_migrations_online",
+        "alembic.env.run_async_migrations",
+        "alembic.versions.pkg_0001_init_tables",
+        "alembic.versions.pkg_0002_insert_static_data"
+      ],
+      "doc_file": "database-migrations.md"
+    },
+    "Tests": {
+      "components": [
+        "t2c_backend.tests.conftest",
+        "t2c_backend.tests.utils.misc.Pagination",
+        "t2c_backend.tests.app.endpoints.v1.rest"
+      ],
+      "doc_file": "tests.md"
+    },
+    "Development Setup": {
+      "components": [
+        "development.docker-compose",
+        "pyproject.toml",
+        "uv.lock",
+        ".python-version"
+      ],
+      "doc_file": "development-setup.md"
+    }
+  },
+  "files_generated": [
+    "overview.md",
+    "application-bootstrap.md",
+    "core-infrastructure.md",
+    "data-models.md",
+    "schemas.md",
+    "api-endpoints.md",
+    "services.md",
+    "security-and-permissions.md",
+    "clients.md",
+    "utilities.md",
+    "database-migrations.md",
+    "tests.md",
+    "development-setup.md",
+    "extending.md"
+  ]
+}
