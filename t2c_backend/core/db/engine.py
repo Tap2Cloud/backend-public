@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from t2c_backend.core.db.session import get_session_context, routing_session_class
 
@@ -32,12 +33,14 @@ class Engine:
                 pool_recycle=3600,
                 echo=echo,
                 echo_pool="debug",
+                poolclass=NullPool,
             ),
             "reader": create_async_engine(
                 self.url,
                 pool_recycle=3600,
                 echo=echo,
                 echo_pool="debug",
+                poolclass=NullPool,
             ),
         }
         self.async_session_factory = self.async_session_factory_creator(expire_on_commit=False)
