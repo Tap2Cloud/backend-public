@@ -22,7 +22,7 @@ async def delete_user_handler(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
-    await services.user_service.delete_user(token.user_id, token.location_id, cascade_org)
+    await services.user_service.delete_user(token.user_id, token.organization_id, cascade_org)
     return Response(status_code=204)
 
 
@@ -35,7 +35,7 @@ async def delete_user(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"org_user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
-    await services.user_service.delete_user(user_id, token.location_id, cascade_org)
+    await services.user_service.delete_user(user_id, token.organization_id, cascade_org)
     return Response(status_code=200)
 
 
