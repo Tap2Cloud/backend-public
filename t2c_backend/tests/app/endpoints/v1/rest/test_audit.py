@@ -6,7 +6,7 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(80)
+@pytest.mark.order(121)
 def test_create_audit_task1_with_document(
     audit_task,
     audit_task_container,
@@ -27,7 +27,7 @@ def test_create_audit_task1_with_document(
     assert response.status_code == 201
 
 
-@pytest.mark.order(81)
+@pytest.mark.order(122)
 def test_create_audit_task2_without_document(
     audit_task,
     audit_task_container,
@@ -44,7 +44,7 @@ def test_create_audit_task2_without_document(
     assert response.status_code == 201
 
 
-@pytest.mark.order(82)
+@pytest.mark.order(123)
 def test_create_audit_task_with_document_and_without_task_name(
     audit_task,
     audit_task_container,
@@ -62,7 +62,7 @@ def test_create_audit_task_with_document_and_without_task_name(
     assert response.status_code == 422
 
 
-@pytest.mark.order(83)
+@pytest.mark.order(124)
 def test_create_audit_task_with_unauthenticated_client(client: TestClient, audit_task):
     response = client.post(
         "/api/v1/audit/task",
@@ -72,7 +72,7 @@ def test_create_audit_task_with_unauthenticated_client(client: TestClient, audit
     assert response.status_code == 401
 
 
-@pytest.mark.order(84)
+@pytest.mark.order(125)
 def test_create_audit(
     authenticated_client: TestClient, audit, audit_task_container, asset_container, audit_container
 ):
@@ -87,7 +87,7 @@ def test_create_audit(
     assert response.status_code == 201
 
 
-@pytest.mark.order(85)
+@pytest.mark.order(126)
 def test_create_audit_without_audit_task(
     authenticated_client: TestClient, audit, audit_task_container, asset_container
 ):
@@ -98,7 +98,7 @@ def test_create_audit_without_audit_task(
     assert response.status_code == 400
 
 
-@pytest.mark.order(86)
+@pytest.mark.order(127)
 def test_create_audit_with_audit_task_only(
     authenticated_client: TestClient, audit, audit_task_container, asset_container
 ):
@@ -123,7 +123,7 @@ def test_create_audit_with_invalid_value(
     assert response.status_code == 400
 
 
-@pytest.mark.order(87)
+@pytest.mark.order(128)
 def test_create_audit_with_unauthenticated_client(
     client: TestClient, audit, audit_task_container, asset_container
 ):
@@ -136,7 +136,7 @@ def test_create_audit_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(88)
+@pytest.mark.order(128)
 def test_create_audit_with_fake_asset_id(
     authenticated_client: TestClient, audit, audit_task_container, fake: Faker
 ):
@@ -149,14 +149,14 @@ def test_create_audit_with_fake_asset_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(89)
+@pytest.mark.order(129)
 def test_get_audit(authenticated_client: TestClient):
     response = authenticated_client.get("/api/v1/audit")
 
     assert response.status_code == 200
 
 
-@pytest.mark.order(90)
+@pytest.mark.order(130)
 def test_get_audit_with_query_serial_no(authenticated_client: TestClient, asset_container):
     serial_no = random.choice([assets["serialNo"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.get(f"/api/v1/audit?q={serial_no}")
@@ -164,7 +164,7 @@ def test_get_audit_with_query_serial_no(authenticated_client: TestClient, asset_
     assert response.status_code == 200
 
 
-@pytest.mark.order(91)
+@pytest.mark.order(131)
 def test_get_audit_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):
@@ -176,7 +176,7 @@ def test_get_audit_with_query_asset_type_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(92)
+@pytest.mark.order(132)
 def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient, fake: Faker):
     start_date = fake.date_between(start_date="-30d", end_date="-5d")
     end_date = fake.date_between(start_date=start_date, end_date="today")
@@ -192,7 +192,7 @@ def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient,
     assert response.status_code == 200
 
 
-@pytest.mark.order(93)
+@pytest.mark.order(133)
 def test_get_audit_with_valid_until_filter(authenticated_client: TestClient, fake: Faker):
     valid_start_date = fake.date_between(start_date="+1d", end_date="+30d")
     valid_end_date = fake.date_between(start_date=valid_start_date, end_date="+60d")
@@ -208,7 +208,7 @@ def test_get_audit_with_valid_until_filter(authenticated_client: TestClient, fak
     assert response.status_code == 200
 
 
-@pytest.mark.order(94)
+@pytest.mark.order(134)
 def test_get_audit_with_is_audit_filter(authenticated_client: TestClient, fake: Faker):
     response = authenticated_client.get(
         "/api/v1/audit",
@@ -220,14 +220,14 @@ def test_get_audit_with_is_audit_filter(authenticated_client: TestClient, fake: 
     assert response.status_code == 200
 
 
-@pytest.mark.order(95)
+@pytest.mark.order(135)
 def test_get_audit_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/audit")
 
     assert response.status_code == 401
 
 
-@pytest.mark.order(96)
+@pytest.mark.order(136)
 def test_download_audit_document(authenticated_client: TestClient, audit_container):
     audit = audit_container[1]
     audit_id = audit.get("id")
@@ -239,7 +239,7 @@ def test_download_audit_document(authenticated_client: TestClient, audit_contain
     assert response.status_code == 200
 
 
-@pytest.mark.order(97)
+@pytest.mark.order(137)
 def test_generate_audit_report(authenticated_client: TestClient, audit_container):
     audit_id = audit_container[1].get("id")
     asset_id = audit_container[0].get("asset_id")

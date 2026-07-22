@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from utils.enums import AssetStatus
 
 
-@pytest.mark.order(40)
+@pytest.mark.order(86)
 def test_create_asset(
     authenticated_client: TestClient,
     fake: Faker,
@@ -32,7 +32,7 @@ def test_create_asset(
     assert response.status_code == 201
 
 
-@pytest.mark.order(41)
+@pytest.mark.order(86)
 def test_create_asset_for_second_user(
     authenticated_client: TestClient,
     fake: Faker,
@@ -60,6 +60,7 @@ def test_create_asset_for_second_user(
     assert response.status_code == 201
 
 
+@pytest.mark.order(87)
 def test_create_asset_with_unauthenticated_client(
     client: TestClient, asset, asset_type_container, asset_container, container
 ):
@@ -74,6 +75,7 @@ def test_create_asset_with_unauthenticated_client(
     assert response.status_code == 401
 
 
+@pytest.mark.order(87)
 def test_create_asset_with_fake_location(
     authenticated_client: TestClient,
     fake: Faker,
@@ -100,6 +102,7 @@ def test_create_asset_with_fake_location(
     assert response.status_code == 404
 
 
+@pytest.mark.order(87)
 def test_create_asset_with_fake_asset_type(
     authenticated_client: TestClient,
     fake: Faker,
@@ -126,13 +129,14 @@ def test_create_asset_with_fake_asset_type(
     assert response.status_code == 404
 
 
+@pytest.mark.order(87)
 def test_get_asset_with_unauthenticated_client(client: TestClient):
     response = client.put("/api/v1/asset", json={"categories": None, "status": None})
 
     assert response.status_code == 401
 
 
-@pytest.mark.order(42)
+@pytest.mark.order(88)
 def test_get_asset(authenticated_client: TestClient, asset_container):
     response = authenticated_client.put("/api/v1/asset", json={"categories": None, "status": None})
     asset_container["asset"] = response.json()
@@ -140,7 +144,7 @@ def test_get_asset(authenticated_client: TestClient, asset_container):
     assert response.status_code == 200
 
 
-@pytest.mark.order(43)
+@pytest.mark.order(89)
 def test_get_asset_with_filter_status(authenticated_client: TestClient, asset_container):
     response = authenticated_client.put(
         "/api/v1/asset",
@@ -151,7 +155,7 @@ def test_get_asset_with_filter_status(authenticated_client: TestClient, asset_co
     assert response.json()["items"][0]["status"] == asset_container["asset"]["items"][0]["status"]
 
 
-@pytest.mark.order(44)
+@pytest.mark.order(90)
 def test_get_asset_with_filter_category(authenticated_client: TestClient, asset_container):
     category = asset_container["asset"]["items"][0]["assetType"]["assetTypeCategory"]
 
@@ -163,7 +167,7 @@ def test_get_asset_with_filter_category(authenticated_client: TestClient, asset_
     assert response.json()["items"][0]["assetType"]["assetTypeCategory"] == category
 
 
-@pytest.mark.order(45)
+@pytest.mark.order(91)
 def test_get_asset_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):
@@ -177,7 +181,7 @@ def test_get_asset_with_query_asset_type_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(46)
+@pytest.mark.order(92)
 def test_get_asset_with_query_serial_no(authenticated_client: TestClient, asset_container):
     serial_no = random.choice([assets["serialNo"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.put(
@@ -187,7 +191,7 @@ def test_get_asset_with_query_serial_no(authenticated_client: TestClient, asset_
     assert response.status_code == 200
 
 
-@pytest.mark.order(47)
+@pytest.mark.order(93)
 def test_get_asset_with_query_serial_no_and_asset_type_name(
     authenticated_client: TestClient, asset_container, asset_type_container
 ):
@@ -203,7 +207,7 @@ def test_get_asset_with_query_serial_no_and_asset_type_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(50)
+@pytest.mark.order(94)
 def test_get_asset_by_id(authenticated_client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = authenticated_client.get(f"/api/v1/asset/{asset_id}")
@@ -212,12 +216,14 @@ def test_get_asset_by_id(authenticated_client: TestClient, asset_container):
     assert response.status_code == 200
 
 
+@pytest.mark.order(95)
 def test_get_asset_by_invalid_id(authenticated_client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = authenticated_client.get(f"/api/v1/asset/{asset_id + 9999999}")
     assert response.status_code == 404
 
 
+@pytest.mark.order(95)
 def test_get_asset_by_unauthenticated_client(client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = client.get(f"/api/v1/asset/{asset_id}")
@@ -225,7 +231,7 @@ def test_get_asset_by_unauthenticated_client(client: TestClient, asset_container
     assert response.status_code == 401
 
 
-@pytest.mark.order(51)
+@pytest.mark.order(96)
 def test_update_asset(authenticated_client: TestClient, asset_container, update_asset):
     asset_id = asset_container["asset_to_update"]["id"]
 
@@ -243,6 +249,7 @@ def test_update_asset(authenticated_client: TestClient, asset_container, update_
     )
 
 
+@pytest.mark.order(97)
 def test_update_asset_with_invalid_id(
     authenticated_client: TestClient, asset_container, update_asset
 ):
@@ -257,6 +264,7 @@ def test_update_asset_with_invalid_id(
     assert response.status_code == 404
 
 
+@pytest.mark.order(97)
 def test_update_asset_with_unauthenticated_client(
     client: TestClient, asset_container, update_asset
 ):
@@ -271,14 +279,14 @@ def test_update_asset_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(105)
+@pytest.mark.order(98)
 def test_list_asset_pass(authenticated_client: TestClient):
     response = authenticated_client.get("/api/v1/asset-pass")
 
     assert response.status_code == 200
 
 
-@pytest.mark.order(106)
+@pytest.mark.order(99)
 def test_list_asset_pass_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/asset-pass")
 
