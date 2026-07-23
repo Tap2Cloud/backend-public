@@ -376,3 +376,13 @@ def invalid_id(fake: Faker):
 @pytest.fixture(scope="function")
 def word_to_search(fake: Faker):
     return fake.domain_name()
+
+
+@pytest.fixture(scope="function")
+def organization_role(fake: Faker):
+    return {
+        "name": fake.first_name(),
+        "permissions": [
+            fake.last_name(),
+        ],
+    }

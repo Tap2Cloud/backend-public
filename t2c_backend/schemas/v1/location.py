@@ -40,7 +40,7 @@ class LocationUpdateRequest(LocationCreateRequest):
 
 class LocationBaseResponse(LocationCreateRequest):
     id: int
-    organization: DisplayOrganization
+    organization: Organization
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,13 +61,14 @@ class LocationBaseResponse(LocationCreateRequest):
             mobileNumber=location.mobile_number,
             faxNumber=location.fax_number,
             email=location.email,
-            organization=DisplayOrganization(
+            organization=Organization(
                 id=organization.id,
                 name=organization.name,
                 number=organization.number,
                 email=organization.email,
                 logo=organization.logo.get_string() if organization.logo is not None else None,
                 createdAt=int(organization.created_at.timestamp()),
+                taxonomy=Taxonomy.from_model(organization.taxonomy),
             ),
         )
 

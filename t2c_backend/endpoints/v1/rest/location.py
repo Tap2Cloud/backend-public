@@ -17,7 +17,7 @@ router = APIRouter()
 )
 async def update_location(
     location_data: LocationCreateRequest,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"update_location": True})),
     services: DictContainer = Depends(get_services),
 ):
     location = await services.location_service.update_location(
@@ -34,7 +34,7 @@ async def update_location(
     status_code=200,
 )
 async def list_location(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"get_location": True})),
     services: DictContainer = Depends(get_services),
 ):
     return [

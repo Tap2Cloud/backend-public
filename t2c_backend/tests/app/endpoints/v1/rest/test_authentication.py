@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(2)
+@pytest.mark.order(3)
 def test_authentication(client: TestClient, user_data) -> None:
     response = client.post("/api/v1/login", json=user_data["credentials"])
 
@@ -10,6 +10,7 @@ def test_authentication(client: TestClient, user_data) -> None:
     assert {"refresh_token", "access_token"} <= response.json().keys()
 
 
+@pytest.mark.order(4)
 def test_authentication_without_password(client: TestClient, user_data) -> None:
     response = client.post("/api/v1/login", json={"email": user_data["credentials"]["email"]})
 

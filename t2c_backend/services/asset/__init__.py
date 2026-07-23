@@ -91,6 +91,9 @@ class AssetService:
         db_asset = await self.repository.get_one_or_none(
             options=[
                 joinedload(self._model.location).joinedload(Location.organization),
+                joinedload(self._model.location)
+                .joinedload(Location.organization)
+                .joinedload(Organization.taxonomy),
                 joinedload(self._model.asset_type),
                 joinedload(self._model.asset_type).options(
                     joinedload(AssetType.documents),
@@ -133,6 +136,9 @@ class AssetService:
             .options(
                 joinedload(self._model.asset_type),
                 joinedload(self._model.location).joinedload(Location.organization),
+                joinedload(self._model.location)
+                .joinedload(Location.organization)
+                .joinedload(Organization.taxonomy),
                 joinedload(self._model.asset_type).options(
                     joinedload(AssetType.documents),
                     joinedload(AssetType.fields).joinedload(

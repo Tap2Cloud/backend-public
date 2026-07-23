@@ -2,6 +2,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import Location
+from t2c_backend.models.organization import Organization as OrganizationModel
 from t2c_backend.schemas.v1.location import LocationCreateRequest, LocationUpdateRequest
 from t2c_backend.utils.errors import NotFoundError
 
@@ -47,7 +48,11 @@ class LocationService:
         location_data: LocationUpdateRequest,
     ):
         location = await self.repository.get(
-            location_id, options=[selectinload(Location.organization)]
+            location_id,
+            options=[
+                selectinload(Location.organization),
+                selectinload(Location.organization).selectinload(OrganizationModel.taxonomy),
+            ],
         )
 
         if not location:
@@ -67,7 +72,10 @@ class LocationService:
 
     async def list_location(self, organization_id: int):
         return await self.repository.list(
-            options=[joinedload(Location.organization)],
+            options=[
+                joinedload(Location.organization),
+                joinedload(Location.organization).selectinload(OrganizationModel.taxonomy),
+            ],
             organization_id=organization_id,
         )
 
