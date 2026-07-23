@@ -10,7 +10,7 @@ from t2c_backend.schemas.v1.user import (
 )
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import UserStatus
-from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.errors import NotFoundError, UnAuthenticatedError
 from t2c_backend.utils.misc import DictContainer
 
 router = APIRouter()
@@ -22,6 +22,11 @@ async def delete_user_handler(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
+    if cascade_org and not {"organization_delete"}.issubset(
+        JWTAPIAccessTokenBearer.user_permissions(token)
+    ):
+        raise UnAuthenticatedError("Insufficient permissions.")
+
     await services.user_service.delete_user(token.user_id, token.organization_id, cascade_org)
     return Response(status_code=204)
 
@@ -35,6 +40,11 @@ async def delete_user(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"org_user_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
+    if cascade_org and not {"organization_delete"}.issubset(
+        JWTAPIAccessTokenBearer.user_permissions(token)
+    ):
+        raise UnAuthenticatedError("Insufficient permissions.")
+
     await services.user_service.delete_user(user_id, token.organization_id, cascade_org)
     return Response(status_code=200)
 
