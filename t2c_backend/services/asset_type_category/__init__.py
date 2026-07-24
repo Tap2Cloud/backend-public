@@ -11,9 +11,6 @@ from t2c_backend.models import (
     AssetTypeCategoryField,
     AssetTypeCategoryFieldOption,
     AssetTypeCategoryGroup,
-    Location,
-    Organization,
-    User,
 )
 from t2c_backend.schemas.v1.asset_type_category import (
     AssetTypeCategoryResponse,
@@ -35,9 +32,10 @@ class AssetTypeCategoryService:
             app, session, AssetTypeCategoryGroup
         )
 
-    async def create_asset_type_category(self, user_id: int, form_data: dict):
+    async def create_asset_type_category(self, user_id: int, location_id: int, form_data: dict):
         form = AssetTypeCategory(
             user_id=user_id,
+            location_id=location_id,
             name=form_data.get("name"),
             has_typeplates=form_data.get("has_typeplates"),
         )
@@ -79,19 +77,13 @@ class AssetTypeCategoryService:
         self,
         asset_type_category_id: int,
         updated_asset_type_category_data: UpdateAssetTypeCategoryRequest,
-        organization_id: int,
+        location_id: int,
     ):
         db_asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_category_id,
-            options=[
-                joinedload(self._model.user),
-                joinedload(self._model.user).joinedload(User.location),
-            ],
+            options=[joinedload(self._model.user)],
         )
-        if (
-            not db_asset_type_details
-            or db_asset_type_details.user.location.organization_id != organization_id
-        ):
+        if not db_asset_type_details or db_asset_type_details.location_id != location_id:
             raise NotFoundError("Asset type category not found")
 
         for key, value in updated_asset_type_category_data.model_dump(
@@ -138,18 +130,21 @@ class AssetTypeCategoryService:
 
         return await self.repository.save(db_asset_type_details)
 
-    async def get_asset_type_category_by_id(self, asset_type_category_id: int, user_id: int):
-        return await self.repository.get_one_or_none(user_id=user_id, id=asset_type_category_id)
+    async def get_asset_type_category_by_id(self, asset_type_category_id: int, location_id: int):
+        return await self.repository.get_one_or_none(
+            location_id=location_id, id=asset_type_category_id
+        )
 
-    async def delete_asset_type_category(self, asset_type_category_id: int):
+    async def delete_asset_type_category(self, asset_type_category_id: int, location_id: int):
+        db_asset_type_category = await self.repository.get_one_or_none(id=asset_type_category_id)
+        if not db_asset_type_category or db_asset_type_category.location_id != location_id:
+            raise NotFoundError("Asset type category not found")
         return await self.repository.delete(id=asset_type_category_id)
 
-    async def list_asset_type_category(self, organization_id: int):
+    async def list_asset_type_category(self, location_id: int):
         stmt = (
             select(AssetTypeCategory)
-            .join(User, User.id == AssetTypeCategory.user_id)
-            .join(Location, Location.id == User.location_id)
-            .where(Location.organization_id == organization_id)
+            .where(AssetTypeCategory.location_id == location_id)
             .where(AssetTypeCategory.asset_type.any())
             .options(joinedload(AssetTypeCategory.asset_type))
             .order_by(desc(AssetTypeCategory.id))
@@ -164,7 +159,7 @@ class AssetTypeCategoryService:
         sort_by: SortBy | None,
         page: int,
         page_size: int,
-        organization_id: int,
+        location_id: int,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.created_at),
@@ -179,9 +174,7 @@ class AssetTypeCategoryService:
                 ),
                 joinedload(self._model.fields).joinedload(AssetTypeCategoryField.options),
             )
-            .join(User, User.id == self._model.user_id)
-            .join(Location, Location.id == User.location_id)
-            .where(Location.organization_id == organization_id)
+            .where(self._model.location_id == location_id)
             .order_by(sort_order[sort_by])
         )
 
@@ -200,13 +193,10 @@ class AssetTypeCategoryService:
             ],
         )
 
-    async def get_asset_type_category(self, organization_id: int, asset_type_category_id: int):
+    async def get_asset_type_category(self, location_id: int, asset_type_category_id: int):
         return await self.repository.get_one_or_none(
-            join=[self._model.user, User.location, Location.organization],
             options=[
-                joinedload(self._model.user)
-                .joinedload(User.location)
-                .joinedload(Location.organization),
+                joinedload(self._model.user),
                 joinedload(self._model.fields),
                 joinedload(self._model.fields).joinedload(AssetTypeCategoryField.options),
                 joinedload(self._model.fields).joinedload(
@@ -214,16 +204,13 @@ class AssetTypeCategoryService:
                 ),
             ],
             id=asset_type_category_id,
-            organization_id=organization_id,
+            location_id=location_id,
         )
 
-    async def get_asset_type_categories(self, organization_id: int):
+    async def get_asset_type_categories(self, location_id: int):
         stmt = (
             select(AssetTypeCategory)
-            .join(AssetTypeCategory.user)
-            .join(User.location)
-            .join(Location.organization)
-            .where(Organization.id == organization_id)
+            .where(AssetTypeCategory.location_id == location_id)
             .order_by(desc(AssetTypeCategory.id))
         )
         result = await self.repository.execute(stmt)

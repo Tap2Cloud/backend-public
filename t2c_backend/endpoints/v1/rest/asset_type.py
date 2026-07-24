@@ -90,7 +90,7 @@ async def list_asset_types(
         page=page,
         page_size=page_size,
         categories=selective.categories,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -131,6 +131,7 @@ async def save_asset_type_custom_field_document(
         asset_type_id=asset_type_id,
         custom_field_id=custom_field_id,
         documents=documents,
+        location_id=token.location_id,
         organization_id=token.organization_id,
     )
     return AssetTypeResponse.convert(
@@ -153,7 +154,7 @@ async def delete_asset_type_custom_field_document(
     return await services.asset_type_service.delete_asset_type_custom_field_document(
         asset_type_id=asset_type_id,
         document_id=document_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -170,7 +171,7 @@ async def get_asset_type_document(
 ):
     return await services.asset_type_service.get_asset_type_document(
         asset_type_id=asset_type_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
         document_type=DocumentFor.InstructionManualDocuments,
         document_id=instruction_manual_id,
         document_name=document_name,
@@ -190,7 +191,7 @@ async def get_asset_type_custom_field_document(
 ):
     return await services.asset_type_service.get_asset_type_document(
         asset_type_id=asset_type_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
         document_type=DocumentFor.AssetTypeFieldSpecificDocuments,
         document_id=document_id,
         document_name=document_name,

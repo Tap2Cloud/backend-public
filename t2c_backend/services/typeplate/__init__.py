@@ -14,12 +14,10 @@ from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import (
     AssetType,
     AssetTypeCategory,
-    Location,
     TypelateImageMapping,
     Typeplate,
     TypeplateDocument,
     TypeplateImage,
-    User,
 )
 from t2c_backend.schemas.v1.typeplates import (
     AssetTypeTypeplateResponse,
@@ -53,7 +51,7 @@ class TypeplateService:
         page_size: int,
         typeplate_created_start_date: date,
         typeplate_created_end_date: date,
-        organization_id: int,
+        location_id: int,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.created_at),
@@ -72,9 +70,7 @@ class TypeplateService:
                 .joinedload(TypelateImageMapping.typeplate_image),
                 joinedload(AssetType.asset_type_category),
             )
-            .join(User, User.id == AssetType.user_id)
-            .join(Location, Location.id == User.location_id)
-            .where(Location.organization_id == organization_id)
+            .where(AssetType.location_id == location_id)
             .order_by(sort_order[sort_by])
         )
 
@@ -147,12 +143,11 @@ class TypeplateService:
             id=typeplate_id,
             options=[
                 joinedload(self._model.asset_type),
-                joinedload(self._model.asset_type).joinedload(AssetType.user),
                 selectinload(self._model.documents),
                 selectinload(self._model.typeplate_images),
             ],
         )
-        if not typeplate or typeplate.asset_type.user.location_id != location_id:
+        if not typeplate or typeplate.asset_type.location_id != location_id:
             raise NotFoundError(msg="Typeplate not found")
 
         for key, value in typeplate_data.model_dump(exclude={"typeplate_images"}).items():

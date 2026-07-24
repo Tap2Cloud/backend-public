@@ -31,8 +31,7 @@ class DashboardService:
 
         asset_type_count_result = await self.session.execute(
             select(func.count(AssetType.id))
-            .outerjoin(User, User.id == AssetType.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Location, Location.id == AssetType.location_id)
             .where(Location.organization_id == organization_id)
         )
         asset_type_count = asset_type_count_result.scalar() or 0
@@ -40,8 +39,7 @@ class DashboardService:
         typeplate_count_result = await self.session.execute(
             select(func.count(Typeplate.id))
             .outerjoin(AssetType, AssetType.id == Typeplate.asset_type_id)
-            .outerjoin(User, User.id == AssetType.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Location, Location.id == AssetType.location_id)
             .where(Location.organization_id == organization_id)
         )
         typeplate_count = typeplate_count_result.scalar() or 0

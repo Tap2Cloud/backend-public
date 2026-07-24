@@ -49,8 +49,12 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
     asset_type_category_id: Mapped[int] = mapped_column(
         ForeignKey("asset_type_categories.id", ondelete="CASCADE"),
     )
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
+    # user_id is kept only as a "created by" acknowledgement; it is never used for
+    # scoping/ownership. Ownership is derived from location_id (user -> location -> org).
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
+    location: Mapped["Location"] = relationship("Location")
     user: Mapped["User"] = relationship("User")
     asset_type_category: Mapped["AssetTypeCategory"] = relationship("AssetTypeCategory")
     fields: Mapped[list["AssetTypeField"]] = relationship(

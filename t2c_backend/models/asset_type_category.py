@@ -22,6 +22,7 @@ from t2c_backend.core.db import (
 )
 from t2c_backend.utils.enums import InputType
 
+from .location import Location
 from .user import User
 
 if TYPE_CHECKING:
@@ -45,15 +46,19 @@ class AssetTypeCategory(
     __table_args__ = (
         UniqueConstraint(
             "name",
-            "user_id",
+            "location_id",
             name="_asset_type_category_name_unique",
         ),
     )
 
     name: Mapped[str] = mapped_column(Text(), nullable=False)
     has_typeplates: Mapped[bool] = mapped_column(Boolean, default=False)
+    location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
+    # user_id is kept only as a "created by" acknowledgement; it is never used for
+    # scoping/ownership. Ownership is derived from location_id (user -> location -> org).
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
+    location: Mapped["Location"] = relationship("Location")
     user: Mapped["User"] = relationship("User")
     fields: Mapped[list["AssetTypeCategoryField"]] = relationship(
         "AssetTypeCategoryField",
