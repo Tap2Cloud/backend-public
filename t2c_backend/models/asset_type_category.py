@@ -56,7 +56,10 @@ class AssetTypeCategory(
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
     # user_id is kept only as a "created by" acknowledgement; it is never used for
     # scoping/ownership. Ownership is derived from location_id (user -> location -> org).
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # ondelete=SET NULL so deleting the creator never removes location-owned data.
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     location: Mapped["Location"] = relationship("Location")
     user: Mapped["User"] = relationship("User")
