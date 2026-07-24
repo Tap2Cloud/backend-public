@@ -8,7 +8,6 @@ from t2c_backend.models import (
     AuditTask,
     Location,
     Typeplate,
-    User,
 )
 from t2c_backend.models.service import Service
 from t2c_backend.utils.enums import TaskType
@@ -62,8 +61,8 @@ class DashboardService:
         audit_count_result = await self.session.execute(
             select(func.count(AuditTask.id))
             .outerjoin(Audit, Audit.id == AuditTask.audit_id)
-            .outerjoin(User, User.id == Audit.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Asset, Asset.id == Audit.asset_id)
+            .outerjoin(Location, Location.id == Asset.location_id)
             .where(
                 Location.organization_id == organization_id,
                 AuditTask.task_type == TaskType.inspection,
