@@ -59,7 +59,7 @@ async def list_typeplate_details(
         page_size=page_size,
         typeplate_created_start_date=typeplate_created_start_date,
         typeplate_created_end_date=typeplate_created_end_date,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 

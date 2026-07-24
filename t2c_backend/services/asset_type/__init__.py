@@ -19,11 +19,9 @@ from t2c_backend.models import (
     AssetTypeCategoryField,
     AssetTypeField,
     AssetTypeFieldOptions,
-    Location,
     TypelateImageMapping,
     Typeplate,
     TypeplateDocument,
-    User,
 )
 from t2c_backend.models.asset_type import AssetTypeDocument as AssetTypeDocumentModel
 from t2c_backend.schemas.v1.asset_type import (
@@ -63,7 +61,7 @@ class AssetTypeService:
     ):
         asset_type_form = (
             await self.app.services.asset_type_category_service.get_asset_type_category_by_id(
-                user_id=user_id,
+                location_id=location_id,
                 asset_type_category_id=asset_type_category_id,
             )
         )
@@ -84,6 +82,7 @@ class AssetTypeService:
         asset_type = AssetType(
             name=asset_type_data.get("name"),
             user_id=user_id,
+            location_id=location_id,
             video_links=asset_type_data.get("video_links"),
             video_title=asset_type_data.get("video_title"),
             web_link=asset_type_data.get("web_link"),
@@ -195,13 +194,11 @@ class AssetTypeService:
         db_asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
             options=[
-                joinedload(self._model.user),
-                joinedload(self._model.user).joinedload(User.location),
                 joinedload(self._model.typeplate),
                 joinedload(self._model.asset_type_category),
             ],
         )
-        if not db_asset_type or db_asset_type.user.location.id != location_id:
+        if not db_asset_type or db_asset_type.location_id != location_id:
             raise NotFoundError("Asset type not found")
 
         db_asset_type.name = asset_type_details.name
@@ -246,8 +243,7 @@ class AssetTypeService:
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
             options=[
-                joinedload(self._model.user),
-                joinedload(self._model.user).joinedload(User.location),
+                joinedload(self._model.location),
                 joinedload(self._model.typeplate),
                 joinedload(self._model.typeplate).joinedload(Typeplate.documents),
                 joinedload(self._model.documents),
@@ -255,13 +251,15 @@ class AssetTypeService:
             ],
         )
 
-        if asset_type is None or asset_type.user.location_id != location_id:
+        if asset_type is None or asset_type.location_id != location_id:
             raise NotFoundError("Asset type not found")
+
+        organization_id = asset_type.location.organization_id
 
         if asset_type.documents:
             for instruction_manual in asset_type.documents:
                 await self.app.clients.storage.delete_document(
-                    organization_id=asset_type.user.location.organization_id,
+                    organization_id=organization_id,
                     document_for=DocumentFor.InstructionManualDocuments,
                     file_id=instruction_manual.id,
                     filename=instruction_manual.name,
@@ -269,7 +267,7 @@ class AssetTypeService:
         if asset_type.typeplate:
             for typeplate_document in asset_type.typeplate.documents:
                 await self.app.clients.storage.delete_document(
-                    organization_id=asset_type.user.location.organization_id,
+                    organization_id=organization_id,
                     document_for=DocumentFor.EuFiles,
                     file_id=typeplate_document.id,
                     filename=typeplate_document.name,
@@ -277,7 +275,7 @@ class AssetTypeService:
 
         for asset_type_field in asset_type.fields:
             await self.app.clients.storage.delete_document(
-                organization_id=asset_type.user.location.organization_id,
+                organization_id=organization_id,
                 document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
                 file_id=asset_type_field.id,
                 filename=asset_type_field.response_value,
@@ -292,7 +290,7 @@ class AssetTypeService:
         page: int,
         page_size: int,
         categories: list[DisplayAssetTypeCategory] | None,
-        organization_id: int,
+        location_id: int,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.id),
@@ -314,9 +312,7 @@ class AssetTypeService:
                 joinedload(self._model.typeplate).joinedload(Typeplate.documents),
                 joinedload(self._model.typeplate).joinedload(Typeplate.typeplate_images),
             )
-            .join(User, User.id == self._model.user_id)
-            .join(Location, Location.id == User.location_id)
-            .where(Location.organization_id == organization_id)
+            .where(self._model.location_id == location_id)
             .order_by(sort_order[sort_by])
         )
 
@@ -365,7 +361,7 @@ class AssetTypeService:
                 joinedload(self._model.user),
             ],
         )
-        if not asset_type_details or asset_type_details.user.location_id != location_id:
+        if not asset_type_details or asset_type_details.location_id != location_id:
             raise NotFoundError("Asset type not found")
         return asset_type_details
 
@@ -377,7 +373,7 @@ class AssetTypeService:
         page_size: int,
         is_video: bool,
         is_document: bool,
-        organization_id: int,
+        location_id: int,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.created_at),
@@ -385,12 +381,10 @@ class AssetTypeService:
         }
         select_query = (
             select(self._model)
-            .join(self._model.user)
-            .join(User.location)
             .options(
                 joinedload(self._model.documents),
             )
-            .where(Location.organization_id == organization_id)
+            .where(self._model.location_id == location_id)
             .order_by(sort_order[sort_by])
         )
 
@@ -443,7 +437,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type:
+        if not asset_type or asset_type.location_id != location_id:
             raise NotFoundError("Asset type not found")
 
         new_db_documents = []
@@ -473,6 +467,7 @@ class AssetTypeService:
         self,
         asset_type_id: int,
         custom_field_id: int,
+        location_id: int,
         organization_id: int,
         documents: UploadFile,
     ):
@@ -495,7 +490,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type:
+        if not asset_type or asset_type.location_id != location_id:
             raise NotFoundError("Asset type not found")
 
         for asset_type_field in asset_type.fields:
@@ -533,7 +528,7 @@ class AssetTypeService:
         return await self.repository.save(asset_type)
 
     async def delete_asset_type_document(
-        self, asset_type_id: int, document_id: uuid.UUID, organization_id: int
+        self, asset_type_id: int, document_id: uuid.UUID, location_id: int
     ):
         document = await self.asset_types_documents_repository.get_one_or_none(
             id=document_id,
@@ -541,11 +536,11 @@ class AssetTypeService:
             options=[joinedload(AssetTypeDocumentModel.location)],
         )
 
-        if not document or document.location.organization_id != organization_id:
+        if not document or document.location_id != location_id:
             raise NotFoundError("Asset type document not found")
 
         await self.app.clients.storage.delete_document(
-            organization_id=organization_id,
+            organization_id=document.location.organization_id,
             document_for=DocumentFor.InstructionManualDocuments,
             file_id=document.id,
             filename=document.name,
@@ -554,28 +549,25 @@ class AssetTypeService:
         return await self.asset_types_documents_repository.delete(id=document_id)
 
     async def delete_asset_type_custom_field_document(
-        self, asset_type_id: int, document_id: int, organization_id: int
+        self, asset_type_id: int, document_id: int, location_id: int
     ):
         document = await self.field_repository.get_one_or_none(
             id=document_id,
             options=[
                 joinedload(AssetTypeField.asset_type),
-                joinedload(AssetTypeField.asset_type).joinedload(AssetType.user),
-                joinedload(AssetTypeField.asset_type)
-                .joinedload(AssetType.user)
-                .joinedload(User.location),
+                joinedload(AssetTypeField.asset_type).joinedload(AssetType.location),
             ],
         )
 
         if (
             not document
             or document.asset_type_id != asset_type_id
-            or document.asset_type.user.location.organization_id != organization_id
+            or document.asset_type.location_id != location_id
         ):
             raise NotFoundError("Asset type field's document not found")
 
         await self.app.clients.storage.delete_document(
-            organization_id=organization_id,
+            organization_id=document.asset_type.location.organization_id,
             document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
             file_id=document.id,
             filename=document.response_value,
@@ -586,7 +578,7 @@ class AssetTypeService:
     async def get_asset_type_document(
         self,
         asset_type_id: int,
-        organization_id: int,
+        location_id: int,
         document_type: DocumentFor,
         document_id: str,
         document_name: str,
@@ -594,19 +586,18 @@ class AssetTypeService:
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
             options=[
-                joinedload(self._model.user),
-                joinedload(self._model.user).joinedload(User.location),
+                joinedload(self._model.location),
             ],
         )
 
-        if not asset_type or asset_type.user.location.organization_id != organization_id:
+        if not asset_type or asset_type.location_id != location_id:
             raise NotFoundError("Asset type not found")
 
         mime_type, encoding = mimetypes.guess_type(document_name)
 
         return StreamingResponse(
             self.app.clients.storage.get_document(
-                organization_id=organization_id,
+                organization_id=asset_type.location.organization_id,
                 document_for=document_type,
                 file_id=document_id,
                 file_name=document_name,
