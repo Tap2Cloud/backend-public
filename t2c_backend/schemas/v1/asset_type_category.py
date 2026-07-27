@@ -200,7 +200,7 @@ class AssetTypeCategoryResponse(BaseModel):
     name: str
     has_typeplates: bool = PydanticField(..., alias="hasTypeplates")
     fields: conlist(Field, min_length=1)
-    user: DisplayUser | None = None
+    user: DisplayUser | None
     created_at: int = PydanticField(..., alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True)
