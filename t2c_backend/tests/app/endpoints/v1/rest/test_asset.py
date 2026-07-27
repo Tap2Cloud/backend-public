@@ -84,12 +84,11 @@ def test_create_asset_with_fake_location(
     asset_container,
     container,
 ):
-    container["location"]["id"] = fake.random_int(max=8000000, min=4000)
     response = authenticated_client.post(
         "/api/v1/asset",
         json={
             **asset,
-            "location": container["location"],
+            "location": {**container["location"], "id": fake.random_int(max=8000000, min=4000)},
             "assetType": random.choice(
                 random.choice(asset_type_category_mapping_container["asset_type_category"])[
                     "assetTypes"
