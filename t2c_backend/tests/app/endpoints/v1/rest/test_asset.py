@@ -113,10 +113,12 @@ def test_create_asset_with_fake_asset_type(
     asset = {
         **asset,
         "location": container["location"],
-        "assetType": random.choice(
-            random.choice(asset_type_category_mapping_container["asset_type_category"])[
-                "assetTypes"
-            ]
+        "assetType": dict(
+            random.choice(
+                random.choice(asset_type_category_mapping_container["asset_type_category"])[
+                    "assetTypes"
+                ]
+            )
         ),
         "status": random.choice(list(AssetStatus)),
     }
