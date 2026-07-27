@@ -101,27 +101,36 @@ class UserService:
 
         return user
 
-    async def delete_user(self, user_id: int, location_id: int) -> bool:
-        db_user = await self.repository.get_one_or_none(id=user_id)
+    async def delete_user(self, user_id: int, organization_id: int, cascade_org: bool) -> bool:
+        db_user = await self.repository.get_one_or_none(
+            id=user_id, options=[joinedload(User.location)]
+        )
 
-        if not db_user:
+        if (
+            not db_user
+            or not db_user.location
+            or db_user.location.organization_id != organization_id
+        ):
             raise NotFoundError("User not found")
 
-        user_locations = await self.repository.exists(
-            id__ne=user_id,
-            location_id=location_id,
+        other_users_exist = await self.repository.session.scalar(
+            select(
+                select(User.id)
+                .join(Location, User.location_id == Location.id)
+                .where(User.id != user_id, Location.organization_id == organization_id)
+                .exists()
+            )
         )
-        if not user_locations:
+
+        if other_users_exist:
+            await self.repository.delete(id=db_user.id)
+        elif cascade_org:
+            await self.app.services.organization_service.delete_organization(
+                organization_id=organization_id
+            )
+        else:
             raise BadRequestError(msg="Unable to delete this user")
 
-        await self.repository.delete(id=db_user.id)
-        return True
-
-    async def delete_users(self, user_id: int):
-        db_user = await self.repository.get_one_or_none(id=user_id)
-        if not db_user:
-            raise NotFoundError("User not found")
-        await self.repository.delete(id=user_id)
         return True
 
     async def register_user(

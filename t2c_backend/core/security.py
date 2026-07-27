@@ -24,13 +24,17 @@ class BaseJWTAPIBearer:
             str(role) in {user_role["name"] for user_role in token.roles} for role in self.roles
         )
 
-    def check_permission(self, token: "Token") -> bool:
-        user_permissions = {
+    @staticmethod
+    def user_permissions(token: "Token"):
+        return {
             flag
             for role in token.roles
             for flag, check in dict(Permissions(int(role["permissions"]))).items()
             if check
         }
+
+    def check_permission(self, token: "Token") -> bool:
+        user_permissions = self.user_permissions(token)
         valid_checked_permissions = {
             permission
             for permission, check in self.permissions.items()

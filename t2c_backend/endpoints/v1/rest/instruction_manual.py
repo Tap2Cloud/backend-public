@@ -37,7 +37,7 @@ async def list_instruction_manual(
         is_document=is_document,
         page=page,
         page_size=page_size,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -85,6 +85,6 @@ async def delete_asset_type_document(
         await services.asset_type_service.delete_asset_type_document(
             asset_type_id=asset_type_id,
             document_id=instruction_manual,
-            organization_id=token.organization_id,
+            location_id=token.location_id,
         )
     return Response(status_code=204)

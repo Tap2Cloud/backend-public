@@ -291,6 +291,9 @@ class AssetService:
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.fields)
                 .joinedload(AssetTypeField.asset_type_field_options),
+                joinedload(self._model.asset_type)
+                .joinedload(AssetType.fields)
+                .joinedload(AssetTypeField.asset_type_category_field),
                 joinedload(self._model.asset_type).joinedload(AssetType.documents),
                 joinedload(self._model.asset_type).joinedload(AssetType.asset_type_category),
                 joinedload(self._model.asset_type)

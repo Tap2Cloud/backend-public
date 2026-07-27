@@ -24,6 +24,7 @@ def test_register_for_second_user(client: TestClient, second_user_data) -> None:
     assert {"refresh_token", "access_token"} <= response.json().keys()
 
 
+@pytest.mark.order(2)
 def test_register_without_password(client: TestClient, user_data) -> None:
     response = client.post(
         "/api/v1/register", json={"email": user_data["credentials"]["email"], **user_data["basics"]}
@@ -32,6 +33,7 @@ def test_register_without_password(client: TestClient, user_data) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.order(2)
 def test_register_without_email(client: TestClient, user_data) -> None:
     response = client.post(
         "/api/v1/register",
@@ -41,6 +43,7 @@ def test_register_without_email(client: TestClient, user_data) -> None:
     assert response.status_code == 422
 
 
+@pytest.mark.order(2)
 def test_register_without_firstname_lastname(client: TestClient, user_data) -> None:
     response = client.post("/api/v1/register", json={**user_data["credentials"]})
 

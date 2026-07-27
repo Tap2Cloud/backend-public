@@ -63,7 +63,10 @@ class TypeplateDocument(
 
     typeplate_id: Mapped[int] = mapped_column(ForeignKey("typeplates.id", ondelete="CASCADE"))
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # created-by only; SET NULL so deleting the creator keeps location-owned documents.
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     typeplate: Mapped["Typeplate"] = relationship("Typeplate", back_populates="documents")
     location: Mapped["Location"] = relationship("Location")

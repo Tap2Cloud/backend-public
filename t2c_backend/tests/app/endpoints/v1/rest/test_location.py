@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(5)
+@pytest.mark.order(16)
 def test_update_location(authenticated_client: TestClient, location, container):
     response = authenticated_client.put(
         "/api/v1/location",
@@ -13,6 +13,7 @@ def test_update_location(authenticated_client: TestClient, location, container):
     assert response.json()["name"] != container["location"]["name"]
 
 
+@pytest.mark.order(17)
 def test_update_location_without_name(authenticated_client: TestClient, location, container):
     response = authenticated_client.put(
         "/api/v1/location",
@@ -22,6 +23,7 @@ def test_update_location_without_name(authenticated_client: TestClient, location
     assert response.status_code == 422
 
 
+@pytest.mark.order(17)
 def test_update_location_with_unauthenticated_client(client: TestClient, location):
     response = client.put(
         "/api/v1/location",
@@ -31,7 +33,7 @@ def test_update_location_with_unauthenticated_client(client: TestClient, locatio
     assert response.status_code == 401
 
 
-@pytest.mark.order(6)
+@pytest.mark.order(18)
 def test_get_location_list(authenticated_client: TestClient, container):
     response = authenticated_client.get("/api/v1/filter/location")
 
@@ -39,6 +41,7 @@ def test_get_location_list(authenticated_client: TestClient, container):
     assert len(response.json()) > 0
 
 
+@pytest.mark.order(19)
 def test_get_location_list_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/filter/location")
 
