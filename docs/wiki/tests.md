@@ -174,6 +174,22 @@ pytest t2c_backend/tests/app/endpoints/v1/rest/test_health.py   # a single modul
 
 > **Note:** Because of the shared-container/global-order design, running an isolated subset of ordered tests may fail on missing prerequisite data — the suite is intended to run as a whole. A test database reachable by the app's `Config` must be available for the `alembic upgrade head` migration step.
 
+## What the suite covers about authorization
+
+The suite exercises the **happy path** of the permission system and the **unauthenticated** path, but
+not the *insufficient-permission* path:
+
+- `authenticated_client` registers a user and creates an organization, which seeds the `member`/`admin`/
+  `owner` roles with the full permission bitmask. That user therefore satisfies every route's flag, so
+  the `permissions={...}` requirements are covered only in the "granted" direction.
+- Nearly every module has a `*_with_unauthenticated_client` counterpart asserting **401** for a request
+  with no token.
+- No test asserts **403 `Insufficient permissions.`** — there is no fixture for a user with a narrow
+  role, so a typo'd or missing flag on a route would not fail the suite. Keep this in mind when adding
+  guarded endpoints (see [Extending Tap2Cloud](extending.md)).
+- `test_create_organization_role` posts an `organization_role` fixture whose `permissions` is a list of
+  arbitrary Faker strings and asserts only `200` — consistent with `RoleService` discarding that list.
+
 ## Dependencies
 
 ```mermaid
@@ -192,4 +208,5 @@ The suite touches nearly every module transitively — booting `main.app` pulls 
 - [Application Bootstrap](application-bootstrap.md) — how `main.app` is assembled and its lifespan runs under `TestClient`
 - [Database Migrations](database-migrations.md) — the `alembic upgrade head` invoked by the `database_migration` fixture
 - [Security & Permissions](security-and-permissions.md) — the JWT flow behind `authenticated_client`
+- [Permissions Reference](permissions-reference.md) — the flags the seeded roles grant
 - [Overview](overview.md) — repository-wide architecture
