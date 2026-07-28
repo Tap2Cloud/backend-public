@@ -11,6 +11,7 @@ from t2c_backend.models import (
     AssetTypeCategoryField,
     AssetTypeCategoryFieldOption,
     AssetTypeCategoryGroup,
+    User,
 )
 from t2c_backend.schemas.v1.asset_type_category import (
     AssetTypeCategoryResponse,

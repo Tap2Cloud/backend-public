@@ -474,13 +474,6 @@ def test_get_asset_type_category_by_unauthenticated_client(
     assert response.status_code == 401
 
 
-def test_get_asset_type_category_by_unauthenticated_client(
-    authenticated_client: TestClient,
-):
-    response = authenticated_client.get("/api/v1/asset-type-category", headers={"language": "en"})
-
-    assert response.status_code == 200
-
 @pytest.mark.order(47)
 def test_create_asset_type_category_string_with_unauthenticated_client(
     client: TestClient,
@@ -549,7 +542,7 @@ def test_get_list_of_asset_type_category_name(
     assert response.status_code == 200
 
 
-
+@pytest.mark.order(49)
 def test_get_list_of_asset_type_category_by_unauthenticated_client(
     client: TestClient,
 ):
@@ -558,11 +551,8 @@ def test_get_list_of_asset_type_category_by_unauthenticated_client(
     assert response.status_code == 401
 
 
-
-
-
-@pytest.mark.order(49)
-def test_update_asset_type_category(
+@pytest.mark.order(151)
+def test_update_asset_type_category_add_integer_field(
     authenticated_client: TestClient,
     fake: Faker,
     container,
@@ -573,24 +563,25 @@ def test_update_asset_type_category(
     saved_first_field = {**raw_first_field}
     saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
     saved_first_field.pop("fieldGroup", None)
-    new_number_field = {
+
+    new_integer_field = {
         **asset_type_category_field,
         "id": None,
-        "fieldType": InputType.number.value,
+        "fieldType": InputType.time.value,
     }
     response = authenticated_client.put(
         f"/api/v1/asset-type-category/{existing_category['id']}",
         json={
             "name": existing_category["name"],
             "hasTypeplates": existing_category["hasTypeplates"],
-            "fields": [saved_first_field, new_number_field],
+            "fields": [saved_first_field, new_integer_field],
         },
     )
     container["integer_asset_type_category"] = response.json()
     assert response.status_code == 200
 
 
-@pytest.mark.order(130)
+@pytest.mark.order(152)
 def test_update_asset_type_category_add_time_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -620,7 +611,7 @@ def test_update_asset_type_category_add_time_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(131)
+@pytest.mark.order(153)
 def test_update_asset_type_category_add_url_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -650,7 +641,7 @@ def test_update_asset_type_category_add_url_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(132)
+@pytest.mark.order(154)
 def test_update_asset_type_category_add_text_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -680,7 +671,7 @@ def test_update_asset_type_category_add_text_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(135)
+@pytest.mark.order(155)
 def test_update_asset_type_category_add_password_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -710,7 +701,7 @@ def test_update_asset_type_category_add_password_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(136)
+@pytest.mark.order(156)
 def test_update_asset_type_category_add_image_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -740,7 +731,7 @@ def test_update_asset_type_category_add_image_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(138)
+@pytest.mark.order(157)
 def test_update_asset_type_category_add_file_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -770,7 +761,7 @@ def test_update_asset_type_category_add_file_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(139)
+@pytest.mark.order(158)
 def test_update_asset_type_category_add_email_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -800,7 +791,7 @@ def test_update_asset_type_category_add_email_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(140)
+@pytest.mark.order(159)
 def test_update_asset_type_category_add_date_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -830,7 +821,7 @@ def test_update_asset_type_category_add_date_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(141)
+@pytest.mark.order(160)
 def test_update_asset_type_category_add_datetime_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -860,7 +851,7 @@ def test_update_asset_type_category_add_datetime_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(142)
+@pytest.mark.order(161)
 def test_update_asset_type_category_add_radio_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -892,7 +883,7 @@ def test_update_asset_type_category_add_radio_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(142)
+@pytest.mark.order(162)
 def test_update_asset_type_category_add_checkbox_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -926,7 +917,7 @@ def test_update_asset_type_category_add_checkbox_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(143)
+@pytest.mark.order(163)
 def test_update_asset_type_category_add_multiselect_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -959,7 +950,7 @@ def test_update_asset_type_category_add_multiselect_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(144)
+@pytest.mark.order(164)
 def test_update_asset_type_category_add_select_field(
     authenticated_client: TestClient,
     fake: Faker,
@@ -993,7 +984,7 @@ def test_update_asset_type_category_add_select_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(145)
+@pytest.mark.order(165)
 def test_update_asset_type_category_delete_integer_field(
     authenticated_client: TestClient,
     container,
@@ -1016,7 +1007,7 @@ def test_update_asset_type_category_delete_integer_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(146)
+@pytest.mark.order(166)
 def test_update_asset_type_category_delete_time_field(
     authenticated_client: TestClient,
     container,
@@ -1038,7 +1029,7 @@ def test_update_asset_type_category_delete_time_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(147)
+@pytest.mark.order(167)
 def test_update_asset_type_category_delete_url_field(
     authenticated_client: TestClient,
     container,
@@ -1060,7 +1051,7 @@ def test_update_asset_type_category_delete_url_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(148)
+@pytest.mark.order(168)
 def test_update_asset_type_category_delete_text_field(
     authenticated_client: TestClient,
     container,
@@ -1082,7 +1073,7 @@ def test_update_asset_type_category_delete_text_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(149)
+@pytest.mark.order(169)
 def test_update_asset_type_category_delete_password_field(
     authenticated_client: TestClient,
     container,
@@ -1104,7 +1095,7 @@ def test_update_asset_type_category_delete_password_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(150)
+@pytest.mark.order(170)
 def test_update_asset_type_category_delete_image_field(
     authenticated_client: TestClient,
     container,
@@ -1126,7 +1117,7 @@ def test_update_asset_type_category_delete_image_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(151)
+@pytest.mark.order(171)
 def test_update_asset_type_category_delete_file_field(
     authenticated_client: TestClient,
     container,
@@ -1148,7 +1139,7 @@ def test_update_asset_type_category_delete_file_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(152)
+@pytest.mark.order(172)
 def test_update_asset_type_category_delete_email_field(
     authenticated_client: TestClient,
     container,
@@ -1170,7 +1161,7 @@ def test_update_asset_type_category_delete_email_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(153)
+@pytest.mark.order(173)
 def test_update_asset_type_category_delete_date_field(
     authenticated_client: TestClient,
     container,
@@ -1192,7 +1183,7 @@ def test_update_asset_type_category_delete_date_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(154)
+@pytest.mark.order(174)
 def test_update_asset_type_category_delete_datetime_field(
     authenticated_client: TestClient,
     container,
@@ -1214,7 +1205,7 @@ def test_update_asset_type_category_delete_datetime_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(155)
+@pytest.mark.order(175)
 def test_update_asset_type_category_delete_checkbox_field(
     authenticated_client: TestClient,
     container,
@@ -1236,7 +1227,7 @@ def test_update_asset_type_category_delete_checkbox_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(156)
+@pytest.mark.order(176)
 def test_update_asset_type_category_delete_multiselect_field(
     authenticated_client: TestClient,
     container,
@@ -1258,7 +1249,7 @@ def test_update_asset_type_category_delete_multiselect_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(157)
+@pytest.mark.order(177)
 def test_update_asset_type_category_delete_radio_field(
     authenticated_client: TestClient,
     container,
@@ -1280,7 +1271,7 @@ def test_update_asset_type_category_delete_radio_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(158)
+@pytest.mark.order(178)
 def test_update_asset_type_category_delete_select_field(
     authenticated_client: TestClient,
     container,
@@ -1303,7 +1294,7 @@ def test_update_asset_type_category_delete_select_field(
     assert response.status_code == 200
 
 
-@pytest.mark.order(159)
+@pytest.mark.order(179)
 def test_update_category_fields_with_simultaneous_add_edit_delete_and_reorder(
     authenticated_client: TestClient,
     fake: Faker,
@@ -1361,7 +1352,7 @@ def test_update_category_fields_with_simultaneous_add_edit_delete_and_reorder(
     assert response.status_code == 200
 
 
-@pytest.mark.order(160)
+@pytest.mark.order(180)
 def test_update_asset_type_category_replace_all_options(
     authenticated_client: TestClient, fake: Faker, container, asset_type_category_field_options
 ):
@@ -1386,7 +1377,7 @@ def test_update_asset_type_category_replace_all_options(
     assert response.status_code == 200
 
 
-@pytest.mark.order(161)
+@pytest.mark.order(181)
 def test_update_asset_type_category_replace_all_fields(
     authenticated_client: TestClient,
     fake: Faker,
