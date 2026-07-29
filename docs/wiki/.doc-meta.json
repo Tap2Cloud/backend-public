@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-28T00:00:00Z",
-  "commit_hash": "b08ae42ad363bc7c02d712404fd8c650078aa2db",
+  "generated_at": "2026-07-29T00:00:00Z",
+  "commit_hash": "363289a383346c3e72f56e8b9a8af3500cf59ced",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
   "component_count": 319,
@@ -168,6 +168,16 @@
         "t2c_backend.services.role.RoleService"
       ],
       "doc_file": "permissions-reference.md"
+    },
+    "Extending Tap2Cloud": {
+      "components": [
+        "t2c_backend.main.CustomFastAPI",
+        "t2c_backend.config.Config",
+        "t2c_backend.core.repository.BaseRepository",
+        "t2c_backend.core.security.JWTAPIAccessTokenBearer",
+        "t2c_backend.core.permissions.Permissions"
+      ],
+      "doc_file": "extending.md"
     }
   },
   "files_generated": [
@@ -188,30 +198,32 @@
     "extending.md"
   ],
   "last_update": {
-    "previous_commit_hash": "4c081229665eefbb724ce3b9be010e7d8d79a18b",
-    "reason": "Permission flags wired into every API route; location-based ownership refactor; seeded-role bitmask derived via ALL_PERMISSIONS",
-    "uncommitted_source_changes": [
-      "t2c_backend/core/permissions.py (ALL_PERMISSIONS constant added)",
-      "t2c_backend/services/organization/__init__.py (seeds roles with ALL_PERMISSIONS instead of a literal)"
+    "previous_commit_hash": "b08ae42ad363bc7c02d712404fd8c650078aa2db",
+    "reason": "Verification pass against the current tree. No structural drift: component count unchanged at 319, and the only source changes since the previous docs commit (ALL_PERMISSIONS in core/permissions.py, OrganizationService seeding with it) were already documented. Corrected a stale test-count figure.",
+    "verified_against_source": [
+      "route → permission matrix: 55/55 guarded routes match core/security.py bearers exactly (65 routes total: 4 public, 1 refresh-only, 5 authenticated-unrestricted)",
+      "flag catalogue: 42 flags, contiguous bits 0-41, ALL_PERMISSIONS == 4398046511103 == 2**42-1",
+      "27 ORM model classes, 14 registered services, 4 alembic revisions (pkg_0001..pkg_0004)",
+      "all file paths, doc cross-links, and heading anchors referenced in the wiki resolve"
     ],
     "modules_updated": [
-      "Security & Permissions",
-      "Permissions Reference",
-      "API Endpoints",
-      "Data Models",
-      "Schemas",
-      "Services",
-      "Database Migrations",
-      "Tests",
-      "Extending Tap2Cloud",
-      "Repository Overview"
+      "Tests"
     ],
     "modules_unchanged": [
       "Application Bootstrap",
       "Core Infrastructure",
+      "Data Models",
+      "Schemas",
+      "API Endpoints",
+      "Services",
+      "Security & Permissions",
+      "Permissions Reference",
       "Clients",
       "Utilities",
-      "Development Setup"
+      "Database Migrations",
+      "Development Setup",
+      "Extending Tap2Cloud",
+      "Repository Overview"
     ]
   }
 }

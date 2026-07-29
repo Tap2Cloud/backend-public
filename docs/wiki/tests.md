@@ -31,7 +31,7 @@ t2c_backend/tests/
         └── test_instruction_manual.py
 ```
 
-The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are ~180 test functions across 14 REST modules.
+The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 190 test functions across 14 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (20).
 
 ## Architecture
 
