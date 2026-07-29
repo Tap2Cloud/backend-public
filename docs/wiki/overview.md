@@ -27,7 +27,11 @@ graph TD
   Models --> Utils
 ```
 
-A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service registry to the request id → the route's `JWTAPIAccessTokenBearer` verifies and re-hydrates the caller's org/roles from the DB → `get_services` wires services onto the request-scoped session → the service runs business logic through `BaseRepository` (with automatic reader/writer engine routing) → the response schema maps the ORM result to the wire format.
+A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service registry to the request id → the route's `JWTAPIAccessTokenBearer` verifies the token, re-hydrates the caller's org/location/roles from the DB, and checks the permission flag the route declares → `get_services` wires services onto the request-scoped session → the service runs business logic through `BaseRepository` (with automatic reader/writer engine routing), scoping rows to the caller's `location_id`/`organization_id` → the response schema maps the ORM result to the wire format.
+
+Access control therefore has two independent layers: **role-based permission flags** decide whether an
+operation is allowed at all, and **location-based ownership** decides which rows it can touch. See
+[Security & Permissions](security-and-permissions.md) and [Permissions Reference](permissions-reference.md).
 
 ## Module Index
 
@@ -39,7 +43,8 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 | [Schemas](schemas.md) | Pydantic request/response DTOs and the JWT token classes |
 | [API Endpoints](api-endpoints.md) | REST routers under `/api/v1` and their auth/DI conventions |
 | [Services](services.md) | Business-logic layer, one service per domain, resolved per request |
-| [Security & Permissions](security-and-permissions.md) | JWT bearers, token classes, bitmask permissions, password hashing |
+| [Security & Permissions](security-and-permissions.md) | JWT bearers, token classes, the bitmask permission check, password hashing |
+| [Permissions Reference](permissions-reference.md) | All 42 permission flags with bit values, the route → permission matrix, and the default role grant |
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
 | [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
@@ -52,7 +57,7 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 - **Language:** Python ≥ 3.12
 - **Web framework:** FastAPI (with `fastapi-pagination`), served by Gunicorn + Uvicorn workers
 - **Database:** PostgreSQL via SQLAlchemy 2.0 (async, `asyncpg`), Alembic migrations
-- **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing
+- **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing; role-based bitmask permissions enforced per route
 - **Config:** `pydantic-settings` (environment-driven)
 - **Files/PDF:** `aiofiles` disk storage (S3 backend stubbed in OSS), ReportLab for audit reports
 - **i18n:** gettext + Babel (`en`/`de`)
@@ -70,4 +75,4 @@ The fastest path to a running local instance uses `uv` for the Python environmen
 5. **Orientation** — start with [Application Bootstrap](application-bootstrap.md) to understand how the app is assembled and how clients/services are registered, then read [Core Infrastructure](core-infrastructure.md) (sessions, repository) and [API Endpoints](api-endpoints.md) (request flow). The [Data Models](data-models.md) ER structure is the best map of the domain.
 6. **Extending** — install this package as a library, subclass `CustomFastAPI` with your own `config_class` and `get_api_router()`, and register additional clients/services via the extension `setup(app)` pattern. See the full walkthrough in [Extending Tap2Cloud](extending.md).
 
-> **Open-core note:** some capabilities — parts of organizational management, advanced access control, enterprise identity, and the concrete S3 storage backend — are provided through separate proprietary modules and are not part of this repository.
+> **Open-core note:** some capabilities — parts of organizational management, advanced access control, enterprise identity, and the concrete S3 storage backend — are provided through separate proprietary modules and are not part of this repository. The permission *enforcement* mechanism is fully open (flags, bearers, per-route checks); what is thin here is permission *administration* — every default role is seeded with the full bitmask and `POST /organization/roles` does not yet persist a submitted permission list.

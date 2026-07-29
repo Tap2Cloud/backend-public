@@ -466,9 +466,119 @@ async def get_warranty_claim(
     return WarrantyClaimResponse.convert(await services.warranty_service.get_claim(claim_id))
 ```
 
-This router is the `warranty_router` composed into `get_api_router()` back in Step 2. Restricting a route
-to roles or permissions works exactly as in the core — pass them to the bearer, e.g.
-`JWTAPIAccessTokenBearer(roles={Role.admin})` (see [Security & Permissions](security-and-permissions.md)).
+This router is the `warranty_router` composed into `get_api_router()` back in Step 2.
+
+### Guarding your endpoints with permissions
+
+The two examples above authenticate only (`JWTAPIAccessTokenBearer()`), which is the exception in the
+core — nearly every core route declares a required permission flag on its bearer. Do the same for your
+routes by passing a `permissions` dict:
+
+```python
+from t2c_backend.core.security import JWTAPIAccessTokenBearer
+
+@router.post("/warranty", operation_id="create warranty claim", status_code=201)
+async def create_warranty_claim(
+    data: CreateWarrantyClaim,
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_update": True})),
+    services: DictContainer = Depends(get_services),
+):
+    ...
+```
+
+The bearer resolves the caller's roles from the database on every request and returns
+**403 `Insufficient permissions.`** unless the required flags are a subset of the union of the caller's
+role flags. `roles={Role.admin}` works the same way for enum-based role gating. Two rules to keep in
+mind:
+
+- **Only names in `Permissions.VALID_FLAGS` are enforced.** An unknown key (a typo, or a flag you
+  intended to add but didn't) is silently filtered out and the route ends up unguarded. There is no
+  startup validation — test the negative case.
+- **Scope rows separately.** A flag authorizes the *operation*, not the *rows*. Pass
+  `token.location_id` (or `token.organization_id`) into your service and validate ownership there,
+  exactly as the core services do:
+
+  ```python
+  claim = await self.repository.get_one_or_none(id=claim_id)
+  if not claim or claim.asset.location_id != location_id:
+      raise NotFoundError("Warranty claim not found")
+  ```
+
+- **Re-check when a parameter escalates the operation.** If a query/path flag makes the endpoint do
+  something bigger (the core's `cascadeOrg` deleting a whole organization), add a second check in the
+  handler with the static helper:
+
+  ```python
+  from t2c_backend.utils.errors import UnAuthenticatedError
+
+  if destructive and not {"organization_delete"}.issubset(
+      JWTAPIAccessTokenBearer.user_permissions(token)
+  ):
+      raise UnAuthenticatedError("Insufficient permissions.")
+  ```
+
+### Adding your own permission flags
+
+`Permissions` is a plain `BaseFlags` subclass, so a downstream module can define its own flag class the
+same way the core does — bits are just integers, and `@fill_with_flags()` builds `VALID_FLAGS` from the
+`FlagValue` descriptors:
+
+```python
+# private_backend/core/permissions.py
+from t2c_backend.core.permissions import BaseFlags, FlagValue, fill_with_flags
+
+
+@fill_with_flags()
+class AppPermissions(BaseFlags):
+    """Private flags, allocated above the core's bits 0-41."""
+
+    __slots__ = ()
+
+    @FlagValue
+    def warranty_create(self) -> int:
+        return 1 << 42
+
+    @FlagValue
+    def warranty_read(self) -> int:
+        return 1 << 43
+```
+
+Two mechanics make this less plug-and-play than it looks — both are worth reading the core source for
+before you commit to an approach:
+
+- **`@fill_with_flags()` and iteration only see the class's own `__dict__`.** `fill_with_flags` builds
+  `VALID_FLAGS` from `cls.__dict__`, and `BaseFlags.__iter__` walks `self.__class__.__dict__` — neither
+  walks the MRO. Subclassing `Permissions` and re-decorating therefore produces a class whose
+  `VALID_FLAGS` contains **only the new flags**; the inherited core flags disappear from `VALID_FLAGS`
+  and from `dict(instance)`, even though their descriptors still work as attributes. Declaring a
+  separate `BaseFlags` subclass (as above) keeps that boundary explicit instead of half-broken.
+- **The bearer decodes with the core `Permissions` class.** `BaseJWTAPIBearer.check_permission` imports
+  `Permissions` directly and filters requirements through `Permissions.VALID_FLAGS`, so a flag the core
+  doesn't know about is **silently ignored** and the route ends up unguarded. To enforce private flags,
+  subclass the bearer and override `user_permissions`/`check_permission` to decode with your flag class,
+  then depend on your subclass in your routers.
+
+Also decide where the extra bits are *stored*: they can share `roles.permissions` (one integer, one
+namespace — simplest, but the two flag classes must never overlap) or live in a separate column your
+own bearer reads. `Numeric` has no 64-bit ceiling, so widening the same column is viable.
+
+Rules for allocating bits, whichever approach you take:
+
+- **Never renumber or reuse a bit.** Values are persisted in `roles.permissions`; changing a bit
+  silently re-interprets every existing role. Append at the next free bit only.
+- **Bits 0–41 are taken** by the core. Start private flags at `1 << 42`. The full allocation is in
+  [Permissions Reference](permissions-reference.md).
+- **The default-role bitmask updates itself — but only for core flags.**
+  `OrganizationService.create_organization_with_location()` seeds `member`/`admin`/`owner` with
+  `ALL_PERMISSIONS`, which `core/permissions.py` derives from `Permissions.VALID_FLAGS`
+  (`Permissions(**dict.fromkeys(Permissions.VALID_FLAGS, True)).value`). A flag added to the core
+  `Permissions` class is therefore granted to newly created organizations automatically. A flag on
+  *your own* class is **not** — `VALID_FLAGS` there belongs to your class, so you need your own
+  equivalent constant and your own seeding logic (or an override of the org-bootstrap path).
+- **Grant existing roles explicitly.** `ALL_PERMISSIONS` only affects roles created *after* the flag
+  was added. Every already-persisted `roles.permissions` integer must be updated for a new flag to take
+  effect on existing organizations — that is a data migration (`UPDATE roles SET permissions = ...`),
+  and no amount of derivation avoids it.
 
 ---
 
@@ -596,6 +706,12 @@ And the shared building blocks your extensions inherit or reuse:
   free them; create them lazily instead.
 - ✅ **Call `super()` in overrides.** In `setup_hook()`, call `await super().setup_hook()` so the core
   clients still load.
+- ✅ **Guard every new route with a permission flag.** Pass `permissions={...}` to the bearer — an
+  unguarded `JWTAPIAccessTokenBearer()` route is reachable by any authenticated user in any
+  organization. Unknown flag names are filtered out silently, so verify the 403 path in a test.
+- ⚠️ **Permission bits are persisted data.** Never renumber an existing bit, always append. New core
+  flags reach new organizations automatically via `ALL_PERMISSIONS`, but existing roles keep their
+  stored integer — grant a new flag to them with a data migration.
 - ⚠️ **Open-core boundary.** Some capabilities — parts of organizational management, advanced access
   control, enterprise identity, and the concrete S3 storage backend — are intentionally not fully
   implemented here and are provided by separate proprietary modules. Your private repo is where those
@@ -608,5 +724,6 @@ And the shared building blocks your extensions inherit or reuse:
 - [Core Infrastructure](core-infrastructure.md) — engine, sessions, `BaseRepository`, pagination
 - [Services](services.md) — the service layer conventions this guide extends
 - [Security & Permissions](security-and-permissions.md) — JWT bearers, roles, permissions
+- [Permissions Reference](permissions-reference.md) — flag/bit allocation you must not collide with
 - [Clients](clients.md) — the startup-client pattern (`token_backend`, `cryptography`, `storage`)
 - [Database Migrations](database-migrations.md) — the Alembic async environment

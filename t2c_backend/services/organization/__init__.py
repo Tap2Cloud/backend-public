@@ -1,6 +1,7 @@
 from fastapi import UploadFile
 from sqlalchemy.orm import joinedload, make_transient_to_detached
 
+from t2c_backend.core.permissions import ALL_PERMISSIONS
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import (
     Location,
@@ -57,7 +58,7 @@ class OrganizationService:
         )
 
         roles = {
-            name: Role(name=name, organization_id=organization.id, permissions=4398046511103)
+            name: Role(name=name, organization_id=organization.id, permissions=ALL_PERMISSIONS)
             for name, value in RoleEnum.organization_roles()
         }
 

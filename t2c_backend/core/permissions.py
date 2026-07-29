@@ -401,3 +401,8 @@ class Permissions(BaseFlags):
     @FlagValue
     def typeplate_document_delete(self) -> int:
         return 1 << 41
+
+
+#: Bitmask with every flag declared on :class:`Permissions` enabled. Recomputed
+#: automatically, so a newly added ``FlagValue`` is included without changes here.
+ALL_PERMISSIONS = Permissions(**dict.fromkeys(Permissions.VALID_FLAGS, True)).value
