@@ -10,7 +10,6 @@ class DisplayOrganization(BaseModel):
     id: int
     name: str
     number: str
-    email: str
     logo: str | None
     created_at: int = Field(..., alias="createdAt")
 
@@ -22,7 +21,6 @@ class DisplayOrganization(BaseModel):
             id=organization.id,
             name=organization.name,
             number=organization.number,
-            email=organization.email,
             createdAt=int(organization.created_at.timestamp()),
             logo=organization.logo.get_string() if organization.logo is not None else None,
         )
@@ -33,7 +31,6 @@ class DisplayOrganization(BaseModel):
             id=organization_obj.id,
             name=organization_obj.name,
             number=organization_obj.number,
-            email=organization_obj.email,
             created_at=datetime.fromtimestamp(organization_obj.created_at),
         )
 
@@ -45,7 +42,6 @@ class Organization(DisplayOrganization):
 class CreateOrganizationRequest(BaseModel):
     name: str
     number: str
-    email: str
     taxonomy: Taxonomy
 
     model_config = ConfigDict(from_attributes=True)
@@ -54,7 +50,6 @@ class CreateOrganizationRequest(BaseModel):
 class UpdateOrganizationRequest(BaseModel):
     name: str | None
     number: str | None
-    email: str | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,7 +58,6 @@ class UpdateOrganizationResponse(BaseModel):
     id: int
     name: str | None
     number: str | None
-    email: str | None
     logo: str | None = None
     created_at: int = Field(..., alias="createdAt")
 
@@ -87,7 +81,6 @@ class OrganizationDetails(DetailedOrganization):
             id=organization.id,
             name=organization.name,
             number=organization.number,
-            email=organization.email,
             createdAt=int(organization.created_at.timestamp()),
             logo=organization.logo.get_string() if organization.logo is not None else None,
             locationCount=organization.location_count,

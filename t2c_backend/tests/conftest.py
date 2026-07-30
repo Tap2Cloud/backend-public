@@ -60,16 +60,8 @@ def second_user_data(user_data_factory):
 @pytest.fixture(scope="function")
 def location(fake: Faker) -> dict[str, str]:
     return {
-        "name": fake.name(),
-        "street": fake.street_name(),
-        "postcode": fake.postcode(),
         "city": fake.city(),
         "country": fake.country(),
-        "region": fake.region(),
-        "telNumber": fake.phone_number(),
-        "mobileNumber": fake.phone_number(),
-        "faxNumber": fake.phone_number(),
-        "email": fake.email(),
     }
 
 
@@ -78,7 +70,6 @@ def organization(fake: Faker) -> dict[str, str]:
     return {
         "name": fake.company(),
         "number": fake.phone_number(),
-        "email": fake.company_email(),
     }
 
 

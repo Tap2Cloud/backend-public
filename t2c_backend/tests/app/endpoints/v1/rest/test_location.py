@@ -10,14 +10,14 @@ def test_update_location(authenticated_client: TestClient, location, container):
     )
 
     assert response.status_code == 200
-    assert response.json()["name"] != container["location"]["name"]
+    assert response.json()["city"] != container["location"]["city"]
 
 
 @pytest.mark.order(17)
-def test_update_location_without_name(authenticated_client: TestClient, location, container):
+def test_update_location_without_city(authenticated_client: TestClient, location, container):
     response = authenticated_client.put(
         "/api/v1/location",
-        json={**location, "name": None},
+        json={**location, "city": None},
     )
 
     assert response.status_code == 422

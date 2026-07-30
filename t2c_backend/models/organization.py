@@ -27,8 +27,7 @@ class Organization(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeB
     taxonomy_id: Mapped[int] = mapped_column(ForeignKey("taxonomies.id", ondelete="CASCADE"))
 
     name: Mapped[str] = mapped_column(Text())
-    number: Mapped[str] = mapped_column(Text())
-    email: Mapped[str] = mapped_column(Text())
+    number: Mapped[str] = mapped_column(Text(), nullable=True)
     logo: Mapped["Image"] = mapped_column(ImageType(), nullable=True)
     taxonomy = relationship("Taxonomy")
 

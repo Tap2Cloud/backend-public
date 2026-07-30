@@ -27,8 +27,7 @@ class OrganizationService:
     async def create_organization_with_location(
         self,
         name: str,
-        number: str,
-        email: str,
+        number: str | None,
         taxonomy: Taxonomy,
         logo: UploadFile,
         location_data: LocationCreateRequest,
@@ -51,7 +50,6 @@ class OrganizationService:
             Organization(
                 name=name,
                 number=number,
-                email=email,
                 logo=await Image.from_file(logo) if logo else None,
                 taxonomy=taxonomy,
             ),
@@ -78,7 +76,6 @@ class OrganizationService:
         organization_id: int,
         name: str | None,
         number: str | None,
-        email: str | None,
         logo: UploadFile | None,
     ):
         organization = await self.repository.get(organization_id)
@@ -89,7 +86,6 @@ class OrganizationService:
         update_fields = {
             "name": name,
             "number": number,
-            # "email": email,
             "logo": await Image.from_file(logo) if logo else None,
         }
 

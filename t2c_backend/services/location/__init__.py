@@ -22,17 +22,9 @@ class LocationService:
         user,
     ):
         location = Location(
-            name=location_data.name,
             organization_id=organization.id,
-            street=location_data.street,
-            postcode=location_data.postcode,
             city=location_data.city,
             country=location_data.country,
-            region=location_data.region,
-            tel_number=location_data.tel_number,
-            mobile_number=location_data.mobile_number,
-            fax_number=location_data.fax_number,
-            email=location_data.email,
         )
 
         location = await self.repository.save(location)

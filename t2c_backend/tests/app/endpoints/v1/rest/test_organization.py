@@ -90,7 +90,6 @@ def test_create_organization_without_organization_name_only(
             "location": location,
             "organization": {
                 "number": organization["number"],
-                "email": organization["email"],
             },
         },
     )
