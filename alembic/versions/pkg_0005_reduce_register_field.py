@@ -4,14 +4,6 @@ Revision ID: pkg_0005
 Revises: pkg_0004
 Create Date: 2026-07-30 14:58:54.973990
 
-Also renames taxonomies -> product_pass_types (and organizations.taxonomy_id ->
-product_pass_type_id).
-
-pkg_0001 creates the table under its new name, because the static-data revision (pkg_0002)
-seeds it through the ORM model, which now maps product_pass_types. The renames below are
-therefore guarded: they are a no-op on a fresh database and only rewrite databases created
-before the rename.
-
 """
 
 from collections.abc import Sequence
