@@ -43,7 +43,9 @@ class LocationService:
             location_id,
             options=[
                 selectinload(Location.organization),
-                selectinload(Location.organization).selectinload(OrganizationModel.taxonomy),
+                selectinload(Location.organization).selectinload(
+                    OrganizationModel.product_pass_type
+                ),
             ],
         )
 
@@ -66,7 +68,7 @@ class LocationService:
         return await self.repository.list(
             options=[
                 joinedload(Location.organization),
-                joinedload(Location.organization).selectinload(OrganizationModel.taxonomy),
+                joinedload(Location.organization).selectinload(OrganizationModel.product_pass_type),
             ],
             organization_id=organization_id,
         )

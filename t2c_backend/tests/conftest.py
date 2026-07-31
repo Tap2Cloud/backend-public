@@ -115,7 +115,7 @@ def asset_type_category_mapping_container():
 
 
 @pytest.fixture(scope="session")
-def taxonomy_container():
+def product_pass_type_container():
     return {}
 
 

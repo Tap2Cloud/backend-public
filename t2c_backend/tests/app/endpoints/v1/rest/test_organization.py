@@ -13,13 +13,15 @@ def test_create_organization_with_location(
     location,
     organization,
     container,
-    taxonomy_container,
+    product_pass_type_container,
 ):
     response = authenticated_client.post(
         "/api/v1/organization",
         data={
             **organization,
-            "taxonomy": json.dumps(random.choice(taxonomy_container["taxonomies"])),
+            "productPassType": json.dumps(
+                random.choice(product_pass_type_container["product_pass_types"])
+            ),
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],
@@ -38,14 +40,16 @@ def test_create_organization_with_location_for_second_user(
     location,
     organization,
     container,
-    taxonomy_container,
+    product_pass_type_container,
 ):
     response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
     response = authenticated_client.post(
         "/api/v1/organization",
         data={
             **organization,
-            "taxonomy": json.dumps(random.choice(taxonomy_container["taxonomies"])),
+            "productPassType": json.dumps(
+                random.choice(product_pass_type_container["product_pass_types"])
+            ),
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],

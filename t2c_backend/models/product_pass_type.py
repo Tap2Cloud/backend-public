@@ -8,15 +8,15 @@ from sqlalchemy.orm import (
 from t2c_backend.core.db import AdvancedDeclarativeBase, BigIntPrimaryKey, CommonTableAttributes
 
 
-class Taxonomy(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
-    __tablename__ = "taxonomies"
+class ProductPassType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
+    __tablename__ = "product_pass_types"
 
     name: Mapped[str] = mapped_column(Text())
     display_name: Mapped[str] = mapped_column(Text())
 
     organization = relationship(
         "Organization",
-        back_populates="taxonomy",
+        back_populates="product_pass_type",
         cascade="all, delete",
         passive_deletes=True,
     )

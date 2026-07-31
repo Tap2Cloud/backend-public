@@ -8,7 +8,7 @@ from t2c_backend.schemas.v1.asset_type_category import (
 )
 from t2c_backend.schemas.v1.audit import AuditResponse
 from t2c_backend.schemas.v1.location import LocationBaseResponse
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.utils.enums import AssetStatus
 
 
@@ -118,7 +118,7 @@ class DetailedAssetPassResponse(BaseModel):
     asset_type: AssetTypeResponse = Field(..., alias="assetType")
     asset_type_category: AssetTypeCategoryResponse = Field(..., alias="assetTypeCategory")
     audit: list[AuditResponse]
-    taxonomy: Taxonomy
+    product_pass_type: ProductPassType = Field(..., alias="productPassType")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -132,7 +132,9 @@ class DetailedAssetPassResponse(BaseModel):
             assetTypeCategory=AssetTypeCategoryResponse.convert(
                 asset.asset_type.asset_type_category
             ),
-            taxonomy=Taxonomy.from_model(asset.location.organization.taxonomy),
+            productPassType=ProductPassType.from_model(
+                asset.location.organization.product_pass_type
+            ),
             audit=[AuditResponse.from_model(audit, audit.audit_tasks) for audit in asset.audit],
         )
 

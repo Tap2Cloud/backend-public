@@ -6,8 +6,8 @@ from t2c_backend.schemas.v1.organization import (
     OrganizationDetails,
     UpdateOrganizationResponse,
 )
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
@@ -22,7 +22,7 @@ router = APIRouter()
 async def create_organization_with_location(
     name: str = Form(...),
     number: str | None = Form(...),
-    taxonomy: Taxonomy = Form(...),
+    product_pass_type: ProductPassType = Form(..., alias="productPassType"),
     logo: UploadFile | None = File(None),
     location: LocationCreateRequest = Form(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -34,7 +34,7 @@ async def create_organization_with_location(
     ) = await services.organization_service.create_organization_with_location(
         name=name,
         number=number,
-        taxonomy=Taxonomy.to_orm(taxonomy),
+        product_pass_type=ProductPassType.to_orm(product_pass_type),
         logo=logo,
         location_data=location,
         user_id=token.user_id,

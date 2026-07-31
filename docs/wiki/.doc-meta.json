@@ -45,7 +45,7 @@
         "t2c_backend.models.typeplate.Typeplate",
         "t2c_backend.models.audit.Audit",
         "t2c_backend.models.service.Service",
-        "t2c_backend.models.taxonomy.Taxonomy",
+        "t2c_backend.models.product_pass_type.ProductPassType",
         "t2c_backend.models.documents.Document"
       ],
       "doc_file": "data-models.md"
@@ -90,7 +90,7 @@
         "t2c_backend.services.service.ServiceService",
         "t2c_backend.services.audit.AuditService",
         "t2c_backend.services.dashboard.DashboardService",
-        "t2c_backend.services.taxonomy.TaxonomyService"
+        "t2c_backend.services.product_pass_type.ProductPassTypeService"
       ],
       "doc_file": "services.md"
     },

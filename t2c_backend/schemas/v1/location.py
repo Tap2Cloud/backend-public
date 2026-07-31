@@ -6,7 +6,7 @@ from starlette.datastructures import UploadFile
 from t2c_backend.models import Location as LocationModel
 from t2c_backend.models import Organization as OrganizationModel
 from t2c_backend.schemas.v1.organization import DisplayOrganization, Organization
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 
 
 class LocationCreateRequest(BaseModel):
@@ -51,7 +51,7 @@ class LocationBaseResponse(LocationCreateRequest):
                 number=organization.number,
                 logo=organization.logo.get_string() if organization.logo is not None else None,
                 createdAt=int(organization.created_at.timestamp()),
-                taxonomy=Taxonomy.from_model(organization.taxonomy),
+                productPassType=ProductPassType.from_model(organization.product_pass_type),
             ),
         )
 
@@ -79,7 +79,7 @@ class Location(LocationBaseResponse):
                 name=organization.name,
                 number=organization.number,
                 createdAt=int(organization.created_at.timestamp()),
-                taxonomy=Taxonomy.from_model(organization.taxonomy),
+                productPassType=ProductPassType.from_model(organization.product_pass_type),
                 logo=organization.logo.get_string() if organization.logo is not None else None,
             ),
         )

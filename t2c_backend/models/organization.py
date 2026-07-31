@@ -24,12 +24,14 @@ from t2c_backend.schemas.v1.image import Image
 class Organization(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     __tablename__ = "organizations"
 
-    taxonomy_id: Mapped[int] = mapped_column(ForeignKey("taxonomies.id", ondelete="CASCADE"))
+    product_pass_type_id: Mapped[int] = mapped_column(
+        ForeignKey("product_pass_types.id", ondelete="CASCADE")
+    )
 
     name: Mapped[str] = mapped_column(Text())
     number: Mapped[str] = mapped_column(Text(), nullable=True)
     logo: Mapped["Image"] = mapped_column(ImageType(), nullable=True)
-    taxonomy = relationship("Taxonomy")
+    product_pass_type = relationship("ProductPassType")
 
     location = relationship(
         "Location",

@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from t2c_backend.models import Organization as OrganizationModel
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 
 
 class DisplayOrganization(BaseModel):
@@ -36,13 +36,13 @@ class DisplayOrganization(BaseModel):
 
 
 class Organization(DisplayOrganization):
-    taxonomy: Taxonomy
+    product_pass_type: ProductPassType = Field(..., alias="productPassType")
 
 
 class CreateOrganizationRequest(BaseModel):
     name: str
     number: str
-    taxonomy: Taxonomy
+    product_pass_type: ProductPassType = Field(..., alias="productPassType")
 
     model_config = ConfigDict(from_attributes=True)
 

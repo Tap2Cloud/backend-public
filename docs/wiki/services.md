@@ -48,7 +48,7 @@ class XService:
 
 - **`OrganizationService`** (`Organization`) — `create_organization_with_location()` bootstraps an org, its default roles (`Role.organization_roles()` — `member`/`admin`/`owner`, each seeded with the **full permission bitmask** `ALL_PERMISSIONS` from `core.permissions`), and its first location (assigning the user `owner`); plus update/get (with computed counts)/delete. `ALL_PERMISSIONS` is derived from `Permissions.VALID_FLAGS` at import time, so a newly declared flag is granted to new organizations without touching this service — see [Permissions Reference](permissions-reference.md#default-role-grant).
 - **`LocationService`** (`Location`) — create/update/list locations and user-location lookups.
-- **`TaxonomyService`** (`Taxonomy`) — read-only taxonomy listing.
+- **`ProductPassTypeService`** (`ProductPassType`) — read-only product pass type listing.
 
 ### Asset definition
 
@@ -64,7 +64,7 @@ class XService:
 
 ### Aggregation
 
-- **`DashboardService`** — atypical (`_model = None`, uses `self.session` directly): `get_dashboard_statistics()` returns a 6-tuple of counts — assets, asset types, typeplates, instruction manuals, services, and inspection tasks. Every count reaches the organization through `Location` rather than through the creating user: asset types and typeplates join `AssetType.location_id`, and audit tasks join `Audit → Asset → Location`. The former cross-organization "shop" count (same-taxonomy assets in other orgs) has been removed along with its response field.
+- **`DashboardService`** — atypical (`_model = None`, uses `self.session` directly): `get_dashboard_statistics()` returns a 6-tuple of counts — assets, asset types, typeplates, instruction manuals, services, and inspection tasks. Every count reaches the organization through `Location` rather than through the creating user: asset types and typeplates join `AssetType.location_id`, and audit tasks join `Audit → Asset → Location`. The former cross-organization "shop" count (same-product-pass-type assets in other orgs) has been removed along with its response field.
 
 ## Dependencies
 

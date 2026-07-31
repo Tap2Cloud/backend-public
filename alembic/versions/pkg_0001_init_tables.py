@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
-        "taxonomies",
+        "product_pass_types",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("display_name", sa.Text(), nullable=False),
@@ -49,14 +49,16 @@ def upgrade() -> None:
     op.create_table(
         "organizations",
         sa.Column("id", sa.BigInteger(), nullable=False),
-        sa.Column("taxonomy_id", sa.BigInteger(), nullable=False),
+        sa.Column("product_pass_type_id", sa.BigInteger(), nullable=False),
         sa.Column("name", sa.Text(), nullable=False),
         sa.Column("number", sa.Text(), nullable=False),
         sa.Column("email", sa.Text(), nullable=False),
         sa.Column("logo", t2c_backend.core.db.types.ImageType(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["taxonomy_id"], ["taxonomies.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["product_pass_type_id"], ["product_pass_types.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -494,6 +496,6 @@ def downgrade() -> None:
     op.drop_table("locations")
     op.drop_table("organizations")
     op.drop_table("typeplate_images")
-    op.drop_table("taxonomies")
+    op.drop_table("product_pass_types")
     op.drop_table("asset_type_category_group")
     # ### end Alembic commands ###
