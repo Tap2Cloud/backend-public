@@ -6,7 +6,9 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(105)
+@pytest.mark.order(
+    after="test_instruction_manual.py::test_get_list_of_instruction_manual_with_is_document_and_is_video_filter",
+)
 def test_list_typeplate(authenticated_client: TestClient, typeplate_container):
     response = authenticated_client.get("/api/v1/typeplate")
     typeplate_container["typeplate"] = response.json()
@@ -14,14 +16,14 @@ def test_list_typeplate(authenticated_client: TestClient, typeplate_container):
     assert response.status_code == 200
 
 
-@pytest.mark.order(106)
+@pytest.mark.order(after="test_list_typeplate")
 def test_list_typeplate_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/typeplate")
 
     assert response.status_code == 401
 
 
-@pytest.mark.order(107)
+@pytest.mark.order(after="test_list_typeplate_with_unauthenticated_client")
 def test_list_typeplate_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):
@@ -33,7 +35,7 @@ def test_list_typeplate_with_query_asset_type_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(108)
+@pytest.mark.order(after="test_list_typeplate_with_query_asset_type_name")
 def test_list_typeplate_with_query_asset_type_category_name(
     authenticated_client: TestClient, asset_type_category_detail_container
 ):
@@ -48,7 +50,7 @@ def test_list_typeplate_with_query_asset_type_category_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(109)
+@pytest.mark.order(after="test_list_typeplate_with_query_asset_type_category_name")
 def test_list_typeplate_with_typeplate_created_filter(
     authenticated_client: TestClient, fake: Faker
 ):
@@ -66,7 +68,7 @@ def test_list_typeplate_with_typeplate_created_filter(
     assert response.status_code == 200
 
 
-@pytest.mark.order(110)
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter")
 def test_get_typeplate_by_id(authenticated_client: TestClient, typeplate_container):
     if len(typeplate_container["typeplate"]["items"]) <= 0:
         assert True
@@ -84,7 +86,7 @@ def test_get_typeplate_by_id(authenticated_client: TestClient, typeplate_contain
         assert response.status_code == 200
 
 
-@pytest.mark.order(111)
+@pytest.mark.order(after="test_get_typeplate_by_id")
 def test_get_typeplate_by_fake_id(
     authenticated_client: TestClient, typeplate_container, fake: Faker
 ):
@@ -94,7 +96,7 @@ def test_get_typeplate_by_fake_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(112)
+@pytest.mark.order(after="test_get_typeplate_by_fake_id")
 def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images):
     response = authenticated_client.get("/api/v1/typeplate/images")
     typeplate_images["typeplate_images"] = response.json()
@@ -102,7 +104,7 @@ def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images
     assert response.status_code == 200
 
 
-@pytest.mark.order(113)
+@pytest.mark.order(after="test_typeplate_image_list")
 def test_update_typeplate_api_without_eu_file(
     authenticated_client: TestClient,
     typeplate_container,
@@ -139,7 +141,7 @@ def test_update_typeplate_api_without_eu_file(
     assert response.status_code == 200
 
 
-@pytest.mark.order(114)
+@pytest.mark.order(after="test_update_typeplate_api_without_eu_file")
 def test_update_typeplate_with_eu_file(
     authenticated_client: TestClient,
     typeplate_container,
@@ -182,7 +184,7 @@ def test_update_typeplate_with_eu_file(
     assert response.status_code == 200
 
 
-@pytest.mark.order(115)
+@pytest.mark.order(after="test_update_typeplate_with_eu_file")
 def test_update_typeplate_with_unauthenticated_client(
     client: TestClient,
     typeplate_container,
@@ -225,7 +227,7 @@ def test_update_typeplate_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(115)
+@pytest.mark.order(after="test_update_typeplate_with_unauthenticated_client")
 def test_update_typeplate_with_fake_typeplate_id(
     authenticated_client: TestClient,
     typeplate_container,
@@ -255,7 +257,7 @@ def test_update_typeplate_with_fake_typeplate_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(116)
+@pytest.mark.order(after="test_update_typeplate_with_fake_typeplate_id")
 def test_get_typeplate_document(
     authenticated_client: TestClient,
     typeplate_container,
@@ -276,7 +278,7 @@ def test_get_typeplate_document(
     assert response.status_code == 200
 
 
-@pytest.mark.order(117)
+@pytest.mark.order(after="test_get_typeplate_document")
 def test_get_typeplate_document_with_unauthenticated_client(
     client: TestClient,
     typeplate_container,
@@ -297,7 +299,7 @@ def test_get_typeplate_document_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(118)
+@pytest.mark.order(after="test_get_typeplate_document_with_unauthenticated_client")
 def test_get_typeplate_document_with_fake_typeplate_id(
     authenticated_client: TestClient,
     typeplate_container,
@@ -318,7 +320,7 @@ def test_get_typeplate_document_with_fake_typeplate_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(119)
+@pytest.mark.order(after="test_get_typeplate_document_with_fake_typeplate_id")
 def test_delete_typeplate_document(
     authenticated_client: TestClient,
     typeplate_container,
@@ -339,7 +341,7 @@ def test_delete_typeplate_document(
     assert response.status_code == 204
 
 
-@pytest.mark.order(120)
+@pytest.mark.order(after="test_delete_typeplate_document")
 def test_delete_typeplate_document_with_unauthenticated_client(
     client: TestClient,
     typeplate_container,
@@ -360,7 +362,7 @@ def test_delete_typeplate_document_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(120)
+@pytest.mark.order(after="test_delete_typeplate_document_with_unauthenticated_client")
 def test_delete_typeplate_document_with_fake_typeplate_id(
     authenticated_client: TestClient,
     typeplate_container,

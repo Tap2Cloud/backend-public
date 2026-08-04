@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(after="test_register_for_second_user")
+@pytest.mark.order(after="test_register.py::test_register_without_firstname_lastname")
 def test_authentication(client: TestClient, user_data) -> None:
     response = client.post("/api/v1/login", json=user_data["credentials"])
 

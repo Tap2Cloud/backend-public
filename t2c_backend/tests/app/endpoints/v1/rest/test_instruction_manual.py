@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(100)
+@pytest.mark.order(after="test_asset.py::test_list_asset_pass_with_unauthenticated_client")
 def test_get_list_of_instruction_manual(
     authenticated_client: TestClient,
 ):
@@ -11,7 +11,7 @@ def test_get_list_of_instruction_manual(
     assert response.status_code == 200
 
 
-@pytest.mark.order(101)
+@pytest.mark.order(after="test_get_list_of_instruction_manual")
 def test_get_list_of_instruction_manual_with_unauthorized_client(
     client: TestClient,
 ):
@@ -20,7 +20,7 @@ def test_get_list_of_instruction_manual_with_unauthorized_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(102)
+@pytest.mark.order(after="test_get_list_of_instruction_manual_with_unauthorized_client")
 def test_get_list_of_instruction_manual_with_is_video_filter(
     authenticated_client: TestClient,
 ):
@@ -34,7 +34,7 @@ def test_get_list_of_instruction_manual_with_is_video_filter(
     assert response.status_code == 200
 
 
-@pytest.mark.order(103)
+@pytest.mark.order(after="test_get_list_of_instruction_manual_with_is_video_filter")
 def test_get_list_of_instruction_manual_with_is_document_filter(
     authenticated_client: TestClient,
 ):
@@ -48,7 +48,7 @@ def test_get_list_of_instruction_manual_with_is_document_filter(
     assert response.status_code == 200
 
 
-@pytest.mark.order(104)
+@pytest.mark.order(after="test_get_list_of_instruction_manual_with_is_document_filter")
 def test_get_list_of_instruction_manual_with_is_document_and_is_video_filter(
     authenticated_client: TestClient,
 ):
