@@ -6,7 +6,7 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(after="test_taxonomy.py::test_get_taxonomy")
+@pytest.mark.order(after="test_product_pass_type.py::test_get_product_pass_type")
 def test_create_organization_with_location(
     authenticated_client: TestClient,
     fake: Faker,
