@@ -41,6 +41,13 @@ class OrganizationService:
                 joinedload(User.roles),
             ],
         )
+        is_organization_exists = await self.repository.exists(
+            name__ilike=name, taxonomy_id=taxonomy.id
+        )
+        if is_organization_exists:
+            raise AlreadyExistsError(
+                msg="An organization with this name already exists in this taxonomy."
+            )
 
         if user.location_id is not None:
             raise AlreadyExistsError(msg="The organization is already exist with this user.")
@@ -85,6 +92,17 @@ class OrganizationService:
 
         if not organization:
             raise NotFoundError(f"Organization with ID '{organization_id}' not found")
+
+        is_organization_exists = await self.repository.exists(
+            name__ilike=name,
+            taxonomy_id=organization.taxonomy_id,
+            id__ne=organization.id,
+        )
+
+        if is_organization_exists:
+            raise AlreadyExistsError(
+                msg="An organization with this name already exists in this taxonomy."
+            )
 
         update_fields = {
             "name": name,
