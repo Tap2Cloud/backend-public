@@ -14,7 +14,8 @@ from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.location import LocationCreateRequest
 from t2c_backend.schemas.v1.taxonomy import Taxonomy
 from t2c_backend.utils.enums import Role as RoleEnum
-from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
+from t2c_backend.utils.misc import normalize_name
 
 
 class OrganizationService:
@@ -41,13 +42,12 @@ class OrganizationService:
                 joinedload(User.roles),
             ],
         )
+        name = normalize_name(name)
         is_organization_exists = await self.repository.exists(
             name__ilike=name, taxonomy_id=taxonomy.id
         )
         if is_organization_exists:
-            raise AlreadyExistsError(
-                msg="An organization with this name already exists in this taxonomy."
-            )
+            raise AlreadyExistsError(msg="Organization with this name already exists.")
 
         if user.location_id is not None:
             raise AlreadyExistsError(msg="The organization is already exist with this user.")
@@ -93,16 +93,19 @@ class OrganizationService:
         if not organization:
             raise NotFoundError(f"Organization with ID '{organization_id}' not found")
 
-        is_organization_exists = await self.repository.exists(
-            name__ilike=name,
-            taxonomy_id=organization.taxonomy_id,
-            id__ne=organization.id,
-        )
+        if name is not None:
+            name = normalize_name(name)
+            if not name:
+                raise BadRequestError(msg="Organization name is required.")
 
-        if is_organization_exists:
-            raise AlreadyExistsError(
-                msg="An organization with this name already exists in this taxonomy."
+            is_organization_exists = await self.repository.exists(
+                name__ilike=name,
+                taxonomy_id=organization.taxonomy_id,
+                id__ne=organization.id,
             )
+
+            if is_organization_exists:
+                raise AlreadyExistsError(msg="Organization with this name already exists.")
 
         update_fields = {
             "name": name,

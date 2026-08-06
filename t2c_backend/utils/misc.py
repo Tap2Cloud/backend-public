@@ -1,6 +1,7 @@
 import functools
 import json
 import re
+import unicodedata
 from calendar import timegm
 from datetime import UTC, datetime
 from inspect import isawaitable
@@ -53,6 +54,27 @@ def datetime_from_epoch(ts):
 
 def get_name_from_email(email: str) -> str | None:
     return (match := re.match(r"^[a-zA-Z]+", email.split("@")[0])) and match.group()
+
+
+# Characters that render as nothing and would otherwise make two identical names look different:
+# soft hyphen, zero width space/non-joiner/joiner, bidi marks, word joiner and BOM.
+INVISIBLE_CHARACTERS = r"[\u00ad\u200b-\u200f\u2060\ufeff]"
+_INVISIBLE_CHARACTERS_RE = re.compile(INVISIBLE_CHARACTERS)
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def normalize_name(name: str) -> str:
+    """
+    Canonical form of a user supplied name.
+
+    Applies NFKC (so fullwidth/compatibility characters and decomposed accents collapse onto
+    their canonical form), drops zero-width characters, squashes every whitespace run into a
+    single space and trims the ends. The result is what gets stored and what duplicate checks
+    are compared on.
+    """
+    name = unicodedata.normalize("NFKC", name)
+    name = _INVISIBLE_CHARACTERS_RE.sub("", name)
+    return _WHITESPACE_RE.sub(" ", name).strip()
 
 
 def r_getattr(obj, attr, *args):
