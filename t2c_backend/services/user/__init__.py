@@ -219,6 +219,7 @@ class UserService:
                 self._model.first_name,
                 self._model.last_name,
                 self._model.email,
+                self._model.profile_avatar,
                 self._model.created_at,
                 case(
                     (self._model.is_active.is_(True), UserStatus.ACTIVE),
