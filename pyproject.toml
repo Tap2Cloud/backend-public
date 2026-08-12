@@ -1,6 +1,6 @@
 [project]
 name = "tap2cloud-backend-opensource"
-version = "0.1.2"
+version = "0.1.3"
 description = "Open source t2c backend base"
 readme = "README.md"
 requires-python = ">=3.12"
