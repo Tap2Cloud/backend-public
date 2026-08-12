@@ -6,20 +6,22 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(after="test_taxonomy.py::test_get_taxonomy")
+@pytest.mark.order(after="test_product_pass_type.py::test_get_product_pass_type")
 def test_create_organization_with_location(
     authenticated_client: TestClient,
     fake: Faker,
     location,
     organization,
     container,
-    taxonomy_container,
+    product_pass_type_container,
 ):
     response = authenticated_client.post(
         "/api/v1/organization",
         data={
             **organization,
-            "taxonomy": json.dumps(random.choice(taxonomy_container["taxonomies"])),
+            "productPassType": json.dumps(
+                random.choice(product_pass_type_container["product_pass_types"])
+            ),
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],
@@ -38,14 +40,16 @@ def test_create_organization_with_location_for_second_user(
     location,
     organization,
     container,
-    taxonomy_container,
+    product_pass_type_container,
 ):
     response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
     response = authenticated_client.post(
         "/api/v1/organization",
         data={
             **organization,
-            "taxonomy": json.dumps(random.choice(taxonomy_container["taxonomies"])),
+            "productPassType": json.dumps(
+                random.choice(product_pass_type_container["product_pass_types"])
+            ),
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],
@@ -90,7 +94,6 @@ def test_create_organization_without_organization_name_only(
             "location": location,
             "organization": {
                 "number": organization["number"],
-                "email": organization["email"],
             },
         },
     )

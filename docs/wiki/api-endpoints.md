@@ -14,7 +14,7 @@ graph TD
   V1 --> AssetR[asset / asset-type / category]
   V1 --> AuditR[audit / service / typeplate]
   V1 --> OrgR[organization / user / location / role]
-  V1 --> Misc[dashboard / taxonomy / health / instruction-manual]
+  V1 --> Misc[dashboard / product pass type / health / instruction-manual]
   Auth --> Sec[JWT bearers]
   AssetR --> Svc[get_services → DictContainer]
 ```
@@ -49,7 +49,7 @@ graph TD
 - `organization` — create org + first location (multipart), update, delete, get details, and org role list/create (which raise `UnAuthorizedError` when the token has no org). Role creation takes `RoleCreate` (`name` + `permissions: list[str]`), though only the name is persisted today — see [Permissions Reference](permissions-reference.md).
 - `user` — profile get/update (multipart avatar), org-user paginated listing (`OrganizationUsersCustomPage`), password change, and two deletes: `DELETE /user/{cascadeOrg}` (self) and `DELETE /organization/user/{userId}/{cascadeOrg}` (another member). The `cascadeOrg` path flag decides what happens when the target is the org's **last** user: `true` deletes the whole organization, `false` returns `400 Unable to delete this user`. Because that escalates to org deletion, both routes require `organization_delete` in addition to their own flag when `cascadeOrg` is set.
 - `location` — update current location, list org locations.
-- `taxonomy` — list taxonomies.
+- `product_pass_type` — list product pass types.
 
 ### Misc
 
@@ -79,7 +79,7 @@ sequenceDiagram
 - **Compound operations** — a few handlers add a second check when a request parameter widens the blast radius: both user-delete routes additionally require `organization_delete` when `cascadeOrg` is true, via `JWTAPIAccessTokenBearer.user_permissions(token)`.
 - **Services** — `services: DictContainer = Depends(get_services)`, where `get_services` nests `Depends(get_db_session)` and wires every registered service onto the request-scoped session, accessed as `services.<name>_service`.
 - **Public routes** — `/login`, `/register`, `/health`, and `/asset-pass/{passId}`.
-- **Authenticated but unguarded routes** — `POST /organization` (bootstrap: the caller has just registered and holds no org roles yet), `GET /user/profile` (own profile), `GET /taxonomies` and `GET /asset-type-category-group` (static reference data), and `GET /dashboard/summary`. `GET /token/refresh` requires a valid refresh token but declares no permission — the refresh bearer skips the DB round-trip, so its token has no roles to check.
+- **Authenticated but unguarded routes** — `POST /organization` (bootstrap: the caller has just registered and holds no org roles yet), `GET /user/profile` (own profile), `GET /product-pass-type` and `GET /asset-type-category-group` (static reference data), and `GET /dashboard/summary`. `GET /token/refresh` requires a valid refresh token but declares no permission — the refresh bearer skips the DB round-trip, so its token has no roles to check.
 - **Conventions** — complex/filtered list endpoints use `PUT` with a body (`SelectiveFilters`) rather than `GET`; pagination params are `page`/`pageSize` (1–1000); file endpoints return `StreamingResponse`; multipart is used for create/update of asset types, typeplates, organizations, user profile, and audits.
 
 > Minor notes carried from the source: the typeplate download path contains a typo (`/typeplate/docuemnt/...`), and `instruction_manual` routes reuse `asset_type_service`.

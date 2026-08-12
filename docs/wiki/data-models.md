@@ -8,7 +8,7 @@ The `models` package defines the SQLAlchemy ORM entities backing the Digital Pro
 
 ```mermaid
 graph TD
-  Taxonomy --> Organization
+  ProductPassType --> Organization
   Organization --> Location
   Location --> User
   Location --> Asset
@@ -32,8 +32,8 @@ graph TD
 
 ### Tenancy & people
 
-- **`Organization`** (`organizations`) — the top-level tenant, classified by a `Taxonomy`, owning many `Location`s. Exposes dynamically-attached computed counts (`add_location_count`, `add_user_count`, `add_role_count`) as column properties. Has a `logo` (`ImageType`).
-- **`Taxonomy`** (`taxonomies`) — classification/type used to categorize organizations (`name`, `display_name`).
+- **`Organization`** (`organizations`) — the top-level tenant, classified by a `ProductPassType`, owning many `Location`s. Exposes dynamically-attached computed counts (`add_location_count`, `add_user_count`, `add_role_count`) as column properties. Has a `logo` (`ImageType`).
+- **`ProductPassType`** (`product_pass_types`) — classification/type used to categorize organizations (`name`, `display_name`).
 - **`Location`** (`locations`) — a physical site of an organization; hosts users and assets; carries address/contact fields.
 - **`User`** (`users`) — an authenticated person tied to a `Location`, with `hashed_password`/`salt`, unique `email`, verification flags, `profile_avatar`, helpers `get_full_name()`/`get_short_name()`, `email_tokens`, and a many-to-many link to `Role`.
 - **`Role`** (`roles`) — org-scoped permission set. `permissions` is a `Numeric` bitmask column (default `0`) holding the bitwise OR of the granted `Permissions` flags; it is the *only* place authorization data lives, and it is read on every request. `organization_id` is nullable with `ON DELETE CASCADE`. Linked to users via `user_roles` and to invitees via `user_invite_roles`. New organizations are seeded with `member`/`admin`/`owner`, all three carrying the full bitmask — see [Permissions Reference](permissions-reference.md).

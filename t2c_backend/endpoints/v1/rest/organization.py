@@ -6,8 +6,8 @@ from t2c_backend.schemas.v1.organization import (
     OrganizationDetails,
     UpdateOrganizationResponse,
 )
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
@@ -21,9 +21,8 @@ router = APIRouter()
 )
 async def create_organization_with_location(
     name: str = Form(...),
-    number: str = Form(...),
-    email: str = Form(...),
-    taxonomy: Taxonomy = Form(...),
+    number: str | None = Form(...),
+    product_pass_type: ProductPassType = Form(..., alias="productPassType"),
     logo: UploadFile | None = File(None),
     location: LocationCreateRequest = Form(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
@@ -35,8 +34,7 @@ async def create_organization_with_location(
     ) = await services.organization_service.create_organization_with_location(
         name=name,
         number=number,
-        email=email,
-        taxonomy=Taxonomy.to_orm(taxonomy),
+        product_pass_type=ProductPassType.to_orm(product_pass_type),
         logo=logo,
         location_data=location,
         user_id=token.user_id,
@@ -53,8 +51,7 @@ async def create_organization_with_location(
 )
 async def update_organization(
     name: str = Form(...),
-    number: str = Form(...),
-    email: str = Form(...),
+    number: str | None = Form(...),
     logo: UploadFile = File(None),
     token: AccessToken = Depends(
         JWTAPIAccessTokenBearer(permissions={"organization_update": True})
@@ -65,7 +62,6 @@ async def update_organization(
         token.organization_id,
         name=name,
         number=number,
-        email=email,
         logo=logo,
     )
 
@@ -73,7 +69,6 @@ async def update_organization(
         id=organization.id,
         name=organization.name,
         number=organization.number,
-        email=organization.email,
         logo=organization.logo.get_string() if organization.logo else None,
         createdAt=int(organization.created_at.timestamp()),
     )

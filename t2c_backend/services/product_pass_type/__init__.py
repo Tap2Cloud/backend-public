@@ -1,17 +1,17 @@
 from t2c_backend.core.repository import BaseRepository
-from t2c_backend.models import Taxonomy
+from t2c_backend.models import ProductPassType
 
 
-class TaxonomyService:
-    _model = Taxonomy
+class ProductPassTypeService:
+    _model = ProductPassType
 
     def __init__(self, app, session) -> None:
         self.app = app
         self.repository = BaseRepository(app, session, self._model)
 
-    async def get_taxonomies(self):
+    async def get_product_pass_types(self):
         return await self.repository.list()
 
 
 def setup(app, session, *args, **kwargs):
-    return app.add_service(TaxonomyService(app, session), session.info["session_id"])
+    return app.add_service(ProductPassTypeService(app, session), session.info["session_id"])
