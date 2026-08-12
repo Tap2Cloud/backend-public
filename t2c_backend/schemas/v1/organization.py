@@ -9,7 +9,7 @@ from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 class DisplayOrganization(BaseModel):
     id: int
     name: str
-    number: str
+    number: str | None
     logo: str | None
     created_at: int = Field(..., alias="createdAt")
 
