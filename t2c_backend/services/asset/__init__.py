@@ -93,7 +93,7 @@ class AssetService:
                 joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(self._model.asset_type),
                 joinedload(self._model.asset_type).options(
                     joinedload(AssetType.documents),
@@ -138,7 +138,7 @@ class AssetService:
                 joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(self._model.asset_type).options(
                     joinedload(AssetType.documents),
                     joinedload(AssetType.fields).joinedload(
@@ -242,7 +242,7 @@ class AssetService:
                 joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(self._model.audit),
                 joinedload(self._model.audit).joinedload(Audit.audit_tasks),
                 joinedload(self._model.audit)
@@ -285,7 +285,7 @@ class AssetService:
                 joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(self._model.asset_type),
                 joinedload(self._model.asset_type).joinedload(AssetType.fields),
                 joinedload(self._model.asset_type)

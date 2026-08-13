@@ -4,7 +4,7 @@ This repository (`backend-public`) is the **open-source core** of Tap2Cloud. It 
 application — it is packaged as a reusable Python library (`tap2cloud-backend-opensource`, imported as
 `t2c_backend`) that you install into your **own private repository** to:
 
-1. **Use the basic functionality** — assets, asset types, taxonomies, audits, auth, etc. — as-is, and
+1. **Use the basic functionality** — assets, asset types, product pass types, audits, auth, etc. — as-is, and
 2. **Extend it** — add your own models, schemas, services, clients, and endpoints on top of the core
    without forking or modifying this repository.
 
