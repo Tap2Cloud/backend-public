@@ -63,10 +63,10 @@ graph LR
 ## Key APIs
 
 ```python
-raise NotFoundError("User not found")   # → HTTP 404 {"msg": ..., "errorCode": "NOT_FOUND"}
+raise NotFoundError("User not found")  # → HTTP 404 {"msg": ..., "errorCode": "NOT_FOUND"}
 
-underscore("AssetTypeService")          # "asset_type_service"  → service registry key
-Role.organization_roles()               # roles excluding Super Admin
+underscore("AssetTypeService")  # "asset_type_service"  → service registry key
+Role.organization_roles()  # roles excluding Super Admin
 ```
 
 ## Cross-references
