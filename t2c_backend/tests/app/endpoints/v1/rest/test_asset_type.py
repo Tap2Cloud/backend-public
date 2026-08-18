@@ -6,7 +6,9 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(21)
+@pytest.mark.order(
+    after="test_asset_type_category.py::test_asset_type_category_with_invalid_group_id",
+)
 def test_create_asset_type_string(
     authenticated_client: TestClient,
     fake: Faker,
@@ -47,7 +49,7 @@ def test_create_asset_type_string(
     assert response.status_code == 204
 
 
-@pytest.mark.order(21)
+@pytest.mark.order(after="test_create_asset_type_string")
 def test_create_asset_type_string_for_second_user(
     authenticated_client: TestClient,
     fake: Faker,
@@ -82,7 +84,7 @@ def test_create_asset_type_string_for_second_user(
     assert response.status_code == 204
 
 
-@pytest.mark.order(22)
+@pytest.mark.order(after="test_asset_type_category.py::test_get_asset_type_category_mapping")
 def test_create_asset_type_integer(
     authenticated_client: TestClient,
     fake: Faker,
@@ -115,7 +117,7 @@ def test_create_asset_type_integer(
     assert response.status_code == 204
 
 
-@pytest.mark.order(23)
+@pytest.mark.order(after="test_create_asset_type_integer")
 def test_create_asset_type_time(
     authenticated_client: TestClient,
     fake: Faker,
@@ -148,7 +150,7 @@ def test_create_asset_type_time(
     assert response.status_code == 204
 
 
-@pytest.mark.order(24)
+@pytest.mark.order(after="test_create_asset_type_time")
 def test_create_asset_type_url(
     authenticated_client: TestClient,
     fake: Faker,
@@ -181,7 +183,7 @@ def test_create_asset_type_url(
     assert response.status_code == 204
 
 
-@pytest.mark.order(25)
+@pytest.mark.order(after="test_create_asset_type_url")
 def test_create_asset_type_password(
     authenticated_client: TestClient,
     fake: Faker,
@@ -214,7 +216,7 @@ def test_create_asset_type_password(
     assert response.status_code == 204
 
 
-@pytest.mark.order(26)
+@pytest.mark.order(after="test_create_asset_type_password")
 def test_create_asset_type_image(
     authenticated_client: TestClient,
     fake: Faker,
@@ -251,7 +253,7 @@ def test_create_asset_type_image(
     assert response.status_code == 204
 
 
-@pytest.mark.order(27)
+@pytest.mark.order(after="test_create_asset_type_image")
 def test_create_asset_type_file(
     authenticated_client: TestClient,
     fake: Faker,
@@ -288,7 +290,7 @@ def test_create_asset_type_file(
     assert response.status_code == 204
 
 
-@pytest.mark.order(28)
+@pytest.mark.order(after="test_create_asset_type_file")
 def test_create_asset_type_email(
     authenticated_client: TestClient,
     fake: Faker,
@@ -321,7 +323,7 @@ def test_create_asset_type_email(
     assert response.status_code == 204
 
 
-@pytest.mark.order(29)
+@pytest.mark.order(after="test_create_asset_type_email")
 def test_create_asset_type_date(
     authenticated_client: TestClient,
     fake: Faker,
@@ -354,7 +356,7 @@ def test_create_asset_type_date(
     assert response.status_code == 204
 
 
-@pytest.mark.order(30)
+@pytest.mark.order(after="test_create_asset_type_date")
 def test_create_asset_type_datetime(
     authenticated_client: TestClient,
     fake: Faker,
@@ -387,7 +389,7 @@ def test_create_asset_type_datetime(
     assert response.status_code == 204
 
 
-@pytest.mark.order(31)
+@pytest.mark.order(after="test_create_asset_type_datetime")
 def test_create_asset_type_radio(
     authenticated_client: TestClient,
     fake: Faker,
@@ -427,7 +429,7 @@ def test_create_asset_type_radio(
     assert response.status_code == 204
 
 
-@pytest.mark.order(32)
+@pytest.mark.order(after="test_create_asset_type_radio")
 def test_create_asset_type_multiselect(
     authenticated_client: TestClient,
     fake: Faker,
@@ -466,7 +468,7 @@ def test_create_asset_type_multiselect(
     assert response.status_code == 204
 
 
-@pytest.mark.order(33)
+@pytest.mark.order(after="test_create_asset_type_multiselect")
 def test_create_asset_type_checkbox(
     authenticated_client: TestClient,
     fake: Faker,
@@ -505,7 +507,7 @@ def test_create_asset_type_checkbox(
     assert response.status_code == 204
 
 
-@pytest.mark.order(34)
+@pytest.mark.order(after="test_create_asset_type_checkbox")
 def test_create_asset_type_select(
     authenticated_client: TestClient,
     fake: Faker,
@@ -544,6 +546,7 @@ def test_create_asset_type_select(
     assert response.status_code == 204
 
 
+@pytest.mark.order(after="test_create_asset_type_select")
 def test_create_asset_type_with_unauthenticated_client(
     client: TestClient,
     fake: Faker,
@@ -576,7 +579,7 @@ def test_create_asset_type_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(35)
+@pytest.mark.order(after="test_create_asset_type_with_unauthenticated_client")
 def test_create_asset_type_with_false_typeplate_image(
     authenticated_client: TestClient,
     fake: Faker,
@@ -609,7 +612,7 @@ def test_create_asset_type_with_false_typeplate_image(
     assert response.status_code == 422
 
 
-@pytest.mark.order(36)
+@pytest.mark.order(after="test_create_asset_type_with_false_typeplate_image")
 def test_list_asset_type_with_unauthenticated_client(
     client: TestClient,
 ):
@@ -618,7 +621,7 @@ def test_list_asset_type_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(37)
+@pytest.mark.order(after="test_list_asset_type_with_unauthenticated_client")
 def test_list_asset_type_with_authenticated_client(
     authenticated_client: TestClient,
     asset_type_container,
@@ -629,6 +632,7 @@ def test_list_asset_type_with_authenticated_client(
     assert response.status_code == 200
 
 
+@pytest.mark.order(after="test_list_asset_type_with_authenticated_client")
 def test_list_asset_type_with_query(authenticated_client: TestClient, asset_type_container):
     asset_type_name = random.choice(asset_type_container["asset_types"]["items"])
     response = authenticated_client.put(
@@ -638,6 +642,7 @@ def test_list_asset_type_with_query(authenticated_client: TestClient, asset_type
     assert response.status_code == 200
 
 
+@pytest.mark.order(after="test_list_asset_type_with_query")
 def test_list_asset_type_filter_by_category(
     authenticated_client: TestClient, asset_type_category_detail_container
 ):
@@ -647,7 +652,7 @@ def test_list_asset_type_filter_by_category(
     assert response.json()["items"][0]["assetTypeCategory"] == category
 
 
-@pytest.mark.order(96)
+@pytest.mark.order(after="test_list_asset_type_filter_by_category")
 def test_upload_asset_type_document(
     authenticated_client: TestClient,
     fake: Faker,
@@ -673,7 +678,7 @@ def test_upload_asset_type_document(
     assert response.status_code == 201
 
 
-@pytest.mark.order(97)
+@pytest.mark.order(after="test_upload_asset_type_document")
 def test_upload_asset_type_documents(
     authenticated_client: TestClient,
     fake: Faker,
@@ -703,7 +708,7 @@ def test_upload_asset_type_documents(
     assert response.status_code == 201
 
 
-@pytest.mark.order(98)
+@pytest.mark.order(after="test_upload_asset_type_documents")
 def test_upload_asset_type_document_with_unauthenticated_client(
     client: TestClient,
     fake: Faker,
@@ -724,7 +729,7 @@ def test_upload_asset_type_document_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(99)
+@pytest.mark.order(after="test_upload_asset_type_document_with_unauthenticated_client")
 def test_upload_asset_type_document_with_fake_asset_type_id(
     authenticated_client: TestClient,
     fake: Faker,
@@ -743,7 +748,7 @@ def test_upload_asset_type_document_with_fake_asset_type_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(99)
+@pytest.mark.order(after="test_upload_asset_type_document_with_fake_asset_type_id")
 def test_upload_asset_type_field_document(
     authenticated_client: TestClient,
     asset_type_container,
@@ -769,6 +774,7 @@ def test_upload_asset_type_field_document(
     assert response.status_code == 201
 
 
+@pytest.mark.order(after="test_upload_asset_type_field_document")
 def test_upload_asset_type_field_document_with_unauthenticated_client(
     client: TestClient,
     asset_type_container,
@@ -790,10 +796,10 @@ def test_upload_asset_type_field_document_with_unauthenticated_client(
         files=[("documents", (str(fake_file), document_content, "application/pdf"))],
     )
 
-    asset_type_with_documents_container.update({"media_field": response.json()})
     assert response.status_code == 401
 
 
+@pytest.mark.order(after="test_upload_asset_type_field_document_with_unauthenticated_client")
 def test_upload_asset_type_field_document_with_invalid_filed_id(
     authenticated_client: TestClient,
     asset_type_container,
@@ -815,11 +821,10 @@ def test_upload_asset_type_field_document_with_invalid_filed_id(
         files=[("documents", (str(fake_file), document_content, "application/pdf"))],
     )
 
-    asset_type_with_documents_container.update({"media_field": response.json()})
     assert response.status_code == 404
 
 
-@pytest.mark.order(99)
+@pytest.mark.order(after="test_upload_asset_type_field_document_with_invalid_filed_id")
 def test_get_asset_type_by_id(
     authenticated_client: TestClient,
     asset_type_with_documents_container,
@@ -831,6 +836,7 @@ def test_get_asset_type_by_id(
     assert response.status_code == 200
 
 
+@pytest.mark.order(after="test_get_asset_type_by_id")
 def test_get_asset_type_by_id_with_unauthenticated_client(
     client: TestClient,
     asset_type_with_documents_container,
@@ -841,6 +847,7 @@ def test_get_asset_type_by_id_with_unauthenticated_client(
     assert response.status_code == 401
 
 
+@pytest.mark.order(after="test_get_asset_type_by_id_with_unauthenticated_client")
 def test_get_asset_type_with_invalid_id(
     authenticated_client: TestClient,
 ):
@@ -848,7 +855,7 @@ def test_get_asset_type_with_invalid_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(100)
+@pytest.mark.order(after="test_get_asset_type_with_invalid_id")
 def test_get_asset_type_document(
     authenticated_client: TestClient,
     asset_type_with_documents_container,
@@ -863,7 +870,7 @@ def test_get_asset_type_document(
     assert response.status_code == 200
 
 
-@pytest.mark.order(101)
+@pytest.mark.order(after="test_get_asset_type_document")
 def test_get_asset_type_document_with_unauthenticated_client(
     client: TestClient,
     asset_type_with_documents_container,
@@ -877,7 +884,7 @@ def test_get_asset_type_document_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(102)
+@pytest.mark.order(after="test_get_asset_type_document_with_unauthenticated_client")
 def test_get_asset_type_document_with_invalid_document_id(
     authenticated_client: TestClient,
     asset_type_with_documents_container,
@@ -893,7 +900,7 @@ def test_get_asset_type_document_with_invalid_document_id(
         assert response.status_code == 200
 
 
-@pytest.mark.order(101)
+@pytest.mark.order(after="test_get_asset_type_document_with_invalid_document_id")
 def test_get_asset_type_field_document(
     authenticated_client: TestClient,
     asset_type_with_documents_container,
@@ -908,7 +915,7 @@ def test_get_asset_type_field_document(
     assert response.status_code == 200
 
 
-@pytest.mark.order(101)
+@pytest.mark.order(after="test_get_asset_type_field_document")
 def test_get_asset_type_field_document_with_unauthenticated_client(
     client: TestClient,
     asset_type_with_documents_container,
@@ -922,7 +929,7 @@ def test_get_asset_type_field_document_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(101)
+@pytest.mark.order(after="test_get_asset_type_field_document_with_unauthenticated_client")
 def test_get_asset_type_field_document_with_invalid_id(
     authenticated_client: TestClient,
     asset_type_with_documents_container,
@@ -937,7 +944,7 @@ def test_get_asset_type_field_document_with_invalid_id(
         assert response.status_code == 200
 
 
-@pytest.mark.order(103)
+@pytest.mark.order(after="test_get_asset_type_field_document_with_invalid_id")
 def test_update_asset_type(
     authenticated_client: TestClient, asset_type_with_documents_container, updated_asset_type
 ):
@@ -957,6 +964,7 @@ def test_update_asset_type(
     assert response.status_code == 200
 
 
+@pytest.mark.order(after="test_update_asset_type")
 def test_update_asset_type_with_unauthenticated_client(
     client: TestClient, asset_type_with_documents_container, updated_asset_type
 ):
@@ -976,6 +984,7 @@ def test_update_asset_type_with_unauthenticated_client(
     assert response.status_code == 401
 
 
+@pytest.mark.order(after="test_update_asset_type_with_unauthenticated_client")
 def test_update_asset_type_with_invalid_id(
     authenticated_client: TestClient, asset_type_with_documents_container, updated_asset_type
 ):
@@ -1014,7 +1023,7 @@ def test_update_asset_type_with_invalid_id(
 #     assert response.status_code == 204
 
 
-@pytest.mark.order(105)
+@pytest.mark.order(after="test_update_asset_type_with_invalid_id")
 def test_delete_asset_type_field_document(
     authenticated_client: TestClient, asset_type_with_documents_container
 ):

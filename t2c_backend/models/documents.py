@@ -39,7 +39,10 @@ class Document(CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     type: Mapped[DocumentType] = mapped_column(Enum(DocumentType), nullable=False)
     content_type: Mapped[str] = mapped_column(Text(), nullable=False)
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # created-by only; SET NULL so deleting the creator keeps location-owned documents.
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     location: Mapped["Location"] = relationship("Location")
     user: Mapped["User"] = relationship("User")

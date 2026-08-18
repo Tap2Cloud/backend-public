@@ -26,7 +26,6 @@ async def get_dashboard_summary(
         instruction_manual_count,
         service_count,
         audit_count,
-        shop,
     ) = await services.dashboard_service.get_dashboard_statistics(
         organization_id=token.organization_id
     )
@@ -37,5 +36,4 @@ async def get_dashboard_summary(
         service_count=service_count,
         instruction_manual_count=instruction_manual_count,
         inspection=audit_count,
-        shop=shop,
     )

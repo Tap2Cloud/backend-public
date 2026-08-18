@@ -27,7 +27,7 @@ router = APIRouter()
     status_code=200,
 )
 async def list_typeplates(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return [
@@ -49,7 +49,7 @@ async def list_typeplate_details(
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     typeplate_created_start_date: datetime.date = None,
     typeplate_created_end_date: datetime.date = None,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.typeplate_service.list_typeplates(
@@ -59,7 +59,7 @@ async def list_typeplate_details(
         page_size=page_size,
         typeplate_created_start_date=typeplate_created_start_date,
         typeplate_created_end_date=typeplate_created_end_date,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -68,7 +68,7 @@ async def update_typeplate(
     typeplate_id: int = Path(..., alias="typeplateId"),
     typeplate_data: UpdateTypeplateRequest = Form(...),
     eu_file: UploadFile | None = File(None),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.typeplate_service.update_typeplate(
@@ -90,7 +90,7 @@ async def update_typeplate(
 )
 async def get_typeplate_details_by_id(
     typeplate_id: int = Path(..., alias="typeplateId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     typeplate = await services.typeplate_service.get_typeplate_details_by_id(
@@ -112,7 +112,9 @@ async def get_typeplate_details_by_id(
 async def delete_typeplate_document(
     typeplate_id: int = Path(..., alias="typeplateId"),
     document_id: str = Path(..., alias="documentId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"typeplate_document_delete": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     await services.typeplate_service.delete_typeplate_document(
@@ -146,7 +148,7 @@ async def delete_typeplate_document(
 async def get_typeplate_document(
     typeplate_id: int = Path(..., alias="typeplateId"),
     eu_file_id: uuid.UUID = Path(..., alias="euFileId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.typeplate_service.get_typeplate_document(

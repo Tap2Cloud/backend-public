@@ -15,7 +15,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 
 from alembic import op
-from t2c_backend.models import AssetTypeCategoryGroup, Role, Taxonomy, TypeplateImage
+from t2c_backend.models import AssetTypeCategoryGroup, ProductPassType, Role, TypeplateImage
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.utils.enums import Role as RoleEnum
 
@@ -42,14 +42,16 @@ def upgrade() -> None:
         for asset_type_category_group in asset_type_category_group_list
     ]
 
-    with open("data/taxonomies.json") as f:
-        taxonomies_list = json.load(f)
+    with open("data/product_pass_types.json") as f:
+        product_pass_types_list = json.load(f)
 
-    new_taxonomies_list = [
-        Taxonomy(
-            id=taxonomies["id"], name=taxonomies["name"], display_name=taxonomies["display_name"]
+    new_product_pass_types_list = [
+        ProductPassType(
+            id=product_pass_type["id"],
+            name=product_pass_type["name"],
+            display_name=product_pass_type["display_name"],
         )
-        for taxonomies in taxonomies_list
+        for product_pass_type in product_pass_types_list
     ]
 
     image_folder_path = "images"
@@ -79,7 +81,7 @@ def upgrade() -> None:
         new_typeplate_images.append(TypeplateImage(name=filename, image=image_obj))
 
     session.add_all(new_asset_type_category_group_list)
-    session.add_all(new_taxonomies_list)
+    session.add_all(new_product_pass_types_list)
     session.add_all(new_typeplate_images)
     session.add(Role(name=str(RoleEnum.super_admin)))
 

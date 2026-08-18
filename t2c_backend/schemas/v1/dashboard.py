@@ -6,7 +6,6 @@ class DashboardResponse(BaseModel):
     typeplate: int
     asset: int
     service: int
-    shop: int
     instruction_manual: int = Field(..., alias="instructionManual")
     inspection: int
     time_recording: int = Field(..., alias="timeRecording")
@@ -22,14 +21,12 @@ class DashboardResponse(BaseModel):
         service_count,
         instruction_manual_count,
         inspection,
-        shop,
     ) -> "DashboardResponse":
         return DashboardResponse(
             assetType=asset_type_count,
             typeplate=typeplate_count,
             asset=asset_count,
             service=service_count,
-            shop=shop,
             instructionManual=instruction_manual_count,
             inspection=inspection,
             timeRecording=0,

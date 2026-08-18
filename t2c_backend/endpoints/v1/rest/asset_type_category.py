@@ -28,11 +28,14 @@ router = APIRouter()
 )
 async def create_asset_type_category(
     form_data: CreateAssetTypeCategoryRequest,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_create": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     db_form = await services.asset_type_category_service.create_asset_type_category(
         token.user_id,
+        token.location_id,
         form_data.model_dump(),
     )
     return AssetTypeCategoryResponse.convert(db_form)
@@ -49,7 +52,9 @@ async def get_asset_type_categories(
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_read": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_category_service.list_asset_type_categories(
@@ -57,7 +62,7 @@ async def get_asset_type_categories(
         sort_by=sort_by,
         page=page,
         page_size=page_size,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -70,14 +75,16 @@ async def get_asset_type_categories(
 async def update_asset_type_category(
     updated_asset_type_category: UpdateAssetTypeCategoryRequest,
     asset_type_category_id: int = Path(..., alias="assetTypeCategoryId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_update": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return AssetTypeCategoryResponse.convert(
         await services.asset_type_category_service.update_asset_type_category(
             asset_type_category_id=asset_type_category_id,
             updated_asset_type_category_data=updated_asset_type_category,
-            organization_id=token.organization_id,
+            location_id=token.location_id,
         )
     )
 
@@ -89,10 +96,14 @@ async def update_asset_type_category(
 )
 async def delete_asset_type_category(
     asset_type_category_id: int = Path(..., alias="assetTypeCategoryId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_delete": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
-    await services.asset_type_category_service.delete_asset_type_category(asset_type_category_id)
+    await services.asset_type_category_service.delete_asset_type_category(
+        asset_type_category_id, token.location_id
+    )
     return Response(status_code=200)
 
 
@@ -118,13 +129,15 @@ async def get_asset_type_category_groups(
     status_code=200,
 )
 async def list_asset_type_categories(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_read": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return [
         DisplayAssetTypeCategory.from_model(asset_type_category)
         for asset_type_category in await services.asset_type_category_service.get_asset_type_categories(  # noqa E501
-            token.organization_id
+            token.location_id
         )
     ]
 
@@ -137,12 +150,14 @@ async def list_asset_type_categories(
 )
 async def get_asset_type_category(
     asset_type_category_id: int = Path(..., alias="assetTypeCategoryId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_read": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return AssetTypeCategoryResponse.convert(
         await services.asset_type_category_service.get_asset_type_category(
-            organization_id=token.organization_id, asset_type_category_id=asset_type_category_id
+            location_id=token.location_id, asset_type_category_id=asset_type_category_id
         )
     )
 
@@ -154,12 +169,14 @@ async def get_asset_type_category(
     status_code=200,
 )
 async def filter_asset_type(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(
+        JWTAPIAccessTokenBearer(permissions={"asset_type_category_read": True})
+    ),
     services: DictContainer = Depends(get_services),
 ):
     return [
         DisplayAssetTypeCategoryMapping.from_model(asset_type)
         for asset_type in await services.asset_type_category_service.list_asset_type_category(
-            organization_id=token.organization_id
+            location_id=token.location_id
         )
     ]

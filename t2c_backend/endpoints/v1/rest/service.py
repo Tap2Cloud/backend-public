@@ -27,7 +27,7 @@ router = APIRouter()
 async def create_service(
     service_data: CreateService,
     asset_id: int = Path(..., alias="assetId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_create": True})),
     services: DictContainer = Depends(get_services),
 ):
     return ServiceResponse.convert(
@@ -46,7 +46,7 @@ async def create_service(
 async def update_service(
     service_data: UpdateService,
     service_id: int = Path(..., alias="serviceId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     return ServiceResponse.convert(
@@ -59,7 +59,7 @@ async def update_service(
 @router.delete("/service/{serviceId}", operation_id="delete service", status_code=204)
 async def delete_service_handler(
     service_id: int = Path(..., alias="serviceId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.service_service.delete_service(service_id, token.location_id)
@@ -81,7 +81,7 @@ async def list_service(
     expire_end_date: datetime.date = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     # todo searching asset through QRcode(asset_id) is left
@@ -107,7 +107,7 @@ async def list_service(
 )
 async def get_service_details(
     service_id: int = Path(..., alias="serviceId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return AssetServiceResponse.convert(

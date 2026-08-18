@@ -19,12 +19,12 @@ from .location import LocationService
 from .location import setup as setup_location
 from .organization import OrganizationService
 from .organization import setup as setup_organization
+from .product_pass_type import ProductPassTypeService
+from .product_pass_type import setup as setup_product_pass_type
 from .role import RoleService
 from .role import setup as setup_role
 from .service import ServiceService
 from .service import setup as setup_service
-from .taxonomy import TaxonomyService
-from .taxonomy import setup as setup_taxonomy
 from .typeplate import TypeplateService
 from .typeplate import setup as setup_typeplate_documents
 from .user import UserService
@@ -46,7 +46,7 @@ __services__ = [
     (UserEmailTokenService, setup_user_email_token),
     (TypeplateService, setup_typeplate_documents),
     (ServiceService, setup_service),
-    (TaxonomyService, setup_taxonomy),
+    (ProductPassTypeService, setup_product_pass_type),
 ]
 
 from t2c_backend.core.db import get_db_session

@@ -114,7 +114,7 @@ class OrganizationUser(DisplayUser):
                 for role in row.get("roles")
             ],
             status=row.get("status"),
-            profileAvatar=row.get("profile_avatar")
+            profileAvatar=row.get("profile_avatar").get_string()
             if row.get("profile_avatar") is not None
             else None,
         )

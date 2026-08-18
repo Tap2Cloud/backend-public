@@ -28,7 +28,7 @@ async def create_asset_type(
     eu_file: UploadFile | str | None = File(None),
     instruction_manuals: list[UploadFile] = File(None),
     custom_media_fields: list[UploadFile] = File(None),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_create": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.asset_type_service.create_asset_type(
@@ -48,7 +48,7 @@ async def create_asset_type(
 async def update_asset_type(
     asset_type_data: UpdateAssetTypeRequest,
     asset_type_id: int = Path(..., alias="assetTypeId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.asset_type_service.update_asset_type(
@@ -60,7 +60,7 @@ async def update_asset_type(
 @router.delete("/asset-type/{assetTypeId}", operation_id="delete asset type")
 async def delete_asset_type_handler(
     asset_type_id: int = Path(..., alias="assetTypeId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     await services.asset_type_service.delete_asset_type(
@@ -81,7 +81,7 @@ async def list_asset_types(
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_service.list_asset_types(
@@ -90,7 +90,7 @@ async def list_asset_types(
         page=page,
         page_size=page_size,
         categories=selective.categories,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -102,7 +102,7 @@ async def list_asset_types(
 )
 async def get_asset_type_by_id(
     asset_type_id: int = Path(..., alias="assetTypeId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     asset_type_details = await services.asset_type_service.get_asset_type_by_id(
@@ -124,13 +124,14 @@ async def save_asset_type_custom_field_document(
     custom_field_id: int = Form(..., alias="customFieldId"),
     documents: UploadFile = File(...),
     asset_type_id: int = Path(..., alias="assetTypeId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     asset_type_details = await services.asset_type_service.save_asset_type_custom_field_document(
         asset_type_id=asset_type_id,
         custom_field_id=custom_field_id,
         documents=documents,
+        location_id=token.location_id,
         organization_id=token.organization_id,
     )
     return AssetTypeResponse.convert(
@@ -147,13 +148,13 @@ async def save_asset_type_custom_field_document(
 async def delete_asset_type_custom_field_document(
     asset_type_id: int = Path(..., alias="assetTypeId"),
     document_id: int = Path(..., alias="documentId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_update": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_service.delete_asset_type_custom_field_document(
         asset_type_id=asset_type_id,
         document_id=document_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
     )
 
 
@@ -165,12 +166,12 @@ async def get_asset_type_document(
     asset_type_id: int = Path(..., alias="assetTypeId"),
     instruction_manual_id: uuid.UUID = Path(..., alias="instructionManualId"),
     document_name: str = Path(..., alias="documentName"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_service.get_asset_type_document(
         asset_type_id=asset_type_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
         document_type=DocumentFor.InstructionManualDocuments,
         document_id=instruction_manual_id,
         document_name=document_name,
@@ -185,12 +186,12 @@ async def get_asset_type_custom_field_document(
     asset_type_id: int = Path(..., alias="assetTypeId"),
     document_id: int = Path(..., alias="documentId"),
     document_name: str = Path(..., alias="documentName"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.asset_type_service.get_asset_type_document(
         asset_type_id=asset_type_id,
-        organization_id=token.organization_id,
+        location_id=token.location_id,
         document_type=DocumentFor.AssetTypeFieldSpecificDocuments,
         document_id=document_id,
         document_name=document_name,

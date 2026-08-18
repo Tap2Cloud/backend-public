@@ -61,16 +61,8 @@ def second_user_data(user_data_factory):
 @pytest.fixture(scope="function")
 def location(fake: Faker) -> dict[str, str]:
     return {
-        "name": fake.name(),
-        "street": fake.street_name(),
-        "postcode": fake.postcode(),
         "city": fake.city(),
         "country": fake.country(),
-        "region": fake.region(),
-        "telNumber": fake.phone_number(),
-        "mobileNumber": fake.phone_number(),
-        "faxNumber": fake.phone_number(),
-        "email": fake.email(),
     }
 
 
@@ -79,7 +71,6 @@ def organization(fake: Faker) -> dict[str, str]:
     return {
         "name": fake.company(),
         "number": fake.phone_number(),
-        "email": fake.company_email(),
     }
 
 
@@ -139,7 +130,7 @@ def asset_type_category_mapping_container():
 
 
 @pytest.fixture(scope="session")
-def taxonomy_container():
+def product_pass_type_container():
     return {}
 
 
@@ -393,6 +384,16 @@ def invalid_id(fake: Faker):
 @pytest.fixture(scope="function")
 def word_to_search(fake: Faker):
     return fake.domain_name()
+
+
+@pytest.fixture(scope="function")
+def organization_role(fake: Faker):
+    return {
+        "name": fake.first_name(),
+        "permissions": [
+            fake.last_name(),
+        ],
+    }
 
 
 @pytest.fixture(scope="session")

@@ -24,7 +24,7 @@ router = APIRouter()
 async def create_audit_task(
     task: CreateAuditTask = Form(...),
     documents: list[UploadFile] = File(None),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_create": True})),
     services: DictContainer = Depends(get_services),
 ):
     audit_task, saved_documents = await services.audit_service.create_audit_task(
@@ -39,7 +39,7 @@ async def create_audit_task(
 async def create_audit(
     asset_id: int = Path(..., alias="assetId"),
     audit_data: CreateAudit = Body(...),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_create": True})),
     services: DictContainer = Depends(get_services),
 ):
     (audit, audit_task) = await services.audit_service.create_audit(
@@ -64,7 +64,7 @@ async def get_audit(
     is_audit_available: bool = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.audit_service.get_audit_list(
@@ -84,7 +84,7 @@ async def get_audit(
 @router.delete("/audit/{auditId}", status_code=204)
 async def delete_audit(
     audit_id: int = Path(..., alias="auditId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.audit_service.delete_audit(audit_id, token.location_id)
@@ -93,7 +93,7 @@ async def delete_audit(
 @router.delete("/audit/task/{auditTaskId}", status_code=204)
 async def delete_audit_task(
     audit_task_id: int = Path(..., alias="auditTaskId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.audit_service.delete_audit_task(audit_task_id)
@@ -106,7 +106,7 @@ async def document_get_download(
     audit_id: int = Path(..., alias="auditId"),
     task_id: int = Path(..., alias="auditTaskId"),
     document_id: str = Path(..., alias="documentId"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.audit_service.document_get_download(
@@ -122,7 +122,7 @@ async def audit_report(
     asset_id: int = Path(..., alias="assetId"),
     audit_id: int = Path(..., alias="auditId"),
     accept_language: LanguageEnum | None = Header(..., alias="Accept-Language"),
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
     services: DictContainer = Depends(get_services),
 ):
     return await services.audit_service.get_audit_report(

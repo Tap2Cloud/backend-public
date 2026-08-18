@@ -337,3 +337,72 @@ class Permissions(BaseFlags):
     @FlagValue
     def user_delete(self) -> int:
         return 1 << 25
+
+    @FlagValue
+    def org_user_delete(self) -> int:
+        return 1 << 26
+
+    @FlagValue
+    def change_user_password(self) -> int:
+        return 1 << 27
+
+    @FlagValue
+    def update_location(self) -> int:
+        return 1 << 28
+
+    @FlagValue
+    def get_location(self) -> int:
+        return 1 << 29
+
+    @FlagValue
+    def get_role(self) -> int:
+        return 1 << 30
+
+    @FlagValue
+    def create_role(self) -> int:
+        return 1 << 31
+
+    @FlagValue
+    def list_asset_pass(self) -> int:
+        return 1 << 32
+
+    @FlagValue
+    def audit_create(self) -> int:
+        return 1 << 33
+
+    @FlagValue
+    def audit_read(self) -> int:
+        return 1 << 34
+
+    @FlagValue
+    def audit_update(self) -> int:
+        return 1 << 35
+
+    @FlagValue
+    def audit_delete(self) -> int:
+        return 1 << 36
+
+    @FlagValue
+    def instruction_manual_create(self) -> int:
+        return 1 << 37
+
+    @FlagValue
+    def instruction_manual_read(self) -> int:
+        return 1 << 38
+
+    @FlagValue
+    def instruction_manual_update(self) -> int:
+        return 1 << 39
+
+    @FlagValue
+    def instruction_manual_delete(self) -> int:
+        return 1 << 40
+
+    @FlagValue
+    def typeplate_document_delete(self) -> int:
+        return 1 << 41
+
+
+#: Bitmask with every flag declared on :class:`Permissions` enabled. Recomputed
+#: automatically, so a newly added ``FlagValue`` is included without changes here.
+ALL_PERMISSIONS = Permissions(**dict.fromkeys(Permissions.VALID_FLAGS, True)).value

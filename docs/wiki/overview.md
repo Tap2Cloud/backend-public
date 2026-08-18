@@ -27,7 +27,11 @@ graph TD
   Models --> Utils
 ```
 
-A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service registry to the request id → the route's `JWTAPIAccessTokenBearer` verifies and re-hydrates the caller's org/roles from the DB → `get_services` wires services onto the request-scoped session → the service runs business logic through `BaseRepository` (with automatic reader/writer engine routing) → the response schema maps the ORM result to the wire format.
+A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service registry to the request id → the route's `JWTAPIAccessTokenBearer` verifies the token, re-hydrates the caller's org/location/roles from the DB, and checks the permission flag the route declares → `get_services` wires services onto the request-scoped session → the service runs business logic through `BaseRepository` (with automatic reader/writer engine routing), scoping rows to the caller's `location_id`/`organization_id` → the response schema maps the ORM result to the wire format.
+
+Access control therefore has two independent layers: **role-based permission flags** decide whether an
+operation is allowed at all, and **location-based ownership** decides which rows it can touch. See
+[Security & Permissions](security-and-permissions.md) and [Permissions Reference](permissions-reference.md).
 
 ## Module Index
 
@@ -39,17 +43,21 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 | [Schemas](schemas.md) | Pydantic request/response DTOs and the JWT token classes |
 | [API Endpoints](api-endpoints.md) | REST routers under `/api/v1` and their auth/DI conventions |
 | [Services](services.md) | Business-logic layer, one service per domain, resolved per request |
-| [Security & Permissions](security-and-permissions.md) | JWT bearers, token classes, bitmask permissions, password hashing |
+| [Security & Permissions](security-and-permissions.md) | JWT bearers, token classes, the bitmask permission check, password hashing |
+| [Permissions Reference](permissions-reference.md) | All 42 permission flags with bit values, the route → permission matrix, and the default role grant |
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
 | [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
+| [Tests](tests.md) | End-to-end integration test suite: ordered, stateful `TestClient` scenarios over a migrated database, with Faker fixtures and shared container pipelines |
+| [Development Setup](development-setup.md) | Running the project locally: `uv` environment/dependency management and the `development/docker-compose.yml` Postgres for a zero-config local database |
+| [Extending Tap2Cloud](extending.md) | How to install the core as a library and add your own models, schemas, services, clients, and endpoints in a private repo |
 
 ## Technology Stack
 
 - **Language:** Python ≥ 3.12
 - **Web framework:** FastAPI (with `fastapi-pagination`), served by Gunicorn + Uvicorn workers
 - **Database:** PostgreSQL via SQLAlchemy 2.0 (async, `asyncpg`), Alembic migrations
-- **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing
+- **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing; role-based bitmask permissions enforced per route
 - **Config:** `pydantic-settings` (environment-driven)
 - **Files/PDF:** `aiofiles` disk storage (S3 backend stubbed in OSS), ReportLab for audit reports
 - **i18n:** gettext + Babel (`en`/`de`)
@@ -58,10 +66,13 @@ A request lifecycle: `SQLAlchemyMiddleware` binds a DB session and service regis
 
 ## Getting Started
 
-1. **Configuration** — the app is driven by environment variables read into `Config` (`t2c_backend/config.py`): DB connection, `APP_HOST`/`APP_PORT`, `ENVIRONMENT`, `PROJECT_NAME`, `FRONTEND_URL`, CORS origins, plus client settings (`SECRET_KEY`, `CRYPTOGRAPHY_KEY`, `STORAGE_TYPE`, `BUCKET`).
-2. **Database** — run `alembic upgrade head` to create the schema and seed static data. See [Database Migrations](database-migrations.md).
-3. **Run** — `python launcher.py` starts Gunicorn with Uvicorn workers; the OpenAPI docs are served by FastAPI under the app's `/api` prefix.
-4. **Orientation** — start with [Application Bootstrap](application-bootstrap.md) to understand how the app is assembled and how clients/services are registered, then read [Core Infrastructure](core-infrastructure.md) (sessions, repository) and [API Endpoints](api-endpoints.md) (request flow). The [Data Models](data-models.md) ER structure is the best map of the domain.
-5. **Extending** — install this package as a library, subclass `CustomFastAPI` with your own `config_class` and `get_api_router()`, and register additional clients/services via the extension `setup(app)` pattern.
+The fastest path to a running local instance uses `uv` for the Python environment and the bundled Docker Compose file for the database — no external database to configure. See [Development Setup](development-setup.md) for the full walkthrough.
 
-> **Open-core note:** some capabilities — parts of organizational management, advanced access control, enterprise identity, and the concrete S3 storage backend — are provided through separate proprietary modules and are not part of this repository.
+1. **Environment** — install dependencies with `uv sync --all-groups` (uses `.python-version` and `uv.lock` to build the `.venv`).
+2. **Configuration** — the app is driven by environment variables read into `Config` (`t2c_backend/config.py`): DB connection, `APP_HOST`/`APP_PORT`, `ENVIRONMENT`, `PROJECT_NAME`, `FRONTEND_URL`, CORS origins, plus client settings (`SECRET_KEY`, `CRYPTOGRAPHY_KEY`, `STORAGE_TYPE`, `BUCKET`). A ready-to-use `.env/.env.development` is provided.
+3. **Database** — start a local Postgres with `docker compose -f development/docker-compose.yml up -d` (its defaults match the sample env), then run `uv run --env-file .env/.env.development alembic upgrade head` to create the schema and seed static data. See [Development Setup](development-setup.md) and [Database Migrations](database-migrations.md).
+4. **Run** — `uv run --env-file .env/.env.development python launcher.py` starts Gunicorn with Uvicorn workers; the OpenAPI docs are served by FastAPI under the app's `/api` prefix.
+5. **Orientation** — start with [Application Bootstrap](application-bootstrap.md) to understand how the app is assembled and how clients/services are registered, then read [Core Infrastructure](core-infrastructure.md) (sessions, repository) and [API Endpoints](api-endpoints.md) (request flow). The [Data Models](data-models.md) ER structure is the best map of the domain.
+6. **Extending** — install this package as a library, subclass `CustomFastAPI` with your own `config_class` and `get_api_router()`, and register additional clients/services via the extension `setup(app)` pattern. See the full walkthrough in [Extending Tap2Cloud](extending.md).
+
+> **Open-core note:** some capabilities — parts of organizational management, advanced access control, enterprise identity, and the concrete S3 storage backend — are provided through separate proprietary modules and are not part of this repository. The permission *enforcement* mechanism is fully open (flags, bearers, per-route checks); what is thin here is permission *administration* — every default role is seeded with the full bitmask and `POST /organization/roles` does not yet persist a submitted permission list.

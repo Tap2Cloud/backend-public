@@ -12,6 +12,7 @@ from t2c_backend.models import (
     User,
     UserRole,
 )
+from t2c_backend.models.product_pass_type import ProductPassType
 from t2c_backend.models.user import UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.user import OrganizationUser, OrganizationUsersCustomPage, UserCount
@@ -90,7 +91,7 @@ class UserService:
             options=[
                 joinedload(User.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(User.roles),
             ],
         )
@@ -100,27 +101,36 @@ class UserService:
 
         return user
 
-    async def delete_user(self, user_id: int, location_id: int) -> bool:
-        db_user = await self.repository.get_one_or_none(id=user_id)
+    async def delete_user(self, user_id: int, organization_id: int, cascade_org: bool) -> bool:
+        db_user = await self.repository.get_one_or_none(
+            id=user_id, options=[joinedload(User.location)]
+        )
 
-        if not db_user:
+        if (
+            not db_user
+            or not db_user.location
+            or db_user.location.organization_id != organization_id
+        ):
             raise NotFoundError("User not found")
 
-        user_locations = await self.repository.exists(
-            id__ne=user_id,
-            location_id=location_id,
+        other_users_exist = await self.repository.session.scalar(
+            select(
+                select(User.id)
+                .join(Location, User.location_id == Location.id)
+                .where(User.id != user_id, Location.organization_id == organization_id)
+                .exists()
+            )
         )
-        if not user_locations:
+
+        if other_users_exist:
+            await self.repository.delete(id=db_user.id)
+        elif cascade_org:
+            await self.app.services.organization_service.delete_organization(
+                organization_id=organization_id
+            )
+        else:
             raise BadRequestError(msg="Unable to delete this user")
 
-        await self.repository.delete(id=db_user.id)
-        return True
-
-    async def delete_users(self, user_id: int):
-        db_user = await self.repository.get_one_or_none(id=user_id)
-        if not db_user:
-            raise NotFoundError("User not found")
-        await self.repository.delete(id=user_id)
         return True
 
     async def register_user(
@@ -209,27 +219,29 @@ class UserService:
                 self._model.first_name,
                 self._model.last_name,
                 self._model.email,
+                self._model.profile_avatar,
                 self._model.created_at,
                 case(
                     (self._model.is_active.is_(True), UserStatus.ACTIVE),
                     (self._model.is_active.is_(False), UserStatus.BANNED),
                 ).label("status"),
                 Location.id.label("location_id"),
-                Location.email.label("location_email"),
-                Location.name.label("location_name"),
                 Location.city.label("location_city"),
                 Location.country.label("location_country"),
-                Location.mobile_number.label("mobile_number"),
-                Location.street.label("location_street"),
-                Location.postcode.label("location_postcode"),
-                Location.region.label("location_region"),
-                Location.tel_number.label("location_tel_number"),
-                Location.fax_number.label("location_fax_number"),
                 Organization.id.label("organization_id"),
                 Organization.name.label("organization_name"),
                 Organization.number.label("organization_number"),
-                Organization.email.label("organization_email"),
                 Organization.created_at.label("organization_created_at"),
+                func.array_agg(
+                    func.jsonb_build_object(
+                        "id",
+                        ProductPassType.id,
+                        "name",
+                        ProductPassType.name,
+                        "display_name",
+                        ProductPassType.display_name,
+                    )
+                ).label("organization_product_pass_type"),
                 func.array_agg(
                     func.jsonb_build_object(
                         "id",
@@ -246,6 +258,7 @@ class UserService:
             .where(Location.organization_id == organization_id)
             .join(UserRole, UserRole.user_id == self._model.id)
             .join(Role, Role.id == UserRole.role_id)
+            .join(ProductPassType, ProductPassType.id == Organization.product_pass_type_id)
             .group_by(User.id, Location.id, Organization.id)
         )
 
@@ -300,23 +313,21 @@ class UserService:
                         **user._asdict(),
                         "location": Location(
                             id=user.location_id,
-                            email=user.location_email,
-                            name=user.location_name,
                             city=user.location_city,
                             country=user.location_country,
-                            mobile_number=user.mobile_number,
-                            street=user.location_street,
-                            postcode=user.location_postcode,
-                            region=user.location_region,
-                            tel_number=user.location_tel_number,
-                            fax_number=user.location_fax_number,
                         ),
                         "organization": Organization(
                             id=user.organization_id,
                             name=user.organization_name,
                             number=user.organization_number,
-                            email=user.organization_email,
                             created_at=user.organization_created_at,
+                            product_pass_type=ProductPassType(
+                                id=user.organization_product_pass_type[0].get("id"),
+                                name=user.organization_product_pass_type[0].get("name"),
+                                display_name=user.organization_product_pass_type[0].get(
+                                    "display_name"
+                                ),
+                            ),
                         ),
                     }
                 )

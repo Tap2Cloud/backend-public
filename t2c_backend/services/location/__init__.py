@@ -2,6 +2,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import Location
+from t2c_backend.models.organization import Organization as OrganizationModel
 from t2c_backend.schemas.v1.location import LocationCreateRequest, LocationUpdateRequest
 from t2c_backend.utils.errors import NotFoundError
 
@@ -21,17 +22,9 @@ class LocationService:
         user,
     ):
         location = Location(
-            name=location_data.name,
             organization_id=organization.id,
-            street=location_data.street,
-            postcode=location_data.postcode,
             city=location_data.city,
             country=location_data.country,
-            region=location_data.region,
-            tel_number=location_data.tel_number,
-            mobile_number=location_data.mobile_number,
-            fax_number=location_data.fax_number,
-            email=location_data.email,
         )
 
         location = await self.repository.save(location)
@@ -47,7 +40,13 @@ class LocationService:
         location_data: LocationUpdateRequest,
     ):
         location = await self.repository.get(
-            location_id, options=[selectinload(Location.organization)]
+            location_id,
+            options=[
+                selectinload(Location.organization),
+                selectinload(Location.organization).selectinload(
+                    OrganizationModel.product_pass_type
+                ),
+            ],
         )
 
         if not location:
@@ -67,7 +66,10 @@ class LocationService:
 
     async def list_location(self, organization_id: int):
         return await self.repository.list(
-            options=[joinedload(Location.organization)],
+            options=[
+                joinedload(Location.organization),
+                joinedload(Location.organization).selectinload(OrganizationModel.product_pass_type),
+            ],
             organization_id=organization_id,
         )
 

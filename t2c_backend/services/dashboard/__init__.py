@@ -7,9 +7,7 @@ from t2c_backend.models import (
     Audit,
     AuditTask,
     Location,
-    Organization,
     Typeplate,
-    User,
 )
 from t2c_backend.models.service import Service
 from t2c_backend.utils.enums import TaskType
@@ -32,8 +30,7 @@ class DashboardService:
 
         asset_type_count_result = await self.session.execute(
             select(func.count(AssetType.id))
-            .outerjoin(User, User.id == AssetType.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Location, Location.id == AssetType.location_id)
             .where(Location.organization_id == organization_id)
         )
         asset_type_count = asset_type_count_result.scalar() or 0
@@ -41,8 +38,7 @@ class DashboardService:
         typeplate_count_result = await self.session.execute(
             select(func.count(Typeplate.id))
             .outerjoin(AssetType, AssetType.id == Typeplate.asset_type_id)
-            .outerjoin(User, User.id == AssetType.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Location, Location.id == AssetType.location_id)
             .where(Location.organization_id == organization_id)
         )
         typeplate_count = typeplate_count_result.scalar() or 0
@@ -65,30 +61,14 @@ class DashboardService:
         audit_count_result = await self.session.execute(
             select(func.count(AuditTask.id))
             .outerjoin(Audit, Audit.id == AuditTask.audit_id)
-            .outerjoin(User, User.id == Audit.user_id)
-            .outerjoin(Location, Location.id == User.location_id)
+            .outerjoin(Asset, Asset.id == Audit.asset_id)
+            .outerjoin(Location, Location.id == Asset.location_id)
             .where(
                 Location.organization_id == organization_id,
                 AuditTask.task_type == TaskType.inspection,
             )
         )
         audit_count = audit_count_result.scalar() or 0
-
-        organization_taxonomy = (
-            select(Organization.taxonomy_id)
-            .where(Organization.id == organization_id)
-            .scalar_subquery()
-        )
-
-        shop_count_result = await self.session.execute(
-            select(func.count(Asset.id))
-            .outerjoin(Location, Location.id == Asset.location_id)
-            .outerjoin(Organization, Location.organization_id == Organization.id)
-            .where(Location.organization_id != organization_id)
-            .where(Organization.taxonomy_id == organization_taxonomy)
-        )
-
-        shop = shop_count_result.scalar() or 0
 
         return (
             asset_count,
@@ -97,7 +77,6 @@ class DashboardService:
             instruction_manual_count,
             service_count,
             audit_count,
-            shop,
         )
 
 

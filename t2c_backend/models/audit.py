@@ -27,7 +27,11 @@ class Audit(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
         default=datetime.now(UTC),
     )
     valid_until: Mapped[datetime] = mapped_column(Date(), nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # created-by only; audit ownership is location-based via the asset. SET NULL so
+    # deleting the creator keeps the audit (its asset still lives in the location).
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id", ondelete="CASCADE"))
 
     asset = relationship("Asset", back_populates="audit")
