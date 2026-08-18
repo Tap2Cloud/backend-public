@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(107)
+@pytest.mark.order(after="test_health.py::test_health")
 def test_get_asset_pass_by_id(authenticated_client: TestClient, asset_pass_container):
     asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
     response = authenticated_client.get(f"/8004/{asset_pass_id}")
@@ -10,7 +10,7 @@ def test_get_asset_pass_by_id(authenticated_client: TestClient, asset_pass_conta
     assert response.status_code == 200
 
 
-@pytest.mark.order(108)
+@pytest.mark.order(after="test_get_asset_pass_by_id")
 def test_get_asset_pass_by_gtin_id(authenticated_client: TestClient, asset_pass_container):
     asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
     gtin_id = asset_pass_container["asset_pass"]["items"][0]["assetType"]["gtin"]
@@ -19,6 +19,7 @@ def test_get_asset_pass_by_gtin_id(authenticated_client: TestClient, asset_pass_
     assert response.status_code == 200
 
 
+@pytest.mark.order(after="test_get_asset_pass_by_gtin_id")
 def test_get_asset_pass_by_invalid_id(authenticated_client: TestClient, asset_pass_container):
     asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
     response = authenticated_client.get(f"/8004/{asset_pass_id + '100'}")
@@ -26,6 +27,7 @@ def test_get_asset_pass_by_invalid_id(authenticated_client: TestClient, asset_pa
     assert response.status_code == 404
 
 
+@pytest.mark.order(after="test_get_asset_pass_by_invalid_id")
 def test_get_asset_pass_by_invalid_gtin_id(authenticated_client: TestClient, asset_pass_container):
     asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
     gtin_id = asset_pass_container["asset_pass"]["items"][0]["assetType"]["gtin"]

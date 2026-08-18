@@ -10,7 +10,7 @@ def test_update_user_profile(
     user_data,
 ):
     response = authenticated_client.put(
-        "/api/v1/user/profile/",
+        "/api/v1/user/profile",
         data={
             "email": user_data["credentials"]["email"],
             "firstName": user_data["basics"]["firstName"],
@@ -29,7 +29,7 @@ def test_update_user_profile_with_unauthenticated_client(
     user_data,
 ):
     response = client.put(
-        "/api/v1/user/profile/",
+        "/api/v1/user/profile",
         data={
             "email": user_data["credentials"]["email"],
             "lastName": user_data["basics"]["lastName"],
@@ -47,7 +47,7 @@ def test_update_user_profile_with_updated_data(
     fake: Faker,
 ):
     response = authenticated_client.put(
-        "/api/v1/user/profile/",
+        "/api/v1/user/profile",
         data={
             "email": fake.email(),
             "lastName": fake.last_name(),
@@ -66,7 +66,7 @@ def test_update_user_profile_without_image(
     user_data,
 ):
     response = authenticated_client.put(
-        "/api/v1/user/profile/",
+        "/api/v1/user/profile",
         data={
             "email": user_data["credentials"]["email"],
             "lastName": user_data["basics"]["lastName"],
@@ -93,7 +93,7 @@ def test_change_user_password(authenticated_client: TestClient, user_data, user_
 @pytest.mark.order(after="test_change_user_password")
 def test_change_user_password_with_unauthenticated_client(client: TestClient, user_data_factory):
     response = client.post(
-        "/api/v1/user/password/change/",
+        "/api/v1/user/password/change",
         json={
             "oldPassword": user_data_factory()["credentials"]["password"],
             "newPassword": user_data_factory()["credentials"]["password"],
@@ -108,7 +108,7 @@ def test_change_user_password_with_wrong_old_password(
     authenticated_client: TestClient, user_data_factory
 ):
     response = authenticated_client.post(
-        "/api/v1/user/password/change/",
+        "/api/v1/user/password/change",
         json={
             "oldPassword": user_data_factory()["credentials"]["password"],
             "newPassword": user_data_factory()["credentials"]["password"],
