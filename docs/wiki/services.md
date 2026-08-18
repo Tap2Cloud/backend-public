@@ -24,6 +24,7 @@ Every domain service follows an identical shape:
 ```python
 class XService:
     _model = SomeModel
+
     def __init__(self, app, session):
         self.app = app
         self.repository = BaseRepository(app, session, self._model)
@@ -82,7 +83,7 @@ graph LR
 ```python
 # Inside a route, services are resolved by name off the request-scoped container:
 user = await services.user_service.login(email, password)
-ctx  = await services.user_service.get_user_org_location_and_roles(user.id)
+ctx = await services.user_service.get_user_org_location_and_roles(user.id)
 
 # Cross-service reuse shares the session-scoped repositories:
 await self.app.services.role_service.repository.save_all(default_roles)

@@ -119,7 +119,9 @@ graph LR
 await asset_repo.get_one_or_none(device_id="X", location_id=1)
 
 # Computed counts are attached dynamically before querying an organization:
-add_location_count(); add_user_count(); add_role_count()
+add_location_count()
+add_user_count()
+add_role_count()
 ```
 
 ## Cross-references
