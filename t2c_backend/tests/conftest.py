@@ -104,6 +104,23 @@ def authenticated_client(database_migration, user_data) -> Generator:
         yield c
 
 
+@pytest.fixture(scope="function")
+def public_client(authenticated_client) -> Generator:
+    """Return a client without an Authorization header, for routes that need no token.
+
+    Entering a TestClient runs the app lifespan, which rebuilds app.database_engine on
+    the entering client's event loop, so only the client that entered last can talk to
+    the database. Public routes are therefore exercised by dropping the header from the
+    authenticated client for the duration of a single test instead of by building a
+    second client.
+    """
+    authorization = authenticated_client.headers.pop("Authorization")
+
+    yield authenticated_client
+
+    authenticated_client.headers.update({"Authorization": authorization})
+
+
 @pytest.fixture(scope="session")
 def asset_type_category_group_container():
     return {}
@@ -348,6 +365,11 @@ def audit_container():
 
 @pytest.fixture(scope="session")
 def asset_type_with_documents_container():
+    return {}
+
+
+@pytest.fixture(scope="session")
+def asset_pass_document_container():
     return {}
 
 

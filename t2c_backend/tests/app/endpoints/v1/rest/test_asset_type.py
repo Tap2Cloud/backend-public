@@ -4,6 +4,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
+from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
@@ -266,9 +267,12 @@ def test_create_asset_type_image(
     asset_type_field,
     container,
     typeplate_details,
+    asset_pass_document_container,
 ):
-    fake_file = fake.file_name()
+    fake_file = f"image-custom-field-{fake.random_int()}.png"
     document_content = fake.text().encode("utf-8")
+    instruction_manual = f"image-instruction-manual-{fake.random_int()}.pdf"
+    instruction_manual_content = fake.text().encode("utf-8")
 
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake_file}"
@@ -296,7 +300,27 @@ def test_create_asset_type_image(
     response = authenticated_client.post(
         "/api/v1/asset-type",
         data=form_data,
-        files=[("custom_media_fields", (fake_file, document_content, "text/plain"))],
+        files=[
+            ("custom_media_fields", (fake_file, document_content, "image/png")),
+            (
+                "instruction_manuals",
+                (instruction_manual, instruction_manual_content, "application/pdf"),
+            ),
+        ],
+    )
+
+    asset_pass_document_container.update(
+        {
+            "asset_type_name": asset_type["name"],
+            DocumentFor.AssetTypeFieldSpecificDocuments: {
+                "name": fake_file,
+                "content": document_content,
+            },
+            DocumentFor.InstructionManualDocuments: {
+                "name": instruction_manual,
+                "content": instruction_manual_content,
+            },
+        }
     )
 
     assert response.status_code == 204
