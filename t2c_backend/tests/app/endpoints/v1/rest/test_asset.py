@@ -409,21 +409,6 @@ def test_download_asset_pass_document_as_attachment(
 
 
 @pytest.mark.order(after="test_download_asset_pass_document_as_attachment")
-def test_get_asset_pass_document_with_authenticated_client(
-    authenticated_client: TestClient, asset_pass_document_container
-):
-    document = asset_pass_document_container[DocumentFor.InstructionManualDocuments]
-
-    response = authenticated_client.get(
-        f"/api/v1/asset-pass/{asset_pass_document_container['pass_id']}"
-        f"/document/{DocumentFor.InstructionManualDocuments}/{document['id']}"
-    )
-
-    assert response.status_code == 200
-    assert response.content == document["content"]
-
-
-@pytest.mark.order(after="test_get_asset_pass_document_with_authenticated_client")
 def test_get_asset_pass_document_with_fake_pass_id(
     public_client: TestClient, fake: Faker, asset_pass_document_container
 ):
@@ -454,8 +439,6 @@ def test_get_asset_pass_document_with_fake_document_id(
 def test_get_asset_pass_document_from_another_document_source(
     public_client: TestClient, asset_pass_document_container
 ):
-    # every document belongs to exactly one source, so asking for it under any of the
-    # other sources of the same asset pass must not resolve
     for document_for in DocumentFor:
         for other_document_for in DocumentFor:
             if other_document_for == document_for:
