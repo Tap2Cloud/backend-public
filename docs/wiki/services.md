@@ -39,20 +39,21 @@ class XService:
 ### Auth & identity
 
 - **`Authentication`** — the only session-less service (no repository). `generate_encoded_password()` (random salt + PBKDF2-HMAC-SHA256, 100k iterations), `verify_hash()`, and frontend link builders for email verification / password reset (`FRONTEND_URL`).
-- **`UserService`** (`User`) — `get_user_org_location_and_roles()` (**auth-critical**, feeds token re-hydration), `login`, `register_user`, `change_password`, `get_user_profile`, `update_user_profile`, deletes, and `organization_user_handler` (paginated/filterable org-user listing with status counts).
+- **`UserService`** (`User`) — `get_user_org_location_and_roles()` (**auth-critical**: outer-joins `User → Location → Organization` and `User → roles`, returning the org/location ids plus each role's `permissions` bitmask; this is what the bearer merges into the token on every request), `login`, `register_user`, `change_password`, `get_user_profile`, `update_user_profile`, `delete_user`, and `organization_user_handler` (paginated/filterable org-user listing with status counts, aggregating roles and permissions via `jsonb_build_object`).
+  - `delete_user(user_id, organization_id, cascade_org)` first verifies the target belongs to the caller's organization *through its location* (`db_user.location.organization_id != organization_id → NotFoundError`). If **other users remain** in the org it simply deletes the user. If it is the **last** user, it either deletes the whole organization (`cascade_org=True`) or raises `BadRequestError("Unable to delete this user")`. The org-deleting branch is why the endpoints demand `organization_delete` on top of their own permission flag — see [Security & Permissions](security-and-permissions.md).
 - **`UserEmailTokenService`** (`UserEmailToken`) — `create_token(user_id, TokenType)` issues one-time email/reset tokens.
-- **`RoleService`** (`Role`) — list and create org roles.
+- **`RoleService`** (`Role`) — `get_roles_by_organisation_id()` and `create_role_by_organisation_id()`. Note the latter persists **only** `name` and `organization_id`: the `permissions: list[str]` field on the `RoleCreate` payload is accepted by the API and then dropped, so an API-created role starts with the column default `0` and grants nothing. See [Permissions Reference](permissions-reference.md).
 
 ### Tenancy
 
-- **`OrganizationService`** (`Organization`) — `create_organization_with_location()` bootstraps an org, its default roles (`Role.organization_roles()`), and its first location (assigning the user `owner`); plus update/get (with computed counts)/delete.
+- **`OrganizationService`** (`Organization`) — `create_organization_with_location()` bootstraps an org, its default roles (`Role.organization_roles()` — `member`/`admin`/`owner`, each seeded with the **full permission bitmask** `ALL_PERMISSIONS` from `core.permissions`), and its first location (assigning the user `owner`); plus update/get (with computed counts)/delete. `ALL_PERMISSIONS` is derived from `Permissions.VALID_FLAGS` at import time, so a newly declared flag is granted to new organizations without touching this service — see [Permissions Reference](permissions-reference.md#default-role-grant).
 - **`LocationService`** (`Location`) — create/update/list locations and user-location lookups.
-- **`TaxonomyService`** (`Taxonomy`) — read-only taxonomy listing.
+- **`ProductPassTypeService`** (`ProductPassType`) — read-only product pass type listing.
 
 ### Asset definition
 
-- **`AssetTypeCategoryService`** (`AssetTypeCategory`) — manages the reusable category templates (dynamic form definitions with grouped fields and options); create/update/get/list with duplicate-order guards; maps `IntegrityError → AlreadyExistsError`.
-- **`AssetTypeService`** (`AssetType`) — the most document-heavy service: builds asset types from a category template, manages custom fields, typeplates, EU files, instruction manuals, and per-field media through `app.clients.storage.save_document` keyed by `DocumentFor`. Provides streaming document downloads.
+- **`AssetTypeCategoryService`** (`AssetTypeCategory`) — manages the reusable category templates (dynamic form definitions with grouped fields and options); create/update/get/list with duplicate-order guards; maps `IntegrityError → AlreadyExistsError`. Every method takes a `location_id` and filters/validates on it (`db_row.location_id != location_id → NotFoundError`) — categories are shared by all users at a location.
+- **`AssetTypeService`** (`AssetType`) — the most document-heavy service: builds asset types from a category template, manages custom fields, typeplates, EU files, instruction manuals, and per-field media through `app.clients.storage.save_document` keyed by `DocumentFor`. Provides streaming document downloads. Like categories, asset types are scoped by `location_id`; `user_id` is recorded as created-by only.
 - **`TypeplateService`** (`Typeplate`) — manages product typeplates (EU declaration files, test results, image mappings); list/get/update/delete with storage-backed documents.
 
 ### Asset operations
@@ -63,7 +64,7 @@ class XService:
 
 ### Aggregation
 
-- **`DashboardService`** — atypical (`_model = None`, uses `self.session` directly): `get_dashboard_statistics()` runs count queries for assets, asset types, typeplates, instruction manuals, services, and inspections, plus a "shop" count of same-taxonomy assets in other orgs.
+- **`DashboardService`** — atypical (`_model = None`, uses `self.session` directly): `get_dashboard_statistics()` returns a 6-tuple of counts — assets, asset types, typeplates, instruction manuals, services, and inspection tasks. Every count reaches the organization through `Location` rather than through the creating user: asset types and typeplates join `AssetType.location_id`, and audit tasks join `Audit → Asset → Location`. The former cross-organization "shop" count (same-product-pass-type assets in other orgs) has been removed along with its response field.
 
 ## Dependencies
 
@@ -91,6 +92,8 @@ await self.app.services.role_service.repository.save_all(default_roles)
 
 - [Core Infrastructure](core-infrastructure.md) — `BaseRepository`, sessions, pagination
 - [Data Models](data-models.md) — the entities services persist
+- [Security & Permissions](security-and-permissions.md) — how the flag check relates to the location scoping done here
+- [Permissions Reference](permissions-reference.md) — the flag catalogue and the default role grant
 - [Clients](clients.md) — storage and cryptography clients used by services
 - [API Endpoints](api-endpoints.md) — the routes that call these services
 - [Application Bootstrap](application-bootstrap.md) — service registration via `add_service`

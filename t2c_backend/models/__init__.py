@@ -10,8 +10,8 @@ from .audit import Audit, AuditTask, AuditTaskDocument
 from .documents import Document
 from .location import Location
 from .organization import Organization
+from .product_pass_type import ProductPassType
 from .role import Role, UserRole
-from .taxonomy import Taxonomy
 from .typeplate import TypelateImageMapping, Typeplate, TypeplateDocument, TypeplateImage
 from .user import User, UserEmailToken
 
@@ -37,7 +37,7 @@ __all__ = [
     "TypeplateDocument",
     "AssetTypeDocument",
     "AssetTypeCategoryGroup",
-    "Taxonomy",
+    "ProductPassType",
     "TypeplateImage",
     "TypelateImageMapping",
 ]

@@ -18,7 +18,7 @@ t2c_backend/tests/
         ├── test_health.py
         ├── test_register.py
         ├── test_authentication.py
-        ├── test_taxonomy.py
+        ├── test_product_pass_type.py
         ├── test_organization.py
         ├── test_location.py
         ├── test_user.py
@@ -31,7 +31,7 @@ t2c_backend/tests/
         └── test_instruction_manual.py
 ```
 
-The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are ~180 test functions across 14 REST modules.
+The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 190 test functions across 14 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (20).
 
 ## Architecture
 
@@ -107,7 +107,7 @@ container["organization_id"] = response.json()["id"]
 "location": container["location"],
 ```
 
-Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `taxonomy_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
+Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `product_pass_type_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
 
 ### Global ordering with pytest-order
 
@@ -116,7 +116,7 @@ Because tests depend on entities created by earlier tests, execution order is fi
 ```python
 @pytest.mark.order(1)   # test_register.py       — create users
 @pytest.mark.order(2)   # test_authentication.py — log in
-@pytest.mark.order(3)   # test_taxonomy.py       — load taxonomies
+@pytest.mark.order(3)   # test_product_pass_type.py       — load product pass types
 @pytest.mark.order(4)   # test_organization.py   — create org (+ store id in container)
 ...
 @pytest.mark.order(40)  # test_asset.py          — create assets
@@ -174,6 +174,22 @@ pytest t2c_backend/tests/app/endpoints/v1/rest/test_health.py   # a single modul
 
 > **Note:** Because of the shared-container/global-order design, running an isolated subset of ordered tests may fail on missing prerequisite data — the suite is intended to run as a whole. A test database reachable by the app's `Config` must be available for the `alembic upgrade head` migration step.
 
+## What the suite covers about authorization
+
+The suite exercises the **happy path** of the permission system and the **unauthenticated** path, but
+not the *insufficient-permission* path:
+
+- `authenticated_client` registers a user and creates an organization, which seeds the `member`/`admin`/
+  `owner` roles with the full permission bitmask. That user therefore satisfies every route's flag, so
+  the `permissions={...}` requirements are covered only in the "granted" direction.
+- Nearly every module has a `*_with_unauthenticated_client` counterpart asserting **401** for a request
+  with no token.
+- No test asserts **403 `Insufficient permissions.`** — there is no fixture for a user with a narrow
+  role, so a typo'd or missing flag on a route would not fail the suite. Keep this in mind when adding
+  guarded endpoints (see [Extending Tap2Cloud](extending.md)).
+- `test_create_organization_role` posts an `organization_role` fixture whose `permissions` is a list of
+  arbitrary Faker strings and asserts only `200` — consistent with `RoleService` discarding that list.
+
 ## Dependencies
 
 ```mermaid
@@ -192,4 +208,5 @@ The suite touches nearly every module transitively — booting `main.app` pulls 
 - [Application Bootstrap](application-bootstrap.md) — how `main.app` is assembled and its lifespan runs under `TestClient`
 - [Database Migrations](database-migrations.md) — the `alembic upgrade head` invoked by the `database_migration` fixture
 - [Security & Permissions](security-and-permissions.md) — the JWT flow behind `authenticated_client`
+- [Permissions Reference](permissions-reference.md) — the flags the seeded roles grant
 - [Overview](overview.md) — repository-wide architecture

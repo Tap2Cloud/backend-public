@@ -5,7 +5,7 @@ from faker import Faker
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(138)
+@pytest.mark.order(after="test_audit.py::test_generate_audit_report")
 def test_create_service(
     authenticated_client: TestClient, asset_service, asset_container, service_container
 ):
@@ -19,7 +19,7 @@ def test_create_service(
     service_container.append(response.json())
 
 
-@pytest.mark.order(139)
+@pytest.mark.order(after="test_create_service")
 def test_create_service_with_unauthenticated_client(
     client: TestClient, asset_service, asset_container
 ):
@@ -29,7 +29,7 @@ def test_create_service_with_unauthenticated_client(
     assert response.status_code == 401
 
 
-@pytest.mark.order(139)
+@pytest.mark.order(after="test_create_service_with_unauthenticated_client")
 def test_create_service_with_fake_asset_id(
     authenticated_client: TestClient, fake: Faker, asset_service
 ):
@@ -41,7 +41,7 @@ def test_create_service_with_fake_asset_id(
     assert response.status_code == 404
 
 
-@pytest.mark.order(139)
+@pytest.mark.order(after="test_create_service_with_fake_asset_id")
 def test_create_service_with_invalid_expiry_date(
     authenticated_client: TestClient, asset_service, asset_container
 ):
@@ -55,21 +55,21 @@ def test_create_service_with_invalid_expiry_date(
     assert response.status_code == 400
 
 
-@pytest.mark.order(140)
+@pytest.mark.order(after="test_create_service_with_invalid_expiry_date")
 def test_get_service(authenticated_client: TestClient, service_container):
     response = authenticated_client.get("/api/v1/service")
     service_container.append(response.json())
     assert response.status_code == 200
 
 
-@pytest.mark.order(141)
+@pytest.mark.order(after="test_get_service")
 def test_get_service_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/service")
 
     assert response.status_code == 401
 
 
-@pytest.mark.order(142)
+@pytest.mark.order(after="test_get_service_with_unauthenticated_client")
 def test_get_service_with_query_serial_no(authenticated_client: TestClient, asset_container):
     serial_no = random.choice([assets["serialNo"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.get(f"api/v1/service?q={serial_no}")
@@ -77,7 +77,7 @@ def test_get_service_with_query_serial_no(authenticated_client: TestClient, asse
     assert response.status_code == 200
 
 
-@pytest.mark.order(143)
+@pytest.mark.order(after="test_get_service_with_query_serial_no")
 def test_get_service_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):
@@ -89,7 +89,7 @@ def test_get_service_with_query_asset_type_name(
     assert response.status_code == 200
 
 
-@pytest.mark.order(144)
+@pytest.mark.order(after="test_get_service_with_query_asset_type_name")
 def test_get_service_with_queries(
     authenticated_client: TestClient, asset_container, asset_type_container
 ):
@@ -102,7 +102,7 @@ def test_get_service_with_queries(
     assert response.status_code == 200
 
 
-@pytest.mark.order(145)
+@pytest.mark.order(after="test_get_service_with_queries")
 def test_get_service_with_id(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.get(f"/api/v1/service/{service_id}")
@@ -110,19 +110,19 @@ def test_get_service_with_id(authenticated_client: TestClient, service_container
     assert response.status_code == 200
 
 
-@pytest.mark.order(146)
+@pytest.mark.order(after="test_get_service_with_id")
 def test_get_service_with_invalid_id(authenticated_client: TestClient):
     response = authenticated_client.get("/api/v1/service/-1")
     assert response.status_code == 404
 
 
-@pytest.mark.order(146)
+@pytest.mark.order(after="test_get_service_with_invalid_id")
 def test_get_service_with_unauthenticated(client: TestClient):
     response = client.get("/api/v1/service/-1")
     assert response.status_code == 401
 
 
-@pytest.mark.order(147)
+@pytest.mark.order(after="test_get_service_with_unauthenticated")
 def test_update_service(authenticated_client: TestClient, service_container, asset_service):
     service_id = service_container[0]["id"]
     response = authenticated_client.put(
@@ -134,7 +134,7 @@ def test_update_service(authenticated_client: TestClient, service_container, ass
     assert response.json()["contact"] != service_container[0]["contact"]
 
 
-@pytest.mark.order(148)
+@pytest.mark.order(after="test_update_service")
 def test_update_service_with_unauthenticated(client: TestClient, service_container, asset_service):
     service_id = service_container[0]["id"]
     response = client.put(f"/api/v1/asset/{service_id}/update/service", json={**asset_service})
@@ -142,14 +142,14 @@ def test_update_service_with_unauthenticated(client: TestClient, service_contain
     assert response.status_code == 401
 
 
-@pytest.mark.order(148)
+@pytest.mark.order(after="test_update_service_with_unauthenticated")
 def test_update_service_with_invalid_id(authenticated_client: TestClient, asset_service):
     response = authenticated_client.put("/api/v1/asset/-1/update/service", json={**asset_service})
 
     assert response.status_code == 404
 
 
-@pytest.mark.order(149)
+@pytest.mark.order(after="test_update_service_with_invalid_id")
 def test_delete_service(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.delete(f"/api/v1/service/{service_id}")
@@ -157,7 +157,7 @@ def test_delete_service(authenticated_client: TestClient, service_container):
     assert response.status_code == 204
 
 
-@pytest.mark.order(150)
+@pytest.mark.order(after="test_delete_service")
 def test_delete_service_with_unauthenticated(client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = client.delete(f"/api/v1/service/{service_id}")
@@ -165,7 +165,7 @@ def test_delete_service_with_unauthenticated(client: TestClient, service_contain
     assert response.status_code == 401
 
 
-@pytest.mark.order(150)
+@pytest.mark.order(after="test_delete_service_with_unauthenticated")
 def test_delete_service_with_invalid_id(authenticated_client: TestClient):
     response = authenticated_client.delete("/api/v1/service/-1")
 

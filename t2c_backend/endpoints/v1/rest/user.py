@@ -61,7 +61,7 @@ async def user_profile_handler(
     return UserResponse.convert(user)
 
 
-@router.put("/user/profile/", operation_id="update user profile", response_model=UserResponse)
+@router.put("/user/profile", operation_id="update user profile", response_model=UserResponse)
 async def user_profile_update_handler(
     picture: UploadFile = File(None),
     first_name: str = Form(..., alias="firstName", validation_alias="firstName"),
