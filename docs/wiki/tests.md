@@ -106,13 +106,17 @@ def second_user_client(authenticated_client, second_user_data) -> Generator:
         authenticated_client.headers["Authorization"] = authorization
 ```
 
-Two details make this safe inside the shared, ordered suite:
+Three details make this safe inside the shared, ordered suite:
 
-- The first user's header is read **before** the login runs, and restored in a `finally` block. Because
-  `authenticated_client` is session-scoped, restoring only after a successful `yield` would not be enough:
-  if the second-user login ever failed, the fixture would raise during setup, pytest would never run the
-  teardown, and every later test would keep using a client that had lost the first user's token. The
-  `finally` guarantees the swap is undone on both the success and the failure path.
+- The first user's header is **read, not removed**, before the login runs. Because `authenticated_client`
+  is session-scoped, a fixture that popped the header first and only restored it after a successful
+  `yield` would strand the shared client: a failed second-user login raises during setup, pytest never
+  runs the teardown, and every later test keeps using a client that has lost the first user's token.
+  Reading the value instead means the header is only ever overwritten once a token is in hand, so the
+  failure path leaves the client untouched.
+- The restore lives in a `finally`, so the swap is undone on every exit path — test failure, or the
+  generator being closed during teardown — and the fixture stays correct if a fallible step is ever
+  added after the header is swapped.
 - `POST /api/v1/login` reads credentials from the request body and never inspects the `Authorization`
   header, so the header does not need to be removed for the login itself — it is swapped purely so that
   requests made *through the fixture* act as the second user.
