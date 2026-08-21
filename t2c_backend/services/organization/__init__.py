@@ -43,7 +43,7 @@ class OrganizationService:
         )
         name = normalize_name(name)
         is_organization_exists = await self.repository.exists(
-            name__ilike=name, taxonomy_id=taxonomy.id
+            name__ilike=name, taxonomy_id=product_pass_type.id
         )
         if is_organization_exists:
             raise AlreadyExistsError(msg="Organization with this name already exists.")

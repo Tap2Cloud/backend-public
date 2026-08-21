@@ -60,10 +60,12 @@ graph TD
 from main import app
 from fastapi.testclient import TestClient
 
+
 @pytest.fixture(scope="session")
 def database_migration() -> None:
     alembic_args = ["--raiseerr", "upgrade", "head"]
     alembic.config.main(argv=alembic_args)
+
 
 @pytest.fixture(scope="session")
 def client(database_migration) -> Generator:
