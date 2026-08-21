@@ -34,15 +34,13 @@ def test_create_asset(
 
 @pytest.mark.order(after="test_create_asset")
 def test_create_asset_for_second_user(
-    authenticated_client: TestClient,
+    second_user_client: TestClient,
     fake: Faker,
-    second_user_data,
     asset,
     asset_type_category_mapping_container,
     container,
 ):
-    response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
-    response = authenticated_client.post(
+    response = second_user_client.post(
         "/api/v1/asset",
         json={
             **asset,
@@ -54,7 +52,6 @@ def test_create_asset_for_second_user(
             ),
             "status": random.choice(list(AssetStatus)),
         },
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
 
     assert response.status_code == 201

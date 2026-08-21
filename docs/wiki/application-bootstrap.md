@@ -94,9 +94,11 @@ graph LR
 # Build a fully-initialized app (loads client extensions)
 app = await CustomFastAPI.create()
 
+
 # Library consumers subclass and override config / routes
 class MyApp(CustomFastAPI):
     config_class = MyConfig
+
     def get_api_router(self):
         return my_router
 ```

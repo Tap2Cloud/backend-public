@@ -220,15 +220,15 @@ from t2c_backend.core.permissions import ALL_PERMISSIONS, Permissions
 
 # Build a value for a narrow role
 p = Permissions(asset_read=True, asset_type_read=True, list_asset_pass=True)
-p.value                      # -> store this int in roles.permissions
+p.value  # -> store this int in roles.permissions
 
 # Decode a stored value
 stored = Permissions(ALL_PERMISSIONS)
-stored.asset_delete          # -> True
-{flag for flag, on in dict(stored).items() if on}   # -> all granted flag names
+stored.asset_delete  # -> True
+{flag for flag, on in dict(stored).items() if on}  # -> all granted flag names
 
 # Set algebra
-Permissions(asset_read=True).is_subset(stored)      # -> True
+Permissions(asset_read=True).is_subset(stored)  # -> True
 Permissions(asset_read=True) | Permissions(asset_create=True)
 ```
 
