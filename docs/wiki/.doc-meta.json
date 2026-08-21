@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-29T00:00:00Z",
-  "commit_hash": "363289a383346c3e72f56e8b9a8af3500cf59ced",
+  "generated_at": "2026-08-21T00:00:00Z",
+  "commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
   "component_count": 319,
@@ -198,13 +198,12 @@
     "extending.md"
   ],
   "last_update": {
-    "previous_commit_hash": "b08ae42ad363bc7c02d712404fd8c650078aa2db",
-    "reason": "Verification pass against the current tree. No structural drift: component count unchanged at 319, and the only source changes since the previous docs commit (ALL_PERMISSIONS in core/permissions.py, OrganizationService seeding with it) were already documented. Corrected a stale test-count figure.",
+    "previous_commit_hash": "363289a383346c3e72f56e8b9a8af3500cf59ced",
+    "reason": "Branch other/improve-test-cases refactored the multi-tenant tests onto a new `second_user_client` fixture in tests/conftest.py, replacing per-test manual logins and per-request Authorization overrides in test_organization.py, test_asset_type_category.py, test_asset_type.py and test_asset.py. Documented the new fixture in tests.md. No production source, model, schema, service or route changed, so component count stays at 319 and every other module doc is untouched.",
     "verified_against_source": [
-      "route → permission matrix: 55/55 guarded routes match core/security.py bearers exactly (65 routes total: 4 public, 1 refresh-only, 5 authenticated-unrestricted)",
-      "flag catalogue: 42 flags, contiguous bits 0-41, ALL_PERMISSIONS == 4398046511103 == 2**42-1",
-      "27 ORM model classes, 14 registered services, 4 alembic revisions (pkg_0001..pkg_0004)",
-      "all file paths, doc cross-links, and heading anchors referenced in the wiki resolve"
+      "tests/conftest.py: 3 client fixtures \u2014 client (session), authenticated_client (session), second_user_client (function, pops/restores the Authorization header around a second_user_data login)",
+      "second_user_client consumed by the *_for_second_user tests in test_organization.py, test_asset_type_category.py, test_asset_type.py, test_asset.py",
+      "test function count unchanged at 190 across 14 REST modules (pure refactor, no tests added or removed)"
     ],
     "modules_updated": [
       "Tests"
@@ -217,13 +216,12 @@
       "API Endpoints",
       "Services",
       "Security & Permissions",
-      "Permissions Reference",
       "Clients",
       "Utilities",
       "Database Migrations",
       "Development Setup",
-      "Extending Tap2Cloud",
-      "Repository Overview"
+      "Permissions Reference",
+      "Extending Tap2Cloud"
     ]
   }
 }
