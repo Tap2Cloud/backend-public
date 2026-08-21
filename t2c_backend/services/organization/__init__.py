@@ -12,7 +12,7 @@ from t2c_backend.models import (
 from t2c_backend.models.organization import add_location_count, add_role_count, add_user_count
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.location import LocationCreateRequest
-from t2c_backend.schemas.v1.taxonomy import Taxonomy
+from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.utils.enums import Role as RoleEnum
 from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
 from t2c_backend.utils.misc import normalize_name
@@ -28,9 +28,8 @@ class OrganizationService:
     async def create_organization_with_location(
         self,
         name: str,
-        number: str,
-        email: str,
-        taxonomy: Taxonomy,
+        number: str | None,
+        product_pass_type: ProductPassType,
         logo: UploadFile,
         location_data: LocationCreateRequest,
         user_id: int,
@@ -52,15 +51,14 @@ class OrganizationService:
         if user.location_id is not None:
             raise AlreadyExistsError(msg="The organization is already exist with this user.")
 
-        make_transient_to_detached(taxonomy)
+        make_transient_to_detached(product_pass_type)
 
         organization = await self.repository.save(
             Organization(
                 name=name,
                 number=number,
-                email=email,
                 logo=await Image.from_file(logo) if logo else None,
-                taxonomy=taxonomy,
+                product_pass_type=product_pass_type,
             ),
         )
 
@@ -85,7 +83,6 @@ class OrganizationService:
         organization_id: int,
         name: str | None,
         number: str | None,
-        email: str | None,
         logo: UploadFile | None,
     ):
         organization = await self.repository.get(organization_id)
@@ -110,7 +107,6 @@ class OrganizationService:
         update_fields = {
             "name": name,
             "number": number,
-            # "email": email,
             "logo": await Image.from_file(logo) if logo else None,
         }
 

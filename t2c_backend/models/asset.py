@@ -50,11 +50,7 @@ class Asset(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Au
     # todo holder related code left
 
     location = relationship("Location")
-    asset_type = relationship(
-        "AssetType",
-        cascade="all, delete",
-        passive_deletes=True,
-    )
+    asset_type = relationship("AssetType")
 
     services: Mapped[list["Service"]] = relationship(
         "Service",

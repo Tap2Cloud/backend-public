@@ -18,7 +18,7 @@ t2c_backend/tests/
         ├── test_health.py
         ├── test_register.py
         ├── test_authentication.py
-        ├── test_taxonomy.py
+        ├── test_product_pass_type.py
         ├── test_organization.py
         ├── test_location.py
         ├── test_user.py
@@ -107,7 +107,7 @@ container["organization_id"] = response.json()["id"]
 "location": container["location"],
 ```
 
-Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `taxonomy_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
+Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `product_pass_type_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
 
 ### Global ordering with pytest-order
 
@@ -116,7 +116,7 @@ Because tests depend on entities created by earlier tests, execution order is fi
 ```python
 @pytest.mark.order(1)   # test_register.py       — create users
 @pytest.mark.order(2)   # test_authentication.py — log in
-@pytest.mark.order(3)   # test_taxonomy.py       — load taxonomies
+@pytest.mark.order(3)   # test_product_pass_type.py       — load product pass types
 @pytest.mark.order(4)   # test_organization.py   — create org (+ store id in container)
 ...
 @pytest.mark.order(40)  # test_asset.py          — create assets

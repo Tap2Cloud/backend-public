@@ -12,7 +12,7 @@ from t2c_backend.models import (
     User,
     UserRole,
 )
-from t2c_backend.models.taxonomy import Taxonomy
+from t2c_backend.models.product_pass_type import ProductPassType
 from t2c_backend.models.user import UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.user import OrganizationUser, OrganizationUsersCustomPage, UserCount
@@ -91,7 +91,7 @@ class UserService:
             options=[
                 joinedload(User.location)
                 .joinedload(Location.organization)
-                .joinedload(Organization.taxonomy),
+                .joinedload(Organization.product_pass_type),
                 joinedload(User.roles),
             ],
         )
@@ -219,37 +219,29 @@ class UserService:
                 self._model.first_name,
                 self._model.last_name,
                 self._model.email,
+                self._model.profile_avatar,
                 self._model.created_at,
                 case(
                     (self._model.is_active.is_(True), UserStatus.ACTIVE),
                     (self._model.is_active.is_(False), UserStatus.BANNED),
                 ).label("status"),
                 Location.id.label("location_id"),
-                Location.email.label("location_email"),
-                Location.name.label("location_name"),
                 Location.city.label("location_city"),
                 Location.country.label("location_country"),
-                Location.mobile_number.label("mobile_number"),
-                Location.street.label("location_street"),
-                Location.postcode.label("location_postcode"),
-                Location.region.label("location_region"),
-                Location.tel_number.label("location_tel_number"),
-                Location.fax_number.label("location_fax_number"),
                 Organization.id.label("organization_id"),
                 Organization.name.label("organization_name"),
                 Organization.number.label("organization_number"),
-                Organization.email.label("organization_email"),
                 Organization.created_at.label("organization_created_at"),
                 func.array_agg(
                     func.jsonb_build_object(
                         "id",
-                        Taxonomy.id,
+                        ProductPassType.id,
                         "name",
-                        Taxonomy.name,
+                        ProductPassType.name,
                         "display_name",
-                        Taxonomy.display_name,
+                        ProductPassType.display_name,
                     )
-                ).label("organization_taxonomy"),
+                ).label("organization_product_pass_type"),
                 func.array_agg(
                     func.jsonb_build_object(
                         "id",
@@ -266,7 +258,7 @@ class UserService:
             .where(Location.organization_id == organization_id)
             .join(UserRole, UserRole.user_id == self._model.id)
             .join(Role, Role.id == UserRole.role_id)
-            .join(Taxonomy, Taxonomy.id == Organization.taxonomy_id)
+            .join(ProductPassType, ProductPassType.id == Organization.product_pass_type_id)
             .group_by(User.id, Location.id, Organization.id)
         )
 
@@ -321,27 +313,20 @@ class UserService:
                         **user._asdict(),
                         "location": Location(
                             id=user.location_id,
-                            email=user.location_email,
-                            name=user.location_name,
                             city=user.location_city,
                             country=user.location_country,
-                            mobile_number=user.mobile_number,
-                            street=user.location_street,
-                            postcode=user.location_postcode,
-                            region=user.location_region,
-                            tel_number=user.location_tel_number,
-                            fax_number=user.location_fax_number,
                         ),
                         "organization": Organization(
                             id=user.organization_id,
                             name=user.organization_name,
                             number=user.organization_number,
-                            email=user.organization_email,
                             created_at=user.organization_created_at,
-                            taxonomy=Taxonomy(
-                                id=user.organization_taxonomy[0].get("id"),
-                                name=user.organization_taxonomy[0].get("name"),
-                                display_name=user.organization_taxonomy[0].get("display_name"),
+                            product_pass_type=ProductPassType(
+                                id=user.organization_product_pass_type[0].get("id"),
+                                name=user.organization_product_pass_type[0].get("name"),
+                                display_name=user.organization_product_pass_type[0].get(
+                                    "display_name"
+                                ),
                             ),
                         ),
                     }

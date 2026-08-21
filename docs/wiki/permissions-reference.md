@@ -111,7 +111,7 @@ bearer skips the DB round-trip, so its token carries no `roles` claim to check a
 | --- | --- | --- |
 | `POST` | `/organization` | bootstrap route — the caller has just registered and holds no org roles yet, so no flag can be required |
 | `GET` | `/user/profile` | every user may read their own profile (the `user_read` requirement was deliberately removed) |
-| `GET` | `/taxonomies` | static reference data |
+| `GET` | `/product-pass-type` | static reference data |
 | `GET` | `/asset-type-category-group` | static reference data |
 | `GET` | `/dashboard/summary` | aggregate counts, already scoped to the caller's location/org |
 
