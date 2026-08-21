@@ -106,6 +106,7 @@ def authenticated_client(database_migration, user_data) -> Generator:
 
 @pytest.fixture(scope="function")
 def second_user_client(authenticated_client, second_user_data) -> Generator:
+    """Return the session client authenticated as the second user."""
     authorization = authenticated_client.headers["Authorization"]
     try:
         response = authenticated_client.post(
