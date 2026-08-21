@@ -201,7 +201,7 @@
     "previous_commit_hash": "363289a383346c3e72f56e8b9a8af3500cf59ced",
     "reason": "Branch other/improve-test-cases refactored the multi-tenant tests onto a new `second_user_client` fixture in tests/conftest.py, replacing per-test manual logins and per-request Authorization overrides in test_organization.py, test_asset_type_category.py, test_asset_type.py and test_asset.py. Documented the new fixture in tests.md. No production source, model, schema, service or route changed, so component count stays at 319 and every other module doc is untouched.",
     "verified_against_source": [
-      "tests/conftest.py: 3 client fixtures \u2014 client (session), authenticated_client (session), second_user_client (function, pops/restores the Authorization header around a second_user_data login)",
+      "tests/conftest.py: 3 client fixtures \u2014 client (session), authenticated_client (session), second_user_client (function, swaps/restores the Authorization header around a second_user_data login via try/finally)",
       "second_user_client consumed by the *_for_second_user tests in test_organization.py, test_asset_type_category.py, test_asset_type.py, test_asset.py",
       "test function count unchanged at 190 across 14 REST modules (pure refactor, no tests added or removed)"
     ],

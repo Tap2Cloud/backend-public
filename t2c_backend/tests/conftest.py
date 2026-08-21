@@ -106,16 +106,18 @@ def authenticated_client(database_migration, user_data) -> Generator:
 
 @pytest.fixture(scope="function")
 def second_user_client(authenticated_client, second_user_data) -> Generator:
-    authorization = authenticated_client.headers.pop("Authorization")
-    response = authenticated_client.post(
-        "/api/v1/login",
-        json=second_user_data["credentials"],
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    authenticated_client.headers["Authorization"] = f"Bearer {token}"
-    yield authenticated_client
-    authenticated_client.headers.update({"Authorization": authorization})
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        response = authenticated_client.post(
+            "/api/v1/login",
+            json=second_user_data["credentials"],
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        authenticated_client.headers["Authorization"] = f"Bearer {token}"
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
 
 
 @pytest.fixture(scope="session")

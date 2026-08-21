@@ -81,7 +81,7 @@ Every client fixture depends on `database_migration`, so the schema (and any see
 | --- | --- | --- |
 | `client` | session | Unauthenticated client — used for health checks, register/login flows, and negative auth tests (expecting `401`/`422`). |
 | `authenticated_client` | session | Logs in with `user_data["credentials"]` and pre-sets the `Authorization: Bearer <token>` header for every request. |
-| `second_user_client` | function | Borrows `authenticated_client`, swaps its header for a token obtained by logging in as `second_user_data`, and restores the original header on teardown. |
+| `second_user_client` | function | Borrows `authenticated_client`, swaps its header for a token obtained by logging in as `second_user_data`, and always restores the original header afterwards — including when the login fails. |
 
 `client` and `authenticated_client` are **session-scoped**, so the same client (and its auth header)
 persists across all test modules.
@@ -91,24 +91,31 @@ persists across all test modules.
 ```python
 @pytest.fixture(scope="function")
 def second_user_client(authenticated_client, second_user_data) -> Generator:
-    authorization = authenticated_client.headers.pop("Authorization")
-    response = authenticated_client.post(
-        "/api/v1/login",
-        json=second_user_data["credentials"],
-    )
-    assert response.status_code == 200
-    token = response.json()["access_token"]
-    authenticated_client.headers["Authorization"] = f"Bearer {token}"
-    yield authenticated_client
-    authenticated_client.headers.update({"Authorization": authorization})
+    """Return the session client authenticated as the second user."""
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        response = authenticated_client.post(
+            "/api/v1/login",
+            json=second_user_data["credentials"],
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        authenticated_client.headers["Authorization"] = f"Bearer {token}"
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
 ```
 
 Two details make this safe inside the shared, ordered suite:
 
-- The login is performed **without** the first user's `Authorization` header (it is popped first), so the
-  request is a clean credential exchange rather than an authenticated call.
-- The original header is **restored on teardown**, so the next ordered test still runs as the first user
-  even though the session client object was mutated.
+- The first user's header is read **before** the login runs, and restored in a `finally` block. Because
+  `authenticated_client` is session-scoped, restoring only after a successful `yield` would not be enough:
+  if the second-user login ever failed, the fixture would raise during setup, pytest would never run the
+  teardown, and every later test would keep using a client that had lost the first user's token. The
+  `finally` guarantees the swap is undone on both the success and the failure path.
+- `POST /api/v1/login` reads credentials from the request body and never inspects the `Authorization`
+  header, so the header does not need to be removed for the login itself — it is swapped purely so that
+  requests made *through the fixture* act as the second user.
 
 Multi-tenant tests therefore just declare the fixture and post normally — no manual login call and no
 per-request `headers={"Authorization": ...}` override:
