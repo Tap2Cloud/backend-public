@@ -61,6 +61,7 @@ def get_name_from_email(email: str) -> str | None:
 INVISIBLE_CHARACTERS = r"[\u00ad\u200b-\u200f\u2060\ufeff]"
 _INVISIBLE_CHARACTERS_RE = re.compile(INVISIBLE_CHARACTERS)
 _WHITESPACE_RE = re.compile(r"\s+")
+_LIKE_WILDCARDS_RE = re.compile(r"([\\%_])")
 
 
 def normalize_name(name: str) -> str:
@@ -75,6 +76,17 @@ def normalize_name(name: str) -> str:
     name = unicodedata.normalize("NFKC", name)
     name = _INVISIBLE_CHARACTERS_RE.sub("", name)
     return _WHITESPACE_RE.sub(" ", name).strip()
+
+
+def escape_like(value: str) -> str:
+    """
+    Escape the LIKE/ILIKE pattern metacharacters in a value that should match exactly.
+
+    `%` and `_` are wildcards, so an unescaped "Acme_Corp" would also match "Acme Corp".
+    Postgres treats a backslash as the default escape character, which is what callers rely
+    on since the repository's `__ilike` filter cannot pass an explicit ESCAPE clause.
+    """
+    return _LIKE_WILDCARDS_RE.sub(r"\\\1", value)
 
 
 def r_getattr(obj, attr, *args):
