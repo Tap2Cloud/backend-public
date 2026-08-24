@@ -85,7 +85,9 @@ class OrganizationService:
         number: str | None,
         logo: UploadFile | None,
     ):
-        organization = await self.repository.get(organization_id)
+        organization = await self.repository.get(
+            organization_id,
+        )
 
         if not organization:
             raise NotFoundError(f"Organization with ID '{organization_id}' not found")
@@ -97,7 +99,7 @@ class OrganizationService:
 
             is_organization_exists = await self.repository.exists(
                 name__ilike=name,
-                taxonomy_id=organization.taxonomy_id,
+                product_pass_type_id=organization.product_pass_type_id,
                 id__ne=organization.id,
             )
 
