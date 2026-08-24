@@ -34,16 +34,14 @@ def test_create_organization_with_location(
 
 @pytest.mark.order(after="test_create_organization_with_location")
 def test_create_organization_with_location_for_second_user(
-    authenticated_client: TestClient,
+    second_user_client: TestClient,
     fake: Faker,
-    second_user_data,
     location,
     organization,
     container,
     product_pass_type_container,
 ):
-    response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
-    response = authenticated_client.post(
+    response = second_user_client.post(
         "/api/v1/organization",
         data={
             **organization,
@@ -53,7 +51,6 @@ def test_create_organization_with_location_for_second_user(
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
 
     container["second_location"] = response.json()
