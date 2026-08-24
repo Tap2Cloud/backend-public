@@ -222,6 +222,38 @@ def test_get_asset_by_invalid_id(authenticated_client: TestClient, asset_contain
 
 
 @pytest.mark.order(after="test_get_asset_by_invalid_id")
+def test_get_asset_for_second_user(second_user_client: TestClient, asset_container):
+    response = second_user_client.put("/api/v1/asset", json={"categories": None, "status": None})
+    asset_container["second_user_asset"] = response.json()
+
+    assert response.status_code == 200
+    assert response.json()["items"]
+
+
+@pytest.mark.order(after="test_get_asset_for_second_user")
+def test_get_second_user_asset_by_id_with_first_authenticated_client(
+    authenticated_client: TestClient, asset_container
+):
+    asset_id = asset_container["second_user_asset"]["items"][0]["id"]
+
+    response = authenticated_client.get(f"/api/v1/asset/{asset_id}")
+
+    assert asset_id not in [assets["id"] for assets in asset_container["asset"]["items"]]
+    assert response.status_code == 404
+
+
+@pytest.mark.order(after="test_get_second_user_asset_by_id_with_first_authenticated_client")
+def test_get_first_user_asset_by_id_with_second_user_client(
+    second_user_client: TestClient, asset_container
+):
+    asset_id = asset_container["asset"]["items"][0]["id"]
+
+    response = second_user_client.get(f"/api/v1/asset/{asset_id}")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.order(after="test_get_first_user_asset_by_id_with_second_user_client")
 def test_get_asset_by_unauthenticated_client(client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = client.get(f"/api/v1/asset/{asset_id}")
