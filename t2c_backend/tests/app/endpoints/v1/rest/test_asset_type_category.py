@@ -43,26 +43,22 @@ def test_create_asset_type_category_string(
 
 @pytest.mark.order(after="test_create_asset_type_category_string")
 def test_create_asset_type_category_string_for_second_user(
-    authenticated_client: TestClient,
-    second_user_data,
+    second_user_client: TestClient,
     asset_type_category,
     asset_type_category_field,
     container,
     asset_type_category_group_container,
 ):
-    response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
-
     asset_type_category_field["fieldGroupId"] = random.choice(
         [group["id"] for group in asset_type_category_group_container["field_group"]]
     )
-    response = authenticated_client.post(
+    response = second_user_client.post(
         "/api/v1/asset-type-category",
         json={
             "name": asset_type_category["name"],
             "hasTypeplates": asset_type_category["hasTypeplates"],
             "fields": [asset_type_category_field],
         },
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
     container["second_string_asset_type_category"] = response.json()
 

@@ -39,7 +39,7 @@ The suite is built from three collaborating pieces: **fixtures** that produce cl
 
 ```mermaid
 graph TD
-  Conftest[conftest.py<br/>fixtures] --> Client[TestClient / authenticated_client]
+  Conftest[conftest.py<br/>fixtures] --> Client[TestClient<br/>client / authenticated_client / second_user_client]
   Conftest --> Faker[Faker data factories]
   Conftest --> Containers[Container fixtures<br/>session-scoped dicts/lists]
   Migration[database_migration<br/>alembic upgrade head] --> Client
@@ -75,14 +75,66 @@ def client(database_migration) -> Generator:
 
 Every client fixture depends on `database_migration`, so the schema (and any seeded static data) is created once per session before requests are made. Because `TestClient` runs the app's lifespan, startup clients (JWT, cryptography, storage) are wired up exactly as in production.
 
-### Two client fixtures
+### Three client fixtures
 
-| Fixture | Purpose |
-| --- | --- |
-| `client` | Unauthenticated client — used for health checks, register/login flows, and negative auth tests (expecting `401`/`422`). |
-| `authenticated_client` | Logs in with `user_data["credentials"]` and pre-sets the `Authorization: Bearer <token>` header for every request. |
+| Fixture | Scope | Purpose |
+| --- | --- | --- |
+| `client` | session | Unauthenticated client — used for health checks, register/login flows, and negative auth tests (expecting `401`/`422`). |
+| `authenticated_client` | session | Logs in with `user_data["credentials"]` and pre-sets the `Authorization: Bearer <token>` header for every request. |
+| `second_user_client` | function | Borrows `authenticated_client`, swaps its header for a token obtained by logging in as `second_user_data`, and always restores the original header afterwards — including when the login fails. |
 
-Both are **session-scoped**, so the same client (and its auth header) persists across all test modules.
+`client` and `authenticated_client` are **session-scoped**, so the same client (and its auth header)
+persists across all test modules.
+
+`second_user_client` is **function-scoped** and wraps the session client rather than creating a new one:
+
+```python
+@pytest.fixture(scope="function")
+def second_user_client(authenticated_client, second_user_data) -> Generator:
+    """Return the session client authenticated as the second user."""
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        response = authenticated_client.post(
+            "/api/v1/login",
+            json=second_user_data["credentials"],
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        authenticated_client.headers["Authorization"] = f"Bearer {token}"
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
+```
+
+Three details make this safe inside the shared, ordered suite:
+
+- The first user's header is **read, not removed**, before the login runs. Because `authenticated_client`
+  is session-scoped, a fixture that popped the header first and only restored it after a successful
+  `yield` would strand the shared client: a failed second-user login raises during setup, pytest never
+  runs the teardown, and every later test keeps using a client that has lost the first user's token.
+  Reading the value instead means the header is only ever overwritten once a token is in hand, so the
+  failure path leaves the client untouched.
+- The restore lives in a `finally`, so the swap is undone on every exit path — test failure, or the
+  generator being closed during teardown — and the fixture stays correct if a fallible step is ever
+  added after the header is swapped.
+- `POST /api/v1/login` reads credentials from the request body and never inspects the `Authorization`
+  header, so the header does not need to be removed for the login itself — it is swapped purely so that
+  requests made *through the fixture* act as the second user.
+
+Multi-tenant tests therefore just declare the fixture and post normally — no manual login call and no
+per-request `headers={"Authorization": ...}` override:
+
+```python
+@pytest.mark.order(after="test_create_organization_with_location")
+def test_create_organization_with_location_for_second_user(
+    second_user_client: TestClient,
+    ...
+):
+    response = second_user_client.post("/api/v1/organization", data={...})
+```
+
+It is used by the `*_for_second_user` tests in `test_organization.py`,
+`test_asset_type_category.py`, `test_asset_type.py`, and `test_asset.py`.
 
 ### Fake data with Faker
 
@@ -91,7 +143,7 @@ Both are **session-scoped**, so the same client (and its auth header) persists a
 - **`session`-scoped fixtures** (e.g. `user_data`, `asset`, `asset_type`, `audit`) — produced once and reused, so the same identity/entity is referenced consistently across the ordered scenario.
 - **`function`-scoped fixtures** (e.g. `location`, `organization`, `asset_type_category`, `update_asset`) — regenerated per test, used where each test needs fresh input or a distinct update payload.
 
-A `user_data_factory` builds nested credential/basics dicts, and `user_data` / `second_user_data` use it to model two independent users (the suite verifies multi-tenant isolation by creating parallel data for a second user).
+A `user_data_factory` builds nested credential/basics dicts, and `user_data` / `second_user_data` use it to model two independent users (the suite verifies multi-tenant isolation by creating parallel data for a second user). `second_user_data` is consumed directly by `test_register.py` and, for every authenticated call, through the `second_user_client` fixture described above.
 
 ### Container fixtures — the data pipeline
 
