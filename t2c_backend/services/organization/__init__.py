@@ -34,6 +34,10 @@ class OrganizationService:
         location_data: LocationCreateRequest,
         user_id: int,
     ):
+        name = normalize_name(name)
+        if not name:
+            raise BadRequestError(msg="Organization name is required.")
+
         user = await self.app.services.user_service.repository.get(
             user_id,
             options=[
@@ -41,15 +45,15 @@ class OrganizationService:
                 joinedload(User.roles),
             ],
         )
-        name = normalize_name(name)
+
+        if user.location_id is not None:
+            raise AlreadyExistsError(msg="The organization is already exist with this user.")
+
         is_organization_exists = await self.repository.exists(
             name__ilike=escape_like(name), product_pass_type_id=product_pass_type.id
         )
         if is_organization_exists:
             raise AlreadyExistsError(msg="Organization with this name already exists.")
-
-        if user.location_id is not None:
-            raise AlreadyExistsError(msg="The organization is already exist with this user.")
 
         make_transient_to_detached(product_pass_type)
 
