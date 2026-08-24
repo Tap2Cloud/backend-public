@@ -57,8 +57,9 @@ def get_name_from_email(email: str) -> str | None:
 
 
 # Characters that render as nothing and would otherwise make two identical names look different:
-# soft hyphen, zero width space/non-joiner/joiner, bidi marks, word joiner and BOM.
-INVISIBLE_CHARACTERS = r"[\u00ad\u200b-\u200f\u2060\ufeff]"
+INVISIBLE_CHARACTERS = (
+    r"[\u00ad\u034f\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb]"
+)
 _INVISIBLE_CHARACTERS_RE = re.compile(INVISIBLE_CHARACTERS)
 _WHITESPACE_RE = re.compile(r"\s+")
 _LIKE_WILDCARDS_RE = re.compile(r"([\\%_])")
