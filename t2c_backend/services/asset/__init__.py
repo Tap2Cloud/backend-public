@@ -114,9 +114,8 @@ class AssetService:
                 .joinedload(AssetTypeCategoryField.asset_type_category_group),
             ],
             id=asset_id,
-            organization_id=organization_id,
         )
-        if not db_asset:
+        if not db_asset or db_asset.location.organization_id != organization_id:
             raise NotFoundError("Asset not found")
         return db_asset
 
