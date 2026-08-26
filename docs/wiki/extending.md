@@ -387,6 +387,11 @@ def setup(app, session, *args, **kwargs):
 `execute`, and the `parse_filters` helper with the `field__op` syntax
 (`serial_no__ilike`, `id__in`, `status__in`, …) — see [Core Infrastructure](core-infrastructure.md).
 
+If your service enforces a uniqueness rule that no unique index backs, guard the check-then-insert with
+`lock_values()` rather than relying on the `exists()` call alone — otherwise two concurrent requests
+both read "not taken" and both commit. See
+[Concurrency guards](core-infrastructure.md#concurrency-guards).
+
 ### Making your service resolvable in endpoints
 
 The core's `t2c_backend.services.get_services` iterates a **fixed** `__services__` list and registers

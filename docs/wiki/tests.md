@@ -12,7 +12,7 @@ t2c_backend/tests/
 ├── utils/
 │   └── misc.py                     # Pagination helper model
 ├── fakes/
-│   └── clients/                    # Stubs for external clients (e.g. payment provider)
+│   └── clients/                    # Empty package — extension point, no fakes yet
 └── app/
     └── endpoints/v1/rest/          # One test module per REST resource
         ├── test_health.py
@@ -31,7 +31,7 @@ t2c_backend/tests/
         └── test_instruction_manual.py
 ```
 
-The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 190 test functions across 14 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (20).
+The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 194 test functions across 14 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (23).
 
 ## Architecture
 
@@ -165,24 +165,42 @@ Because these are session-scoped, a value written by an early test is visible to
 
 ### Global ordering with pytest-order
 
-Because tests depend on entities created by earlier tests, execution order is fixed with the **`pytest-order`** plugin via `@pytest.mark.order(N)`. The numbers form a single global sequence spanning all files:
+Because tests depend on entities created by earlier tests, execution order is fixed with the
+**`pytest-order`** plugin. Ordering is expressed **relatively**, not as a global numeric sequence:
+essentially every mark in the suite is `@pytest.mark.order(after=...)`, naming the test it must follow.
+Within a module the target is a bare test name; across modules it is qualified with the file:
 
 ```python
-@pytest.mark.order(1)   # test_register.py       — create users
-@pytest.mark.order(2)   # test_authentication.py — log in
-@pytest.mark.order(3)   # test_product_pass_type.py       — load product pass types
-@pytest.mark.order(4)   # test_organization.py   — create org (+ store id in container)
-...
-@pytest.mark.order(40)  # test_asset.py          — create assets
-...
-@pytest.mark.order(124) # test_organization.py   — read/update org near the end
+# test_register.py — chains within the module
+@pytest.mark.order(after="test_register")
+def test_register_without_firstname_lastname(...): ...
+
+# test_authentication.py — chains onto a test in another module
+@pytest.mark.order(after="test_register.py::test_register_without_firstname_lastname")
+def test_authentication(...): ...
+
+# test_product_pass_type.py — continues the cross-file chain
+@pytest.mark.order(after="test_authentication.py::test_authentication_without_password")
+def test_product_pass_type(...): ...
 ```
 
-Unmarked tests (mostly negative cases like "without password", "unauthenticated client") are order-independent and run without a fixed position. The high tail numbers (e.g. `124`, `125`) are deliberately placed late so read/update/delete assertions execute after all creation steps.
+This forms one long dependency chain — register → authenticate → product pass types → organization →
+asset type category → asset type → asset → service/audit — so the container pipeline above always has
+its data ready. Relative marks are more robust than fixed numbers: inserting a test in the middle does
+not require renumbering everything after it.
+
+Numeric marks (`@pytest.mark.order(3)`) are supported by the plugin but are **not** used here — the only
+one in the tree is commented out at `test_asset_type.py:1124`. Tests with no mark at all (mostly negative
+cases like "without password" or "unauthenticated client") are order-independent.
 
 ### Faking external clients
 
-`tests/fakes/clients/` holds stand-ins for third-party integrations (such as a payment provider) so tests never hit external services. Combined with `pytest-mock`, dependencies are swapped for deterministic fakes during the run. The concrete integrations these fakes replace live in proprietary modules outside this repository.
+`t2c_backend/tests/fakes/clients/` exists as a package but is currently **empty** — `__init__.py` is a
+zero-byte file and nothing in the suite imports from `tests.fakes`. `pytest-mock` is likewise declared as
+a dependency but `mocker` is not used anywhere in the tests today. The scaffolding is in place for
+swapping third-party integrations with deterministic fakes; the concrete integrations it was built for
+live in proprietary modules outside this repository. Treat this as an extension point, not an active
+mechanism.
 
 ### Helpers
 
@@ -208,7 +226,7 @@ testpaths = ["t2c_backend/tests"]
 
 [dependency-groups]
 test = [
-    "faker>=40.28.1",
+    "faker>=40.37.0",
     "pillow>=12.3.0",
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
@@ -243,6 +261,20 @@ not the *insufficient-permission* path:
   guarded endpoints (see [Extending Tap2Cloud](extending.md)).
 - `test_create_organization_role` posts an `organization_role` fixture whose `permissions` is a list of
   arbitrary Faker strings and asserts only `200` — consistent with `RoleService` discarding that list.
+
+**Tenant isolation is covered separately from permissions.** Where the flag checks are only exercised in
+the "granted" direction, the *location-based ownership* layer does get negative coverage, using the two
+parallel users the fixtures build:
+
+- `test_asset.py` asserts the boundary in both directions — `test_get_second_user_asset_by_id_with_first_authenticated_client`
+  and `test_get_first_user_asset_by_id_with_second_user_client` each fetch an asset belonging to the other
+  user by id and assert **404**, pinning the `location.organization_id` check in
+  `AssetService.get_asset_by_organization_id`
+  (see [Services](services.md)).
+- `test_organization.py::test_update_organization_duplicate_name_for_second_user` renames the second
+  user's organization to the first user's name and asserts **409**, covering the duplicate-name guard.
+  Note this test logs in inline and passes an explicit `Authorization` header rather than using the
+  `second_user_client` fixture, because it needs the first user's name read *before* the swap.
 
 ## Dependencies
 
