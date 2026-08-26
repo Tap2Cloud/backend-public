@@ -126,7 +126,6 @@ class OrganizationService:
             "logo": await Image.from_file(logo) if logo else None,
         }
 
-        # Update fields dynamically if the values are not None
         for field, value in update_fields.items():
             setattr(organization, field, value)
 
