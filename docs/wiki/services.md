@@ -62,6 +62,17 @@ class XService:
 
 - **`AssetService`** (`Asset`) — CRUD and listing; generates the passport `pass_id` via `app.clients.cryptography.encode(f"{location.id}_{device_id}")`; deep eager-loaded `list_asset_pass` / `get_asset_pass_by_pass_id` for public passport views.
   - `get_asset_by_organization_id()` (the method behind `GET /api/v1/asset/{id}`) reaches the organization **through the asset's location** rather than filtering on a column of `Asset` itself: it fetches by `id` alone and then rejects the row with `db_asset.location.organization_id != organization_id → NotFoundError`. This matches how `UserService.delete_user` and the dashboard counts resolve tenancy, and keeps cross-organization reads returning `404` rather than leaking existence. The tenant boundary is covered by the cross-user asset tests in [Tests](tests.md).
+  - **`get_asset_pass_document()`** backs the public document route. It loads the asset by `pass_id` in a single `get_one_or_none` whose `options` eager-load every relationship the lookup can walk — `location`, `asset_type.documents`, `asset_type.typeplate.documents`, `asset_type.fields.asset_type_category_field`, and `audit.audit_tasks.documents`. That eager-loading is load-bearing, not an optimization: touching an unloaded relationship after the await would raise `MissingGreenlet` under the async session. It then delegates to `_resolve_asset_pass_document()` and returns a `StreamingResponse` over `app.clients.storage.get_document`, using the resolved content type (falling back to `application/octet-stream`) and a `Content-Disposition` of `attachment` or `inline` per the `as_attachment` flag. The organization is reached the same indirect way as elsewhere — `asset.location.organization_id`.
+  - **`_resolve_asset_pass_document()`** is the static branch table mapping a `DocumentFor` to a `(file_id, file_name, content_type)` triple, searching **only the resolved asset's own relations**. This is what bounds the public route: an id from another asset simply isn't in the scanned collections, so it falls through to `NotFoundError`.
+
+    | `DocumentFor` | Searched in | Storage `file_id` |
+    | --- | --- | --- |
+    | `InstructionManualDocuments` | `asset.asset_type.documents` | `document.id` |
+    | `EuFiles` | `asset.asset_type.typeplate.documents` (typeplate may be absent) | `document.id` |
+    | `AuditTaskDocuments` | `asset.audit[*].audit_tasks[*].documents` | **`audit_task.id`** |
+    | `AssetTypeFieldSpecificDocuments` | `asset.asset_type.fields` | `field.id` |
+
+    Two branches are deliberately irregular. Audit-task documents are stored under the **task** id rather than the document id, matching how `AuditService.create_audit_task` wrote them. Field documents have no stored content type, so it is guessed from the file name with `mimetypes.guess_type`, and the branch only matches fields whose category field type is `InputType.file` or `InputType.image` — anything else breaks out to the `NotFoundError`.
 - **`ServiceService`** (`Service`) — maintenance/service records; validates asset ownership by location and blocks editing expired services (`aware_utcnow()`).
 - **`AuditService`** (`Audit`) — inspection audits, tasks, and documents; generates a **localized landscape-A4 PDF report** with ReportLab + Babel + i18n `_()`, with color-coded task statuses.
 

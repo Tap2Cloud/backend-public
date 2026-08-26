@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-26T06:06:46Z",
-  "commit_hash": "c0f4f95c11ec77102cb40994f24b5bbb8c0d5baa",
+  "generated_at": "2026-08-26T11:43:22Z",
+  "commit_hash": "693df380d8551e56cfd8e9a285172e14a5553e40",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
-  "component_count": 325,
+  "component_count": 326,
   "languages": [
     "python",
     "javascript"
@@ -70,6 +70,7 @@
         "t2c_backend.endpoints.v1.rest.register",
         "t2c_backend.endpoints.v1.rest.token",
         "t2c_backend.endpoints.v1.rest.asset",
+        "t2c_backend.endpoints.v1.rest.asset_pass",
         "t2c_backend.endpoints.v1.rest.asset_type",
         "t2c_backend.endpoints.v1.rest.organization",
         "t2c_backend.endpoints.v1.rest.user"

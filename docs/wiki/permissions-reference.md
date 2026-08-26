@@ -100,6 +100,7 @@ Every route in `t2c_backend/endpoints/v1/rest`, with the permission it requires.
 | `POST` | `/register` | creates a user and auto-logs-in |
 | `GET` | `/health` | liveness/version |
 | `GET` | `/asset-pass/{passId}` | the public Digital Product Passport view |
+| `GET` | `/asset-pass/{passId}/document/{documentFor}/{documentId}` | streams one document belonging to that passport; bounded to the asset the `passId` resolves to |
 
 `GET /token/refresh` sits between the two groups: it requires a valid **refresh** token via
 `JWTAPIRefreshTokenBearer` but declares no permission. It could not enforce one anyway — the refresh
