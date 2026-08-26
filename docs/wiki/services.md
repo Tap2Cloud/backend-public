@@ -48,6 +48,7 @@ class XService:
 ### Tenancy
 
 - **`OrganizationService`** (`Organization`) — `create_organization_with_location()` bootstraps an org, its default roles (`Role.organization_roles()` — `member`/`admin`/`owner`, each seeded with the **full permission bitmask** `ALL_PERMISSIONS` from `core.permissions`), and its first location (assigning the user `owner`); plus update/get (with computed counts)/delete. `ALL_PERMISSIONS` is derived from `Permissions.VALID_FLAGS` at import time, so a newly declared flag is granted to new organizations without touching this service — see [Permissions Reference](permissions-reference.md#default-role-grant).
+  - **Duplicate-name guard.** Organization names are unique per `product_pass_type_id`, and that rule is enforced entirely in application code — there is no unique index backing it. Both `create_organization_with_location()` and `update_organization()` therefore run the same three-step sequence: normalize the submitted name with `normalize_name()`, take a `lock_values()` advisory lock on `(lower(name), product_pass_type_id)`, then run the `exists()` check with `name__ilike=escape_like(name)` before writing. The lock is what makes the check-then-insert atomic; without it two concurrent requests both read "not taken" and both commit. The update path adds `id__ne=organization.id` so an organization does not collide with itself. See [Core Infrastructure](core-infrastructure.md#concurrency-guards) for the locking mechanics and [Utilities](utilities.md) for the normalization pair.
 - **`LocationService`** (`Location`) — create/update/list locations and user-location lookups.
 - **`ProductPassTypeService`** (`ProductPassType`) — read-only product pass type listing.
 
@@ -60,6 +61,7 @@ class XService:
 ### Asset operations
 
 - **`AssetService`** (`Asset`) — CRUD and listing; generates the passport `pass_id` via `app.clients.cryptography.encode(f"{location.id}_{device_id}")`; deep eager-loaded `list_asset_pass` / `get_asset_pass_by_pass_id` for public passport views.
+  - `get_asset()` reaches the organization **through the asset's location** rather than filtering on a column of `Asset` itself: it fetches by `id` alone and then rejects the row with `db_asset.location.organization_id != organization_id → NotFoundError`. This matches how `UserService.delete_user` and the dashboard counts resolve tenancy, and keeps cross-organization reads returning `404` rather than leaking existence. The tenant boundary is covered by the cross-user asset tests in [Tests](tests.md).
 - **`ServiceService`** (`Service`) — maintenance/service records; validates asset ownership by location and blocks editing expired services (`aware_utcnow()`).
 - **`AuditService`** (`Audit`) — inspection audits, tasks, and documents; generates a **localized landscape-A4 PDF report** with ReportLab + Babel + i18n `_()`, with color-coded task statuses.
 

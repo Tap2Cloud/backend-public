@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-21T00:00:00Z",
-  "commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae",
+  "generated_at": "2026-08-26T06:06:46Z",
+  "commit_hash": "c0f4f95c11ec77102cb40994f24b5bbb8c0d5baa",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
-  "component_count": 319,
+  "component_count": 325,
   "languages": [
     "python",
     "javascript"
@@ -29,7 +29,8 @@
         "t2c_backend.core.pagination.CustomPage",
         "t2c_backend.core.middlewares.sqlalchemy.SQLAlchemyMiddleware",
         "t2c_backend.core.middlewares.language.LanguageMiddleware",
-        "t2c_backend.core.i18n.TranslationWrapper"
+        "t2c_backend.core.i18n.TranslationWrapper",
+        "t2c_backend.core.repository.TableLockMode"
       ],
       "doc_file": "core-infrastructure.md"
     },
@@ -125,7 +126,9 @@
         "t2c_backend.utils.enums",
         "t2c_backend.utils.errors.ApplicationError",
         "t2c_backend.utils.misc.DictContainer",
-        "t2c_backend.utils.misc.underscore"
+        "t2c_backend.utils.misc.underscore",
+        "t2c_backend.utils.misc.normalize_name",
+        "t2c_backend.utils.misc.escape_like"
       ],
       "doc_file": "utilities.md"
     },
@@ -198,30 +201,38 @@
     "extending.md"
   ],
   "last_update": {
-    "previous_commit_hash": "363289a383346c3e72f56e8b9a8af3500cf59ced",
-    "reason": "Branch other/improve-test-cases refactored the multi-tenant tests onto a new `second_user_client` fixture in tests/conftest.py, replacing per-test manual logins and per-request Authorization overrides in test_organization.py, test_asset_type_category.py, test_asset_type.py and test_asset.py. Documented the new fixture in tests.md. No production source, model, schema, service or route changed, so component count stays at 319 and every other module doc is untouched.",
-    "verified_against_source": [
-      "tests/conftest.py: 3 client fixtures \u2014 client (session), authenticated_client (session), second_user_client (function, swaps/restores the Authorization header around a second_user_data login via try/finally)",
-      "second_user_client consumed by the *_for_second_user tests in test_organization.py, test_asset_type_category.py, test_asset_type.py, test_asset.py",
-      "test function count unchanged at 190 across 14 REST modules (pure refactor, no tests added or removed)"
-    ],
+    "previous_commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae",
+    "reason": "Branches other/jep-fix-prevent-duplicate-organization-name and other/fix-race-condition added a concurrency guard for the per-product-pass-type organization name rule, which no unique index backs. BaseRepository gained TableLockMode, lock_table() and lock_values() (Postgres advisory/table locks that pin the session to the writer engine); utils.misc gained normalize_name() and escape_like(); OrganizationService.create_organization_with_location and update_organization now normalize, lock, then check. Separately, AssetService.get_asset now resolves tenancy through location.organization_id instead of an Asset column filter, and the suite gained cross-tenant 404 tests plus a duplicate-name 409 test. Updated core-infrastructure.md, utilities.md, services.md, extending.md, tests.md and overview.md; the other 9 module docs were unaffected.",
     "modules_updated": [
+      "Core Infrastructure",
+      "Utilities",
+      "Services",
+      "Extending Tap2Cloud",
       "Tests"
     ],
     "modules_unchanged": [
       "Application Bootstrap",
-      "Core Infrastructure",
       "Data Models",
       "Schemas",
       "API Endpoints",
-      "Services",
       "Security & Permissions",
       "Clients",
-      "Utilities",
       "Database Migrations",
       "Development Setup",
-      "Permissions Reference",
-      "Extending Tap2Cloud"
+      "Permissions Reference"
+    ],
+    "verified_against_source": [
+      "core/repository/__init__.py: TableLockMode(SHARE/EXCLUSIVE/ACCESS EXCLUSIVE); lock_table() issues LOCK TABLE ... IN <mode> MODE; lock_values() hashes table name + sorted column=value parts via hashtextextended and takes pg_advisory_xact_lock; both set session.info['engine']='writer' before executing.",
+      "core/db/session.py: RoutingSession.get_bind() returns the writer engine whenever info['engine']=='writer', so the pin is sticky for the rest of the session; get_db_session commits once at request end, so the xact lock spans lock -> exists -> save.",
+      "utils/misc.py: normalize_name() = NFKC + INVISIBLE_CHARACTERS strip + whitespace collapse + strip; escape_like() escapes backslash, % and _ (Postgres default LIKE escape).",
+      "services/organization/__init__.py: both create and update call lock_values(name=func.lower(name), product_pass_type_id=...) immediately before exists(name__ilike=escape_like(name), ...); update adds id__ne=organization.id.",
+      "services/asset/__init__.py: get_asset() no longer filters organization_id in the query; it raises NotFoundError when db_asset.location.organization_id != organization_id.",
+      "tests: test_asset.py adds test_get_second_user_asset_by_id_with_first_authenticated_client and test_get_first_user_asset_by_id_with_second_user_client (both assert 404); test_organization.py adds test_update_organization_duplicate_name_for_second_user (asserts 409)."
+    ],
+    "known_gaps": [
+      "lock_table() and TableLockMode are defined but not called anywhere in this repository; only lock_values() has a call site. Documented as available API, not as an active code path.",
+      "The organizations table still has no unique index on (product_pass_type_id, name); the guard is application-level only and protects only call sites that invoke it."
     ]
-  }
+  },
+  "previous_commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae"
 }

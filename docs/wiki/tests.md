@@ -244,6 +244,19 @@ not the *insufficient-permission* path:
 - `test_create_organization_role` posts an `organization_role` fixture whose `permissions` is a list of
   arbitrary Faker strings and asserts only `200` — consistent with `RoleService` discarding that list.
 
+**Tenant isolation is covered separately from permissions.** Where the flag checks are only exercised in
+the "granted" direction, the *location-based ownership* layer does get negative coverage, using the two
+parallel users the fixtures build:
+
+- `test_asset.py` asserts the boundary in both directions — `test_get_second_user_asset_by_id_with_first_authenticated_client`
+  and `test_get_first_user_asset_by_id_with_second_user_client` each fetch an asset belonging to the other
+  user by id and assert **404**, pinning the `location.organization_id` check in `AssetService.get_asset`
+  (see [Services](services.md)).
+- `test_organization.py::test_update_organization_duplicate_name_for_second_user` renames the second
+  user's organization to the first user's name and asserts **409**, covering the duplicate-name guard.
+  Note this test logs in inline and passes an explicit `Authorization` header rather than using the
+  `second_user_client` fixture, because it needs the first user's name read *before* the swap.
+
 ## Dependencies
 
 ```mermaid
