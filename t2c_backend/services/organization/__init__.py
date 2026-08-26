@@ -1,4 +1,5 @@
 from fastapi import UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload, make_transient_to_detached
 
 from t2c_backend.core.permissions import ALL_PERMISSIONS
@@ -48,6 +49,10 @@ class OrganizationService:
 
         if user.location_id is not None:
             raise AlreadyExistsError(msg="The organization is already exist with this user.")
+
+        await self.repository.lock_values(
+            name=func.lower(name), product_pass_type_id=product_pass_type.id
+        )
 
         is_organization_exists = await self.repository.exists(
             name__ilike=escape_like(name), product_pass_type_id=product_pass_type.id
@@ -100,6 +105,11 @@ class OrganizationService:
             name = normalize_name(name)
             if not name:
                 raise BadRequestError(msg="Organization name is required.")
+
+            await self.repository.lock_values(
+                name=func.lower(name),
+                product_pass_type_id=organization.product_pass_type_id,
+            )
 
             is_organization_exists = await self.repository.exists(
                 name__ilike=escape_like(name),
