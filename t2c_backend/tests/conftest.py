@@ -131,11 +131,12 @@ def public_client(authenticated_client) -> Generator:
     authenticated client for the duration of a single test instead of by building a
     second client.
     """
-    authorization = authenticated_client.headers.pop("Authorization")
-
-    yield authenticated_client
-
-    authenticated_client.headers.update({"Authorization": authorization})
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        del authenticated_client.headers["Authorization"]
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
 
 
 @pytest.fixture(scope="session")
