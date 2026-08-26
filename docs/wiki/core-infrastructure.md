@@ -20,6 +20,8 @@ graph TD
   RS --> Reader
   Repo[BaseRepository] --> ScopedSession
   Repo --> Base[AdvancedDeclarativeBase models]
+  Repo --> Locks["lock_values / lock_table<br/>pin session to writer"]
+  Locks --> Writer
 ```
 
 ## Components
@@ -54,7 +56,45 @@ Key methods:
 | `list` | Filtered multi-row fetch with `joins`, `options`, `orders` |
 | `get` | Primary-key lookup |
 | `exists` | `SELECT EXISTS(...)` for filters |
+| `lock_values` | Advisory lock on one combination of column values |
+| `lock_table` | Whole-table lock in a chosen `TableLockMode` |
 | `execute` / `merge` / `delete` | Thin wrappers over the session |
+
+#### Concurrency guards
+
+A "check then write" pair — *does this name already exist? if not, insert it* — is not atomic on its
+own. Two concurrent requests can both read "no", both insert, and both commit. A row lock cannot help,
+because the row being guarded against does not exist yet. The repository offers two guards for this,
+both released by Postgres when the request commits or rolls back:
+
+- **`lock_values(**kwargs)`** — the narrow guard, and the one to prefer. It takes a
+  `pg_advisory_xact_lock` keyed by a hash of the table name plus the supplied `column=value` pairs, so
+  it only holds up requests competing for the *same* values and leaves every other writer of the table
+  running. Values are sorted before hashing, so the key does not depend on keyword order, and every part
+  is cast to `text` so `1` and `"1"` cannot collide.
+- **`lock_table(mode=TableLockMode.EXCLUSIVE)`** — the blunt guard, for when the whole table genuinely
+  has to hold still. `TableLockMode` covers the three Postgres modes worth taking from application code:
+  `SHARE` (blocks writers but is shared, so two holders can deadlock the moment they both write),
+  `EXCLUSIVE` (blocks writers, self-exclusive, plain `SELECT` unaffected — the default), and
+  `ACCESS EXCLUSIVE` (blocks readers too; schema-level work only).
+
+Both methods pin the session to the **writer** engine (`session.info["engine"] = "writer"`) before
+issuing the lock. This is load-bearing rather than incidental: reader and writer are separate
+connections running separate transactions, so a lock taken on the reader would leave the writer's
+`INSERT` blocked on a lock held by its own request, which nothing can release. Because the flag is
+sticky for the rest of the session, the subsequent `exists()` check and `save()` run on that same
+writer connection and transaction.
+
+Anything the existence check compares *loosely* must be passed as a SQL expression so the lock key
+folds the value the same way the check does — `func.lower(name)` alongside a `name__ilike` check.
+Folding in Python instead would be wrong: Python and Postgres disagree on some Unicode (Turkish dotted
+I, Greek final sigma), which would hand two names the check calls equal two different keys, and the
+guard would silently do nothing for exactly those names. The hashing runs in Postgres for the same
+reason. Unrelated values can in principle hash to the same key; that costs a little contention, never
+correctness.
+
+> A unique index is the cheaper guard where one can be added. These locks are the fallback for cases
+> where it cannot — and the only guard that covers a value that does not exist yet.
 
 ### Pagination (`core/pagination/__init__.py`)
 
@@ -87,6 +127,13 @@ users = await repo.list(is_active=True, email__ilike="%@acme.com", id__in=[1, 2,
 
 # Read/write routing is automatic: writes go to the writer engine,
 # reads to the reader engine, based on statement type and session.info["engine"].
+
+# Making a read-then-write check atomic. Pass func.lower() (not name.lower())
+# so the lock key folds the value exactly as the ilike check does.
+await repo.lock_values(name=func.lower(name), product_pass_type_id=product_pass_type.id)
+if await repo.exists(name__ilike=escape_like(name), product_pass_type_id=product_pass_type.id):
+    raise AlreadyExistsError(msg="Organization with this name already exists.")
+await repo.save(Organization(name=name, ...))
 ```
 
 ## Cross-references

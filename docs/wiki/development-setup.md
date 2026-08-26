@@ -42,10 +42,10 @@ Relevant `pyproject.toml` groups:
 ```toml
 [dependency-groups]
 dev = [
-    "ruff>=0.15.21",
+    "ruff>=0.16.4",
 ]
 test = [
-    "faker>=40.28.1",
+    "faker>=40.37.0",
     "pillow>=12.3.0",
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",

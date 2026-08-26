@@ -1,7 +1,23 @@
+import enum
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-from sqlalchemy import Column, ColumnElement, and_, delete, exists, not_, or_, select
+from sqlalchemy import (
+    BigInteger,
+    Column,
+    ColumnElement,
+    Text,
+    and_,
+    cast,
+    delete,
+    exists,
+    func,
+    literal,
+    not_,
+    or_,
+    select,
+    text,
+)
 from sqlalchemy.ext.asyncio import AsyncSession, async_scoped_session
 from sqlalchemy.orm import InstrumentedAttribute
 from sqlalchemy.orm.util import AliasedClass
@@ -9,6 +25,28 @@ from sqlalchemy.orm.util import AliasedClass
 from t2c_backend.core.db import AdvancedDeclarativeBase
 
 ModelType = TypeVar("ModelType", bound=AdvancedDeclarativeBase)
+
+
+class TableLockMode(enum.StrEnum):
+    """
+    The Postgres table lock modes worth taking from application code.
+
+    What separates them is which other transactions may still read, and whether two
+    transactions can hold the mode at the same time. The full conflict matrix lives in the
+    Postgres docs under "Explicit Locking".
+    """
+
+    # Blocks writers, but is shared: two transactions can hold it at once and then deadlock
+    # the moment they both try to write. Safe only when nothing writes afterwards.
+    SHARE = "SHARE"
+    # Blocks writers and is self exclusive, so a read-then-write pair cannot interleave with
+    # another request's. Plain SELECT is unaffected.
+    EXCLUSIVE = "EXCLUSIVE"
+    # Blocks everything, readers included. Only needed for schema level work.
+    ACCESS_EXCLUSIVE = "ACCESS EXCLUSIVE"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class BaseRepository:
@@ -147,6 +185,80 @@ class BaseRepository:
                 )
 
         return filters
+
+    async def lock_table(self, mode: TableLockMode = TableLockMode.EXCLUSIVE) -> None:
+        """
+        Take a table lock that Postgres releases when the request commits or rolls back.
+
+        The default EXCLUSIVE mode keeps plain SELECT running and blocks every writer, which is
+        what a read-then-write check needs: ask "does this value already exist?", then write if
+        it does not. Without the lock two concurrent requests both read "no", both write, and
+        both commit. A unique index is the cheaper guard when one can be added; this is the
+        fallback when it cannot, and the only guard that covers a value which does not exist
+        yet, since a row lock has no row to attach to.
+
+        Postgres locks tables and rows, never columns, so this covers the whole table and
+        serialises every writer of it for the rest of the request. Prefer lock_values() when
+        the guard only needs to cover one combination of values; reach for this when the whole
+        table genuinely has to hold still.
+        """
+        # A lock belongs to the transaction that took it, and the reader and writer engines are
+        # separate connections running separate transactions. Routed by statement type this
+        # would land on the reader, leaving the writer's INSERT waiting on a lock held by its
+        # own request, which nothing can release. So pin the session to the writer that will
+        # run the save, the same way save() below does.
+        self.session.info["engine"] = "writer"
+        await self.session.execute(
+            text(f"LOCK TABLE {self.model.__table__.fullname} IN {mode} MODE")
+        )
+
+    async def lock_values(self, **kwargs: Any) -> None:
+        """
+        Take a lock on one combination of column values, released on commit or rollback.
+
+        Narrower than lock_table(): it holds up only the requests competing for the same values
+        and leaves every other writer of the table running. Use it to make a read-then-write
+        check atomic - "is this name taken?", then insert - which is exactly the case a row
+        lock cannot cover, because the row being guarded against does not exist yet.
+
+        Postgres keys these locks by number, so the values are hashed rather than compared and
+        are matched exactly. Pass a SQL expression for anything the check compares loosely -
+        func.lower(name) next to an ilike check - so that the key folds the value the same way
+        the check does. Do not fold it in Python first: Python and Postgres disagree on some
+        Unicode (Turkish dotted I, Greek final sigma), which would hand two names the check
+        calls equal two different keys, and the guard would silently do nothing for them. The
+        hashing happens in Postgres for the same reason.
+
+        Unrelated values can in principle hash to the same key; that costs a little contention,
+        never correctness.
+        """
+        # Every part is cast to text: Postgres has to be told the type of a bare parameter, and
+        # it also keeps 1 and "1" from hashing alike. The table name keeps two models from
+        # sharing a key, and sorting keeps the key stable regardless of the order the caller
+        # passed the values in.
+        parts = [cast(literal(self.model.__table__.fullname), Text)]
+        for column in sorted(kwargs):
+            value = kwargs[column]
+            expression = value if isinstance(value, ColumnElement) else literal(value)
+            parts.append(
+                cast(literal(f"{column}="), Text)
+                + func.coalesce(cast(expression, Text), cast(literal("\x1e<null>"), Text))
+            )
+
+        # A unit separator cannot appear in a normalised name, so no two different sets of
+        # values can be glued into the same payload.
+        payload = func.concat_ws(cast(literal("\x1f"), Text), *parts)
+
+        # The lock belongs to the connection that took it, and the reader and writer engines
+        # hold separate ones, so pin the session to the writer that will run the save.
+        self.session.info["engine"] = "writer"
+        await self.session.execute(
+            select(
+                func.pg_advisory_xact_lock(
+                    func.hashtextextended(payload, cast(literal(0), BigInteger))
+                )
+            )
+        )
 
     async def save(self, instance: ModelType, refresh: bool = False) -> ModelType:
         self.session.info["engine"] = "writer"
