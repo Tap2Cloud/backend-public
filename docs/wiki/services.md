@@ -61,7 +61,7 @@ class XService:
 ### Asset operations
 
 - **`AssetService`** (`Asset`) — CRUD and listing; generates the passport `pass_id` via `app.clients.cryptography.encode(f"{location.id}_{device_id}")`; deep eager-loaded `list_asset_pass` / `get_asset_pass_by_pass_id` for public passport views.
-  - `get_asset()` reaches the organization **through the asset's location** rather than filtering on a column of `Asset` itself: it fetches by `id` alone and then rejects the row with `db_asset.location.organization_id != organization_id → NotFoundError`. This matches how `UserService.delete_user` and the dashboard counts resolve tenancy, and keeps cross-organization reads returning `404` rather than leaking existence. The tenant boundary is covered by the cross-user asset tests in [Tests](tests.md).
+  - `get_asset_by_organization_id()` (the method behind `GET /api/v1/asset/{id}`) reaches the organization **through the asset's location** rather than filtering on a column of `Asset` itself: it fetches by `id` alone and then rejects the row with `db_asset.location.organization_id != organization_id → NotFoundError`. This matches how `UserService.delete_user` and the dashboard counts resolve tenancy, and keeps cross-organization reads returning `404` rather than leaking existence. The tenant boundary is covered by the cross-user asset tests in [Tests](tests.md).
 - **`ServiceService`** (`Service`) — maintenance/service records; validates asset ownership by location and blocks editing expired services (`aware_utcnow()`).
 - **`AuditService`** (`Audit`) — inspection audits, tasks, and documents; generates a **localized landscape-A4 PDF report** with ReportLab + Babel + i18n `_()`, with color-coded task statuses.
 

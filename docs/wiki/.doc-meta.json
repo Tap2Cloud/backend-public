@@ -202,37 +202,68 @@
   ],
   "last_update": {
     "previous_commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae",
-    "reason": "Branches other/jep-fix-prevent-duplicate-organization-name and other/fix-race-condition added a concurrency guard for the per-product-pass-type organization name rule, which no unique index backs. BaseRepository gained TableLockMode, lock_table() and lock_values() (Postgres advisory/table locks that pin the session to the writer engine); utils.misc gained normalize_name() and escape_like(); OrganizationService.create_organization_with_location and update_organization now normalize, lock, then check. Separately, AssetService.get_asset now resolves tenancy through location.organization_id instead of an Asset column filter, and the suite gained cross-tenant 404 tests plus a duplicate-name 409 test. Updated core-infrastructure.md, utilities.md, services.md, extending.md, tests.md and overview.md; the other 9 module docs were unaffected.",
+    "reason": "Documentation had drifted from the code by 25 commits (baseline 6edee23). This update covers that whole range, which spans work merged to main via PR #21 as well as the current branch. From PR #21 / main: utils.misc gained normalize_name() and escape_like(), and AssetService.get_asset_by_organization_id was changed to resolve tenancy through location.organization_id instead of an Asset column filter, with cross-tenant 404 tests and a duplicate-name 409 test added alongside it. From the current branch (other/fix-race-condition): BaseRepository gained TableLockMode, lock_table() and lock_values() (Postgres advisory/table locks that pin the session to the writer engine), and OrganizationService.create_organization_with_location and update_organization now normalize, lock, then check. Updated core-infrastructure.md, utilities.md, services.md, extending.md, tests.md and overview.md; the other 9 module docs were reviewed and needed no change.",
     "modules_updated": [
       "Core Infrastructure",
       "Utilities",
       "Services",
       "Extending Tap2Cloud",
-      "Tests"
+      "Tests",
+      "Data Models",
+      "Database Migrations",
+      "API Endpoints",
+      "Development Setup",
+      "Permissions Reference"
     ],
     "modules_unchanged": [
       "Application Bootstrap",
-      "Data Models",
       "Schemas",
-      "API Endpoints",
       "Security & Permissions",
-      "Clients",
-      "Database Migrations",
-      "Development Setup",
-      "Permissions Reference"
+      "Clients"
     ],
     "verified_against_source": [
       "core/repository/__init__.py: TableLockMode(SHARE/EXCLUSIVE/ACCESS EXCLUSIVE); lock_table() issues LOCK TABLE ... IN <mode> MODE; lock_values() hashes table name + sorted column=value parts via hashtextextended and takes pg_advisory_xact_lock; both set session.info['engine']='writer' before executing.",
       "core/db/session.py: RoutingSession.get_bind() returns the writer engine whenever info['engine']=='writer', so the pin is sticky for the rest of the session; get_db_session commits once at request end, so the xact lock spans lock -> exists -> save.",
       "utils/misc.py: normalize_name() = NFKC + INVISIBLE_CHARACTERS strip + whitespace collapse + strip; escape_like() escapes backslash, % and _ (Postgres default LIKE escape).",
       "services/organization/__init__.py: both create and update call lock_values(name=func.lower(name), product_pass_type_id=...) immediately before exists(name__ilike=escape_like(name), ...); update adds id__ne=organization.id.",
-      "services/asset/__init__.py: get_asset() no longer filters organization_id in the query; it raises NotFoundError when db_asset.location.organization_id != organization_id.",
+      "services/asset/__init__.py: get_asset_by_organization_id() (called by endpoints/v1/rest/asset.py:106) no longer filters organization_id in the query; it raises NotFoundError when db_asset.location.organization_id != organization_id.",
       "tests: test_asset.py adds test_get_second_user_asset_by_id_with_first_authenticated_client and test_get_first_user_asset_by_id_with_second_user_client (both assert 404); test_organization.py adds test_update_organization_duplicate_name_for_second_user (asserts 409)."
     ],
     "known_gaps": [
       "lock_table() and TableLockMode are defined but not called anywhere in this repository; only lock_values() has a call site. Documented as available API, not as an active code path.",
       "The organizations table still has no unique index on (product_pass_type_id, name); the guard is application-level only and protects only call sites that invoke it."
-    ]
-  },
-  "previous_commit_hash": "6edee23cd539a45ac6e9b8e349a751db79d680ae"
+    ],
+    "full_audit": {
+      "scope": "After the scoped update, every one of the 15 wiki docs was audited claim-by-claim against current source, because the doc baseline (6edee23) predated work merged to main via other PRs and a file-scoped update cannot catch drift in docs whose files did not change.",
+      "corrections": [
+        "database-migrations.md: pkg_0005_reduce_register_field was entirely undocumented (missing from the revision list AND the chain diagram). It drops 8 columns from locations and organizations.email, makes organizations.number nullable, and renames taxonomies -> product_pass_types idempotently.",
+        "data-models.md: Location was described as carrying 'address/contact fields'; pkg_0005 left it with only city and country.",
+        "data-models.md: claimed ALL models mix in AuditColumns; it is actually on 11 classes only (Location, Role, Service, ProductPassType, Audit/AuditTask and the association tables have no timestamps).",
+        "data-models.md: table name asset_type_documents corrected to asset_types_documents.",
+        "data-models.md: add_location_count()/add_user_count()/add_role_count() examples called with no args; each requires the model class.",
+        "tests.md: test count 190 -> 194, test_asset.py 20 -> 23.",
+        "tests.md: the 'global ordering' section described a fabricated numeric @pytest.mark.order(1..124) scheme. The suite uses relative order(after=...) marks almost exclusively; the only numeric mark in the tree is commented out.",
+        "tests.md: fakes/clients was described as holding active third-party stubs used with pytest-mock; the package is empty (0-byte __init__.py) and mocker is unused.",
+        "api-endpoints.md: the v1 prefix router was attributed to endpoints/v1/__init__.py (which is empty); it lives in endpoints/v1/rest/__init__.py. operation_id coverage was stated as universal; it is 51 of 65 routes.",
+        "permissions-reference.md: route PUT /user/profile/ had a spurious trailing slash (2 places).",
+        "development-setup.md / tests.md: ruff pin 0.15.21 -> 0.16.4, faker pin 40.28.1 -> 40.37.0.",
+        "services.md / tests.md / .doc-meta.json: AssetService.get_asset() does not exist; corrected to get_asset_by_organization_id()."
+      ],
+      "verified_clean": [
+        "application-bootstrap.md",
+        "schemas.md",
+        "security-and-permissions.md",
+        "clients.md",
+        "services.md",
+        "core-infrastructure.md",
+        "utilities.md",
+        "overview.md",
+        "extending.md"
+      ],
+      "notes": [
+        "permissions-reference.md's 42 flags, their bit values, ALL_PERMISSIONS=2^42-1, and the 55-row route->permission matrix were each re-derived from source and match exactly.",
+        "t2c_backend/services/taxonomy/ exists on disk but holds only a stale __pycache__ and is untracked by git; it is not a service and is correctly absent from the docs."
+      ]
+    }
+  }
 }

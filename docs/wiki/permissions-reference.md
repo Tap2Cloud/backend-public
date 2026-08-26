@@ -58,7 +58,7 @@ subtracted. See [Security & Permissions](security-and-permissions.md) for the un
 | `organization_read` | 20 | `1048576` | `GET /organization` |
 | `organization_delete` | 21 | `2097152` | `DELETE /organization`<br>`DELETE /user/{cascadeOrg}` *(secondary, only when `cascadeOrg` is true)*<br>`DELETE /organization/user/{userId}/{cascadeOrg}` *(secondary, only when `cascadeOrg` is true)* |
 | `user_create` | 22 | `4194304` | — *(defined, no route)* |
-| `user_update` | 23 | `8388608` | `PUT /user/profile/` |
+| `user_update` | 23 | `8388608` | `PUT /user/profile` |
 | `user_read` | 24 | `16777216` | `GET /organization/users` |
 | `user_delete` | 25 | `33554432` | `DELETE /user/{cascadeOrg}` |
 | `org_user_delete` | 26 | `67108864` | `DELETE /organization/user/{userId}/{cascadeOrg}` |
@@ -168,7 +168,7 @@ bearer skips the DB round-trip, so its token carries no `roles` claim to check a
 | `GET` | `/organization/roles` | `get_role` |
 | `POST` | `/organization/roles` | `create_role` |
 | `GET` | `/organization/users` | `user_read` |
-| `PUT` | `/user/profile/` | `user_update` |
+| `PUT` | `/user/profile` | `user_update` |
 | `POST` | `/user/password/change` | `change_user_password` |
 | `DELETE` | `/user/{cascadeOrg}` | `user_delete` **+** `organization_delete` when `cascadeOrg` |
 | `DELETE` | `/organization/user/{userId}/{cascadeOrg}` | `org_user_delete` **+** `organization_delete` when `cascadeOrg` |

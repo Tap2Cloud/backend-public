@@ -21,7 +21,9 @@ graph TD
 
 ## Router Wiring
 
-`endpoints/router.py` builds `api_router` and includes the `v1` rest router; `CustomFastAPI` mounts it under `API_STR` (`/api`). `endpoints/v1/__init__.py` is a parent `APIRouter(prefix="/v1")` that includes each sub-router with a central `tags=[...]`. Each sub-router file declares a bare `router = APIRouter()` with full paths on each decorator and explicit `operation_id`/`status_code`.
+`endpoints/router.py` builds `api_router` and includes the `v1` rest router; `CustomFastAPI` mounts it under `API_STR` (`/api`). The parent router lives in **`endpoints/v1/rest/__init__.py`** — an `APIRouter(prefix="/v1")` that includes each sub-router with a central `tags=[...]`. (`endpoints/v1/__init__.py` itself is empty.) Each sub-router file declares a bare `router = APIRouter()` with full paths on each decorator.
+
+`operation_id` is set on most but not all routes — 51 of 65 today. The uncovered ones are every route in `audit.py`, plus `POST /login`, `POST /register`, `GET /health`, `GET /token/refresh`, `GET /product-pass-type`, `GET /instruction-manual` and `GET /filter/location`; those fall back to FastAPI's generated ids, which makes their client-SDK method names less stable across refactors.
 
 ## Endpoint Groups
 
