@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import asc, desc, or_, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
 from t2c_backend.core.repository import BaseRepository
@@ -217,39 +217,30 @@ class AssetService:
                 self._model.device_id.isnot(None),
             )
             .options(
-                joinedload(self._model.asset_type),
-                joinedload(self._model.asset_type).joinedload(AssetType.fields),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
-                .joinedload(AssetTypeField.asset_type_field_options),
+                .selectinload(AssetType.fields)
+                .selectinload(AssetTypeField.asset_type_field_options),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
+                .selectinload(AssetType.fields)
                 .joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.asset_type).joinedload(AssetType.documents),
-                joinedload(self._model.asset_type).joinedload(AssetType.asset_type_category),
+                joinedload(self._model.asset_type).selectinload(AssetType.documents),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields),
+                .selectinload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategoryField.options),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type)
-                .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategory.fields)
                 .joinedload(AssetTypeCategoryField.asset_type_category_group),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
                 .joinedload(AssetTypeCategory.user),
-                joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
                 .joinedload(Organization.product_pass_type),
-                joinedload(self._model.audit),
-                joinedload(self._model.audit).joinedload(Audit.audit_tasks),
-                joinedload(self._model.audit)
-                .joinedload(Audit.audit_tasks)
-                .joinedload(AuditTask.documents),
+                selectinload(self._model.audit)
+                .selectinload(Audit.audit_tasks)
+                .selectinload(AuditTask.documents),
             )
             .order_by(sort_order[sort_by])
         )
@@ -283,40 +274,30 @@ class AssetService:
         asset = await self.repository.get_one_or_none(
             pass_id=pass_id,
             options=[
-                joinedload(self._model.location),
-                joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
                 .joinedload(Organization.product_pass_type),
-                joinedload(self._model.asset_type),
-                joinedload(self._model.asset_type).joinedload(AssetType.fields),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
-                .joinedload(AssetTypeField.asset_type_field_options),
+                .selectinload(AssetType.fields)
+                .selectinload(AssetTypeField.asset_type_field_options),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
+                .selectinload(AssetType.fields)
                 .joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.asset_type).joinedload(AssetType.documents),
-                joinedload(self._model.asset_type).joinedload(AssetType.asset_type_category),
+                joinedload(self._model.asset_type).selectinload(AssetType.documents),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields),
+                .selectinload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategoryField.options),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type)
-                .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategory.fields)
                 .joinedload(AssetTypeCategoryField.asset_type_category_group),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
                 .joinedload(AssetTypeCategory.user),
-                joinedload(self._model.audit),
-                joinedload(self._model.audit).joinedload(Audit.audit_tasks),
-                joinedload(self._model.audit)
-                .joinedload(Audit.audit_tasks)
-                .joinedload(AuditTask.documents),
+                selectinload(self._model.audit)
+                .selectinload(Audit.audit_tasks)
+                .selectinload(AuditTask.documents),
             ],
         )
 
