@@ -25,13 +25,14 @@ t2c_backend/tests/
         ├── test_asset_type_category.py
         ├── test_asset_type.py
         ├── test_asset.py
+        ├── test_asset_pass.py
         ├── test_service.py
         ├── test_typeplate.py
         ├── test_audit.py
         └── test_instruction_manual.py
 ```
 
-The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 194 test functions across 14 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (23).
+The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 203 test functions across 15 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (21).
 
 ## Architecture
 
@@ -75,13 +76,14 @@ def client(database_migration) -> Generator:
 
 Every client fixture depends on `database_migration`, so the schema (and any seeded static data) is created once per session before requests are made. Because `TestClient` runs the app's lifespan, startup clients (JWT, cryptography, storage) are wired up exactly as in production.
 
-### Three client fixtures
+### Four client fixtures
 
 | Fixture | Scope | Purpose |
 | --- | --- | --- |
 | `client` | session | Unauthenticated client — used for health checks, register/login flows, and negative auth tests (expecting `401`/`422`). |
 | `authenticated_client` | session | Logs in with `user_data["credentials"]` and pre-sets the `Authorization: Bearer <token>` header for every request. |
 | `second_user_client` | function | Borrows `authenticated_client`, swaps its header for a token obtained by logging in as `second_user_data`, and always restores the original header afterwards — including when the login fails. |
+| `public_client` | function | Borrows `authenticated_client` and **removes** its header for the duration of one test, so public routes are exercised with no token at all. Restores it afterwards. |
 
 `client` and `authenticated_client` are **session-scoped**, so the same client (and its auth header)
 persists across all test modules.
@@ -136,6 +138,36 @@ def test_create_organization_with_location_for_second_user(
 It is used by the `*_for_second_user` tests in `test_organization.py`,
 `test_asset_type_category.py`, `test_asset_type.py`, and `test_asset.py`.
 
+`public_client` follows the same borrow-and-restore shape, but removes the header instead of swapping it:
+
+```python
+@pytest.fixture(scope="function")
+def public_client(authenticated_client) -> Generator:
+    """Return a client without an Authorization header, for routes that need no token."""
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        del authenticated_client.headers["Authorization"]
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
+```
+
+It exists because the obvious alternative — standing up a second `TestClient` — does not work here. Entering
+a `TestClient` runs the app lifespan, which rebuilds `app.database_engine` on the entering client's event
+loop, so only the client that entered **last** can still reach the database. Borrowing the session client
+and dropping its header for one test sidesteps that entirely.
+
+The ordering follows the same rule as `second_user_client`: the header is **read before the `try`**, where
+nothing has been mutated yet, and the only mutation happens inside the `try` so the `finally` restore is
+guaranteed to run. Registering the finalizer this way is what keeps a failure from stranding the shared
+session client without its token.
+
+Note the distinction from `client`, which is also unauthenticated: `client` is a separate session-scoped
+client that never logged in, so it is the right fixture for `401` negative tests. `public_client` is the
+*authenticated* session client with its token temporarily removed, which is what lets a test reach a public
+route while the surrounding ordered scenario keeps its logged-in state. The public document tests in
+`test_asset_pass.py` use it.
+
 ### Fake data with Faker
 
 `conftest.py` centralizes payload generation with a session-scoped `Faker(locale="fr_FR")` instance. Data fixtures fall into two shapes:
@@ -161,7 +193,11 @@ container["organization_id"] = response.json()["id"]
 "location": container["location"],
 ```
 
-Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `product_pass_type_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
+Because these are session-scoped, a value written by an early test is visible to every later test. Containers include `container`, `product_pass_type_container`, `asset_type_container`, `asset_container`, `asset_type_category_mapping_container`, `typeplate_container`, `service_container`, `audit_container`, `organization_container`, `asset_pass_document_container`, and others. This is what lets, for example, `test_asset.py` create an asset that references an organization created back in `test_organization.py` and an asset type created in `test_asset_type.py`.
+
+`asset_pass_document_container` is the widest-reaching of these, and shows how far a container can span. It is keyed by `DocumentFor` and accumulates one known-good document per source as the scenario walks through the modules that create them — the instruction manual and field document in `test_asset_type.py`, the EU file in `test_typeplate.py`, the task document in `test_audit.py` — recording each document's name and raw bytes at upload time. `test_asset.py::test_create_asset` then pins the new asset to that same asset type — selecting it by the recorded `asset_type_name` rather than at random, so the passport is guaranteed to carry the documents under test. `test_asset_pass.py` closes the loop: `test_list_asset_pass` captures the resulting `passId`, and the public document tests replay each entry against `GET /asset-pass/{passId}/document/{documentFor}/{documentId}`, asserting the streamed bytes match what was uploaded. That is why those upload tests carry small additions in this suite: they are feeding the passport assertions downstream.
+
+This is also why `test_asset_pass.py` runs **last**, after `test_health.py::test_health`, rather than next to `test_asset.py`: its container is not fully populated until the audit module has created its task document, so the passport assertions have to follow every module that contributes a document.
 
 ### Global ordering with pytest-order
 
@@ -185,9 +221,14 @@ def test_product_pass_type(...): ...
 ```
 
 This forms one long dependency chain — register → authenticate → product pass types → organization →
-asset type category → asset type → asset → service/audit — so the container pipeline above always has
-its data ready. Relative marks are more robust than fixed numbers: inserting a test in the middle does
-not require renumbering everything after it.
+asset type category → asset type → asset → service/audit → health → asset pass — so the container
+pipeline above always has its data ready. Relative marks are more robust than fixed numbers: inserting a
+test in the middle does not require renumbering everything after it.
+
+The chain is also what lets a module be split without disturbing the run: `test_asset_pass.py` was carved
+out of `test_asset.py` to mirror the `asset_pass.py` router, and because its own marks are internal bare
+names anchored to a single cross-file mark (`after="test_health.py::test_health"`), the eleven tests moved
+as one block and kept their position at the tail of the suite.
 
 Numeric marks (`@pytest.mark.order(3)`) are supported by the plugin but are **not** used here — the only
 one in the tree is commented out at `test_asset_type.py:1124`. Tests with no mark at all (mostly negative

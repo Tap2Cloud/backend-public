@@ -191,6 +191,7 @@ def test_create_asset_type_category_image(
     )
     asset_type_category["name"] = fake.name()
     asset_type_category_field["fieldType"] = InputType.image
+    asset_type_category["hasTypeplates"] = True
 
     response = authenticated_client.post(
         "/api/v1/asset-type-category",

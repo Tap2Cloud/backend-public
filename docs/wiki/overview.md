@@ -33,6 +33,12 @@ Access control therefore has two independent layers: **role-based permission fla
 operation is allowed at all, and **location-based ownership** decides which rows it can touch. See
 [Security & Permissions](security-and-permissions.md) and [Permissions Reference](permissions-reference.md).
 
+The digital product passport is the deliberate exception. `GET /asset-pass/{passId}` and its document
+sub-route carry no token at all: the `pass_id` — a cryptographically derived, unguessable string — *is*
+the capability, so that a scanned passport resolves for anyone holding the code. Those routes stay
+read-only and are bounded to the single asset the `pass_id` resolves to. See
+[API Endpoints](api-endpoints.md).
+
 Uniqueness rules that no database constraint backs — organization names, which are unique per product
 pass type — are enforced in the service layer instead. Because a bare "check then insert" pair lets two
 concurrent requests both pass the check, those services take a transaction-scoped advisory lock on the

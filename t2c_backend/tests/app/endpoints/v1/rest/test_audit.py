@@ -4,6 +4,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
+from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
@@ -14,8 +15,9 @@ def test_create_audit_task1_with_document(
     audit_task_container,
     authenticated_client: TestClient,
     fake: Faker,
+    asset_pass_document_container,
 ):
-    fake_file = f"{fake.file_name()}.png"
+    fake_file = f"audit-task-{fake.random_int()}.png"
     document_content = fake.text().encode("utf-8")
 
     response = authenticated_client.post(
@@ -25,6 +27,11 @@ def test_create_audit_task1_with_document(
     )
 
     audit_task_container.append(response.json())
+    asset_pass_document_container[DocumentFor.AuditTaskDocuments] = {
+        "name": fake_file,
+        "content": document_content,
+        "id": response.json()["documents"][0]["id"],
+    }
 
     assert response.status_code == 201
 

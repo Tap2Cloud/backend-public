@@ -1,9 +1,11 @@
+import mimetypes
 from datetime import datetime
 
+from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import asc, desc, or_, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
 from t2c_backend.core.repository import BaseRepository
@@ -17,6 +19,7 @@ from t2c_backend.models import (
     AuditTask,
     Location,
     Organization,
+    Typeplate,
 )
 from t2c_backend.schemas.v1.asset import (
     AssetResponse,
@@ -25,7 +28,7 @@ from t2c_backend.schemas.v1.asset import (
     UpdateAsset,
 )
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
-from t2c_backend.utils.enums import AssetStatus, SortBy
+from t2c_backend.utils.enums import AssetStatus, DocumentFor, InputType, SortBy
 from t2c_backend.utils.errors import NotFoundError
 
 
@@ -214,39 +217,30 @@ class AssetService:
                 self._model.device_id.isnot(None),
             )
             .options(
-                joinedload(self._model.asset_type),
-                joinedload(self._model.asset_type).joinedload(AssetType.fields),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
-                .joinedload(AssetTypeField.asset_type_field_options),
+                .selectinload(AssetType.fields)
+                .selectinload(AssetTypeField.asset_type_field_options),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
+                .selectinload(AssetType.fields)
                 .joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.asset_type).joinedload(AssetType.documents),
-                joinedload(self._model.asset_type).joinedload(AssetType.asset_type_category),
+                joinedload(self._model.asset_type).selectinload(AssetType.documents),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields),
+                .selectinload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategoryField.options),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type)
-                .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategory.fields)
                 .joinedload(AssetTypeCategoryField.asset_type_category_group),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
                 .joinedload(AssetTypeCategory.user),
-                joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
                 .joinedload(Organization.product_pass_type),
-                joinedload(self._model.audit),
-                joinedload(self._model.audit).joinedload(Audit.audit_tasks),
-                joinedload(self._model.audit)
-                .joinedload(Audit.audit_tasks)
-                .joinedload(AuditTask.documents),
+                selectinload(self._model.audit)
+                .selectinload(Audit.audit_tasks)
+                .selectinload(AuditTask.documents),
             )
             .order_by(sort_order[sort_by])
         )
@@ -280,37 +274,92 @@ class AssetService:
         asset = await self.repository.get_one_or_none(
             pass_id=pass_id,
             options=[
-                joinedload(self._model.location),
-                joinedload(self._model.location).joinedload(Location.organization),
                 joinedload(self._model.location)
                 .joinedload(Location.organization)
                 .joinedload(Organization.product_pass_type),
-                joinedload(self._model.asset_type),
-                joinedload(self._model.asset_type).joinedload(AssetType.fields),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
-                .joinedload(AssetTypeField.asset_type_field_options),
+                .selectinload(AssetType.fields)
+                .selectinload(AssetTypeField.asset_type_field_options),
                 joinedload(self._model.asset_type)
-                .joinedload(AssetType.fields)
+                .selectinload(AssetType.fields)
                 .joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.asset_type).joinedload(AssetType.documents),
-                joinedload(self._model.asset_type).joinedload(AssetType.asset_type_category),
+                joinedload(self._model.asset_type).selectinload(AssetType.documents),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields),
+                .selectinload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategoryField.options),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type)
-                .joinedload(AssetType.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
+                .selectinload(AssetTypeCategory.fields)
                 .joinedload(AssetTypeCategoryField.asset_type_category_group),
                 joinedload(self._model.asset_type)
                 .joinedload(AssetType.asset_type_category)
                 .joinedload(AssetTypeCategory.user),
-                joinedload(self._model.audit),
-                joinedload(self._model.audit).joinedload(Audit.audit_tasks),
+                selectinload(self._model.audit)
+                .selectinload(Audit.audit_tasks)
+                .selectinload(AuditTask.documents),
+            ],
+        )
+
+        if not asset:
+            raise NotFoundError(msg="No asset found")
+
+        return asset
+
+    @staticmethod
+    def _resolve_asset_pass_document(asset: Asset, document_for: DocumentFor, document_id: str):
+        if document_for == DocumentFor.InstructionManualDocuments:
+            for document in asset.asset_type.documents:
+                if str(document.id) == document_id:
+                    return document.id, document.name, document.content_type
+
+        elif document_for == DocumentFor.EuFiles:
+            typeplate = asset.asset_type.typeplate
+            for document in typeplate.documents if typeplate else []:
+                if str(document.id) == document_id:
+                    return document.id, document.name, document.content_type
+
+        elif document_for == DocumentFor.AuditTaskDocuments:
+            for audit in asset.audit:
+                for audit_task in audit.audit_tasks:
+                    for document in audit_task.documents:
+                        if str(document.id) == document_id:
+                            # audit task documents are stored under the task id, not
+                            # the document id (see AuditService.create_audit_task)
+                            return audit_task.id, document.name, document.content_type
+
+        elif document_for == DocumentFor.AssetTypeFieldSpecificDocuments:
+            for field in asset.asset_type.fields:
+                if str(field.id) != document_id:
+                    continue
+                category_field = field.asset_type_category_field
+                if not field.response_value or not category_field:
+                    break
+                if category_field.field_type not in (InputType.file, InputType.image):
+                    break
+                content_type, _ = mimetypes.guess_type(field.response_value)
+                return field.id, field.response_value, content_type
+
+        raise NotFoundError(msg="Document not found")
+
+    async def get_asset_pass_document(
+        self,
+        pass_id: str,
+        document_for: DocumentFor,
+        document_id: str,
+        as_attachment: bool = False,
+    ):
+        asset = await self.repository.get_one_or_none(
+            pass_id=pass_id,
+            options=[
+                joinedload(self._model.location),
+                joinedload(self._model.asset_type).joinedload(AssetType.documents),
+                joinedload(self._model.asset_type)
+                .joinedload(AssetType.typeplate)
+                .joinedload(Typeplate.documents),
+                joinedload(self._model.asset_type)
+                .joinedload(AssetType.fields)
+                .joinedload(AssetTypeField.asset_type_category_field),
                 joinedload(self._model.audit)
                 .joinedload(Audit.audit_tasks)
                 .joinedload(AuditTask.documents),
@@ -320,7 +369,21 @@ class AssetService:
         if not asset:
             raise NotFoundError(msg="No asset found")
 
-        return asset
+        file_id, file_name, content_type = self._resolve_asset_pass_document(
+            asset, document_for, document_id
+        )
+        disposition = "attachment" if as_attachment else "inline"
+
+        return StreamingResponse(
+            self.app.clients.storage.get_document(
+                organization_id=asset.location.organization_id,
+                document_for=document_for,
+                file_id=file_id,
+                file_name=file_name,
+            ),
+            media_type=content_type or "application/octet-stream",
+            headers={"Content-Disposition": f'{disposition}; filename="{file_name}"'},
+        )
 
     async def get_asset_by_id(self, asset_id: int, organization_id: int):
         select_query = (
