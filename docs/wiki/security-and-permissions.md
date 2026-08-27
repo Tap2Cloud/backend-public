@@ -65,8 +65,7 @@ async def delete_asset_handler(
     asset_id: int = Path(..., alias="assetId"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_delete": True})),
     services: DictContainer = Depends(get_services),
-):
-    ...
+): ...
 ```
 
 The dict form is deliberate: `permissions={"asset_delete": True}` — only entries whose value is truthy
@@ -83,6 +82,7 @@ def user_permissions(token: "Token"):
         for flag, check in dict(Permissions(int(role["permissions"]))).items()
         if check
     }
+
 
 def check_permission(self, token: "Token") -> bool:
     user_permissions = self.user_permissions(token)

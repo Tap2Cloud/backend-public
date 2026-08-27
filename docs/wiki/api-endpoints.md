@@ -12,16 +12,20 @@ graph TD
   ApiRouter --> V1[v1 router /v1]
   V1 --> Auth[authentication/register/token]
   V1 --> AssetR[asset / asset-type / category]
+  V1 --> PassR[asset-pass]
   V1 --> AuditR[audit / service / typeplate]
   V1 --> OrgR[organization / user / location / role]
   V1 --> Misc[dashboard / product pass type / health / instruction-manual]
   Auth --> Sec[JWT bearers]
   AssetR --> Svc[get_services → DictContainer]
+  PassR --> Svc
 ```
 
 ## Router Wiring
 
-`endpoints/router.py` builds `api_router` and includes the `v1` rest router; `CustomFastAPI` mounts it under `API_STR` (`/api`). `endpoints/v1/__init__.py` is a parent `APIRouter(prefix="/v1")` that includes each sub-router with a central `tags=[...]`. Each sub-router file declares a bare `router = APIRouter()` with full paths on each decorator and explicit `operation_id`/`status_code`.
+`endpoints/router.py` builds `api_router` and includes the `v1` rest router; `CustomFastAPI` mounts it under `API_STR` (`/api`). The parent router lives in **`endpoints/v1/rest/__init__.py`** — an `APIRouter(prefix="/v1")` that includes each sub-router with a central `tags=[...]`. (`endpoints/v1/__init__.py` itself is empty.) Each sub-router file declares a bare `router = APIRouter()` with full paths on each decorator.
+
+`operation_id` is set on most but not all routes — 52 of 66 today. The uncovered ones are every route in `audit.py`, plus `POST /login`, `POST /register`, `GET /health`, `GET /token/refresh`, `GET /product-pass-type`, `GET /instruction-manual` and `GET /filter/location`; those fall back to FastAPI's generated ids, which makes their client-SDK method names less stable across refactors.
 
 ## Endpoint Groups
 
@@ -33,9 +37,46 @@ graph TD
 
 ### Assets & passports
 
-- `asset` — create/update/delete, `PUT /asset` (filtered paginated list via `SelectiveFilters` body), `GET /asset/{id}`, `GET /asset-pass` (paginated). **`GET /asset-pass/{passId}` is public** — the digital product passport view.
+- `asset` — create/update/delete, `PUT /asset` (filtered paginated list via `SelectiveFilters` body), `GET /asset/{id}`.
+- `asset-pass` — the digital product passport surface, in its own router (`asset_pass.py`, tag `asset-pass`). See below.
 - `asset-type` — CRUD, filtered list, and document sub-routes (custom-field docs, instruction-manual downloads via streaming); create/update are multipart.
 - `asset-type-category` — CRUD, category groups, and filter/mapping endpoints backing dropdowns.
+
+#### The `asset-pass` router
+
+`endpoints/v1/rest/asset_pass.py` holds the three passport routes. `GET /asset-pass` is the only guarded one:
+
+| Route | Auth | Purpose |
+| --- | --- | --- |
+| `GET /asset-pass` | `list_asset_pass` flag | Paginated `DetailedAssetPassResponse` list, scoped to `token.organization_id`. |
+| `GET /asset-pass/{passId}` | **public** | The passport view for a single asset, resolved by `pass_id`. |
+| `GET /asset-pass/{passId}/document/{documentFor}/{documentId}` | **public** | Streams one document attached to that passport. |
+
+The document route is the passport's read-only file surface — it lets a passport page load its own PDFs and images without a token, given only the (unguessable) `pass_id`:
+
+```python
+@router.get(
+    "/asset-pass/{passId}/document/{documentFor}/{documentId}", response_class=StreamingResponse
+)
+async def get_asset_pass_document(
+    pass_id: str = Path(..., alias="passId"),
+    document_for: DocumentFor = Path(..., alias="documentFor"),
+    document_id: str = Path(..., alias="documentId"),
+    download: bool = Query(False),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.asset_service.get_asset_pass_document(
+        pass_id=pass_id,
+        document_for=document_for,
+        document_id=document_id,
+        as_attachment=download,
+    )
+```
+
+- `documentFor` is the `DocumentFor` enum, so an unknown value is rejected by FastAPI as **422** before the service runs; a well-formed but unmatched document is **404**.
+- `download=true` switches `Content-Disposition` from `inline` to `attachment`; the filename is always the stored document name.
+- The declared OpenAPI response content type is `application/octet-stream`, but the handler serves the document's real content type when one is known — octet-stream is only the fallback.
+- Reachability is bounded by the passport: the service resolves the asset from `passId` first and then searches **only that asset's** own documents, so a `documentId` belonging to another asset returns 404. See [Services](services.md) for the resolution rules.
 
 ### Operations
 
@@ -78,7 +119,7 @@ sequenceDiagram
 - **Row scoping is separate** — the flag says *what kind of* operation is allowed; **which rows** are reachable is enforced inside the services from `token.location_id` / `token.organization_id` (raising `NotFoundError` on a mismatch, or `UnAuthorizedError` in the org role routes when the token has no org).
 - **Compound operations** — a few handlers add a second check when a request parameter widens the blast radius: both user-delete routes additionally require `organization_delete` when `cascadeOrg` is true, via `JWTAPIAccessTokenBearer.user_permissions(token)`.
 - **Services** — `services: DictContainer = Depends(get_services)`, where `get_services` nests `Depends(get_db_session)` and wires every registered service onto the request-scoped session, accessed as `services.<name>_service`.
-- **Public routes** — `/login`, `/register`, `/health`, and `/asset-pass/{passId}`.
+- **Public routes** — `/login`, `/register`, `/health`, `/asset-pass/{passId}`, and `/asset-pass/{passId}/document/{documentFor}/{documentId}`. The two passport routes are unauthenticated by design: the `pass_id` is the capability, so anyone holding it can read that passport and stream its documents.
 - **Authenticated but unguarded routes** — `POST /organization` (bootstrap: the caller has just registered and holds no org roles yet), `GET /user/profile` (own profile), `GET /product-pass-type` and `GET /asset-type-category-group` (static reference data), and `GET /dashboard/summary`. `GET /token/refresh` requires a valid refresh token but declares no permission — the refresh bearer skips the DB round-trip, so its token has no roles to check.
 - **Conventions** — complex/filtered list endpoints use `PUT` with a body (`SelectiveFilters`) rather than `GET`; pagination params are `page`/`pageSize` (1–1000); file endpoints return `StreamingResponse`; multipart is used for create/update of asset types, typeplates, organizations, user profile, and audits.
 

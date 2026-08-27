@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from t2c_backend.endpoints.v1.rest import (
     asset,
+    asset_pass,
     asset_type,
     asset_type_category,
     audit,
@@ -22,6 +23,7 @@ from t2c_backend.endpoints.v1.rest import (
 router = APIRouter(prefix="/v1")
 
 router.include_router(asset.router, tags=["asset"])
+router.include_router(asset_pass.router, tags=["asset-pass"])
 router.include_router(asset_type.router, tags=["asset-type"])
 router.include_router(asset_type_category.router, tags=["asset-type-category"])
 router.include_router(audit.router, tags=["audit"])

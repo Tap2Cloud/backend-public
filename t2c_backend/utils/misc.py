@@ -1,6 +1,7 @@
 import functools
 import json
 import re
+import unicodedata
 from calendar import timegm
 from datetime import UTC, datetime
 from inspect import isawaitable
@@ -53,6 +54,40 @@ def datetime_from_epoch(ts):
 
 def get_name_from_email(email: str) -> str | None:
     return (match := re.match(r"^[a-zA-Z]+", email.split("@")[0])) and match.group()
+
+
+# Characters that render as nothing and would otherwise make two identical names look different:
+INVISIBLE_CHARACTERS = (
+    r"[\u00ad\u034f\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb]"
+)
+_INVISIBLE_CHARACTERS_RE = re.compile(INVISIBLE_CHARACTERS)
+_WHITESPACE_RE = re.compile(r"\s+")
+_LIKE_WILDCARDS_RE = re.compile(r"([\\%_])")
+
+
+def normalize_name(name: str) -> str:
+    """
+    Canonical form of a user supplied name.
+
+    Applies NFKC (so fullwidth/compatibility characters and decomposed accents collapse onto
+    their canonical form), drops zero-width characters, squashes every whitespace run into a
+    single space and trims the ends. The result is what gets stored and what duplicate checks
+    are compared on.
+    """
+    name = unicodedata.normalize("NFKC", name)
+    name = _INVISIBLE_CHARACTERS_RE.sub("", name)
+    return _WHITESPACE_RE.sub(" ", name).strip()
+
+
+def escape_like(value: str) -> str:
+    """
+    Escape the LIKE/ILIKE pattern metacharacters in a value that should match exactly.
+
+    `%` and `_` are wildcards, so an unescaped "Acme_Corp" would also match "Acme Corp".
+    Postgres treats a backslash as the default escape character, which is what callers rely
+    on since the repository's `__ilike` filter cannot pass an explicit ESCAPE clause.
+    """
+    return _LIKE_WILDCARDS_RE.sub(r"\\\1", value)
 
 
 def r_getattr(obj, attr, *args):

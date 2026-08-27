@@ -33,12 +33,25 @@ Access control therefore has two independent layers: **role-based permission fla
 operation is allowed at all, and **location-based ownership** decides which rows it can touch. See
 [Security & Permissions](security-and-permissions.md) and [Permissions Reference](permissions-reference.md).
 
+The digital product passport is the deliberate exception. `GET /asset-pass/{passId}` and its document
+sub-route carry no token at all: the `pass_id` — a cryptographically derived, unguessable string — *is*
+the capability, so that a scanned passport resolves for anyone holding the code. Those routes stay
+read-only and are bounded to the single asset the `pass_id` resolves to. See
+[API Endpoints](api-endpoints.md).
+
+Uniqueness rules that no database constraint backs — organization names, which are unique per product
+pass type — are enforced in the service layer instead. Because a bare "check then insert" pair lets two
+concurrent requests both pass the check, those services take a transaction-scoped advisory lock on the
+contended values first (`BaseRepository.lock_values`), and normalize the name so that visually identical
+inputs cannot slip past the comparison. See
+[Concurrency guards](core-infrastructure.md#concurrency-guards).
+
 ## Module Index
 
 | Module | Description |
 | --- | --- |
 | [Application Bootstrap](application-bootstrap.md) | `CustomFastAPI` app assembly, config, lifespan, extension loader, and the Gunicorn/Uvicorn launcher |
-| [Core Infrastructure](core-infrastructure.md) | Async engine with read/write routing, context-scoped sessions, `BaseRepository`, pagination, middleware, i18n |
+| [Core Infrastructure](core-infrastructure.md) | Async engine with read/write routing, context-scoped sessions, `BaseRepository` (filters + concurrency guards), pagination, middleware, i18n |
 | [Data Models](data-models.md) | SQLAlchemy ORM entities for the DPP domain (organizations, assets, asset types, typeplates, audits, users) |
 | [Schemas](schemas.md) | Pydantic request/response DTOs and the JWT token classes |
 | [API Endpoints](api-endpoints.md) | REST routers under `/api/v1` and their auth/DI conventions |
@@ -48,7 +61,7 @@ operation is allowed at all, and **location-based ownership** decides which rows
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
 | [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
-| [Tests](tests.md) | End-to-end integration test suite: ordered, stateful `TestClient` scenarios over a migrated database, with Faker fixtures and shared container pipelines |
+| [Tests](tests.md) | End-to-end integration test suite: ordered, stateful `TestClient` scenarios over a migrated database, with Faker fixtures, shared container pipelines, and cross-tenant isolation checks |
 | [Development Setup](development-setup.md) | Running the project locally: `uv` environment/dependency management and the `development/docker-compose.yml` Postgres for a zero-config local database |
 | [Extending Tap2Cloud](extending.md) | How to install the core as a library and add your own models, schemas, services, clients, and endpoints in a private repo |
 

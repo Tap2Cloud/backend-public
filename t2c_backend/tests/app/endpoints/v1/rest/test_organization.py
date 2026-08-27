@@ -34,16 +34,14 @@ def test_create_organization_with_location(
 
 @pytest.mark.order(after="test_create_organization_with_location")
 def test_create_organization_with_location_for_second_user(
-    authenticated_client: TestClient,
+    second_user_client: TestClient,
     fake: Faker,
-    second_user_data,
     location,
     organization,
     container,
     product_pass_type_container,
 ):
-    response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
-    response = authenticated_client.post(
+    response = second_user_client.post(
         "/api/v1/organization",
         data={
             **organization,
@@ -53,7 +51,6 @@ def test_create_organization_with_location_for_second_user(
             "location": json.dumps(location),
         },
         files=[("logo", ("file", fake.image(), "application/octet-stream"))],
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
 
     container["second_location"] = response.json()
@@ -159,6 +156,28 @@ def test_update_organization_with_id(
 
     assert response.status_code == 200
     assert response.json()["name"] != organization_container["name"]
+    organization_container.update(response.json())
+
+
+@pytest.mark.order(after="test_update_organization_with_id")
+def test_update_organization_duplicate_name_for_second_user(
+    authenticated_client: TestClient, second_user_data, organization, organization_container
+):
+    login_response = authenticated_client.post(
+        "/api/v1/login", json=second_user_data["credentials"]
+    )
+    updated_organization_name = organization_container["name"]
+
+    response = authenticated_client.put(
+        "/api/v1/organization",
+        data={
+            **organization,
+            "name": updated_organization_name,
+            "logo": None,
+        },
+        headers={"Authorization": f"Bearer {login_response.json()['access_token']}"},
+    )
+    assert response.status_code == 409
 
 
 @pytest.mark.order(after="test_update_organization_with_id")

@@ -1,4 +1,5 @@
 from fastapi import UploadFile
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload, make_transient_to_detached
 
 from t2c_backend.core.permissions import ALL_PERMISSIONS
@@ -14,7 +15,8 @@ from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.location import LocationCreateRequest
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.utils.enums import Role as RoleEnum
-from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
+from t2c_backend.utils.misc import escape_like, normalize_name
 
 
 class OrganizationService:
@@ -33,6 +35,10 @@ class OrganizationService:
         location_data: LocationCreateRequest,
         user_id: int,
     ):
+        name = normalize_name(name)
+        if not name:
+            raise BadRequestError(msg="Organization name is required.")
+
         user = await self.app.services.user_service.repository.get(
             user_id,
             options=[
@@ -43,6 +49,16 @@ class OrganizationService:
 
         if user.location_id is not None:
             raise AlreadyExistsError(msg="The organization is already exist with this user.")
+
+        await self.repository.lock_values(
+            name=func.lower(name), product_pass_type_id=product_pass_type.id
+        )
+
+        is_organization_exists = await self.repository.exists(
+            name__ilike=escape_like(name), product_pass_type_id=product_pass_type.id
+        )
+        if is_organization_exists:
+            raise AlreadyExistsError(msg="Organization with this name already exists.")
 
         make_transient_to_detached(product_pass_type)
 
@@ -78,10 +94,31 @@ class OrganizationService:
         number: str | None,
         logo: UploadFile | None,
     ):
-        organization = await self.repository.get(organization_id)
+        organization = await self.repository.get(
+            organization_id,
+        )
 
         if not organization:
             raise NotFoundError(f"Organization with ID '{organization_id}' not found")
+
+        if name is not None:
+            name = normalize_name(name)
+            if not name:
+                raise BadRequestError(msg="Organization name is required.")
+
+            await self.repository.lock_values(
+                name=func.lower(name),
+                product_pass_type_id=organization.product_pass_type_id,
+            )
+
+            is_organization_exists = await self.repository.exists(
+                name__ilike=escape_like(name),
+                product_pass_type_id=organization.product_pass_type_id,
+                id__ne=organization.id,
+            )
+
+            if is_organization_exists:
+                raise AlreadyExistsError(msg="Organization with this name already exists.")
 
         update_fields = {
             "name": name,
@@ -89,7 +126,6 @@ class OrganizationService:
             "logo": await Image.from_file(logo) if logo else None,
         }
 
-        # Update fields dynamically if the values are not None
         for field, value in update_fields.items():
             setattr(organization, field, value)
 

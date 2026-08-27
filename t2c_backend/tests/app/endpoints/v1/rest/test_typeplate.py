@@ -4,6 +4,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
+from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
@@ -148,19 +149,15 @@ def test_update_typeplate_with_eu_file(
     typeplate_details,
     typeplate_images,
     fake: Faker,
+    asset_pass_document_container,
 ):
     if len(typeplate_container["typeplate"]["items"]) <= 0:
         assert True
         return
 
-    typeplate_id = random.choice(
-        [
-            typeplate["typeplateDetails"]["id"]
-            for typeplate in typeplate_container["typeplate"]["items"]
-        ]
-    )
+    typeplate_id = asset_pass_document_container["typeplate_id"]
 
-    fake_file = fake.file_name()
+    fake_file = f"typeplate-eu-file-{fake.random_int()}.pdf"
     document_content = fake.text().encode("utf-8")
 
     typeplate_details["testResults"] = fake.text(max_nb_chars=200, ext_word_list=None)
@@ -180,6 +177,11 @@ def test_update_typeplate_with_eu_file(
         data=form_data,
         files=[("eu_file", (fake_file, document_content, "application/pdf"))],
     )
+
+    asset_pass_document_container[DocumentFor.EuFiles] = {
+        "name": fake_file,
+        "content": document_content,
+    }
 
     assert response.status_code == 200
 

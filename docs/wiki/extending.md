@@ -183,13 +183,13 @@ class App(CustomFastAPI):
     # 2) Compose the route table: keep the core routes, add your own.
     def get_api_router(self) -> APIRouter:
         router = APIRouter()
-        router.include_router(core_api_router)      # everything the OSS core ships
-        router.include_router(warranty_router)      # your new endpoints
+        router.include_router(core_api_router)  # everything the OSS core ships
+        router.include_router(warranty_router)  # your new endpoints
         return router
 
     # 3) Load your startup clients in addition to the core clients.
     async def setup_hook(self) -> None:
-        await super().setup_hook()                  # loads token_backend, cryptography, storage
+        await super().setup_hook()  # loads token_backend, cryptography, storage
         for extension in extra_clients:
             await self.load_extension(extension)
 
@@ -237,9 +237,7 @@ from t2c_backend.core.db import (
 )
 
 
-class WarrantyClaim(
-    BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns
-):
+class WarrantyClaim(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     __tablename__ = "warranty_claims"
 
     reference: Mapped[str] = mapped_column(Text(), nullable=False)
@@ -324,8 +322,8 @@ both the core models and your models so that everything is present on
 ```python
 # alembic/env.py  (private repo — abbreviated; model it on the core's env.py)
 from t2c_backend.core.db import AdvancedDeclarativeBase
-from t2c_backend.models import *        # noqa: F403  -> registers the core tables
-from private_backend.models import *    # noqa: F403  -> registers YOUR tables
+from t2c_backend.models import *  # noqa: F403  -> registers the core tables
+from private_backend.models import *  # noqa: F403  -> registers YOUR tables
 
 target_metadata = [AdvancedDeclarativeBase.metadata]
 ```
@@ -367,9 +365,7 @@ class WarrantyService:
         self.repository = BaseRepository(app, session, self._model)
 
     async def create_claim(self, asset_id: int, reference: str, description: str | None):
-        claim = WarrantyClaim(
-            asset_id=asset_id, reference=reference, description=description
-        )
+        claim = WarrantyClaim(asset_id=asset_id, reference=reference, description=description)
         return await self.repository.save(claim)
 
     async def get_claim(self, claim_id: int):
@@ -390,6 +386,11 @@ def setup(app, session, *args, **kwargs):
 `BaseRepository` gives you `save`, `save_all`, `get`, `get_one_or_none`, `list`, `exists`, `delete`,
 `execute`, and the `parse_filters` helper with the `field__op` syntax
 (`serial_no__ilike`, `id__in`, `status__in`, …) — see [Core Infrastructure](core-infrastructure.md).
+
+If your service enforces a uniqueness rule that no unique index backs, guard the check-then-insert with
+`lock_values()` rather than relying on the `exists()` call alone — otherwise two concurrent requests
+both read "not taken" and both commit. See
+[Concurrency guards](core-infrastructure.md#concurrency-guards).
 
 ### Making your service resolvable in endpoints
 
@@ -477,13 +478,13 @@ routes by passing a `permissions` dict:
 ```python
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 
+
 @router.post("/warranty", operation_id="create warranty claim", status_code=201)
 async def create_warranty_claim(
     data: CreateWarrantyClaim,
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_update": True})),
     services: DictContainer = Depends(get_services),
-):
-    ...
+): ...
 ```
 
 The bearer resolves the caller's roles from the database on every request and returns
@@ -619,7 +620,7 @@ class WarrantyProviderClient:
 
 async def setup(app):
     client = WarrantyProviderClient(
-        base_url=app.config.WARRANTY_PROVIDER_URL,   # from your AppConfig (Step 1)
+        base_url=app.config.WARRANTY_PROVIDER_URL,  # from your AppConfig (Step 1)
         api_key=app.config.WARRANTY_API_KEY,
     )
     return app.add_client(client, client_name="warranty_provider")
@@ -639,7 +640,7 @@ verbatim — just import `app` from your `main` module instead of the core's.
 
 ```python
 # launcher.py (private repo)
-from private_backend.main import app   # triggers the lazy App.create()
+from private_backend.main import app  # triggers the lazy App.create()
 
 # ...identical Gunicorn StandaloneApplication setup as the core launcher...
 

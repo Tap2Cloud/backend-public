@@ -2,7 +2,7 @@
 
 ## Module Overview
 
-The `models` package defines the SQLAlchemy ORM entities backing the Digital Product Passport domain. The schema cleanly separates a **definition layer** (categories, fields, asset types, typeplates) from a **runtime/instance layer** (assets, services, audits), threaded together by **tenancy** (Organization → Location → User). All models build on `AdvancedDeclarativeBase` and mix in `BigIntPrimaryKey`, `AuditColumns`, and `CommonTableAttributes` from [Core Infrastructure](core-infrastructure.md); document tables typically use UUID primary keys instead.
+The `models` package defines the SQLAlchemy ORM entities backing the Digital Product Passport domain. The schema cleanly separates a **definition layer** (categories, fields, asset types, typeplates) from a **runtime/instance layer** (assets, services, audits), threaded together by **tenancy** (Organization → Location → User). All models build on `AdvancedDeclarativeBase` and most mix in `BigIntPrimaryKey` and `CommonTableAttributes` from [Core Infrastructure](core-infrastructure.md); document tables typically use UUID primary keys instead. `AuditColumns` (the `created_at`/`updated_at` pair) is **not** universal — it is mixed into `Organization`, `User`, `AssetType`, `AssetTypeDocument`, `AssetTypeCategory`, `Typeplate`, `TypeplateDocument`, `TypeplateImage`, `TypelateImageMapping`, `Document` and `AuditTaskDocument` only. Notably `Location`, `Role`, `Service`, `ProductPassType`, `Audit`/`AuditTask` and the association tables carry no timestamps.
 
 ## Entity-Relationship Diagram
 
@@ -34,7 +34,7 @@ graph TD
 
 - **`Organization`** (`organizations`) — the top-level tenant, classified by a `ProductPassType`, owning many `Location`s. Exposes dynamically-attached computed counts (`add_location_count`, `add_user_count`, `add_role_count`) as column properties. Has a `logo` (`ImageType`).
 - **`ProductPassType`** (`product_pass_types`) — classification/type used to categorize organizations (`name`, `display_name`).
-- **`Location`** (`locations`) — a physical site of an organization; hosts users and assets; carries address/contact fields.
+- **`Location`** (`locations`) — a physical site of an organization; hosts users and assets. Deliberately minimal: besides `organization_id` it carries only `city` and `country`. Migration `pkg_0005_reduce_register_field` dropped the former address/contact columns (`name`, `email`, `tel_number`, `fax_number`, `street`, `postcode`, `mobile_number`, `region`) to shrink the registration form — see [Database Migrations](database-migrations.md).
 - **`User`** (`users`) — an authenticated person tied to a `Location`, with `hashed_password`/`salt`, unique `email`, verification flags, `profile_avatar`, helpers `get_full_name()`/`get_short_name()`, `email_tokens`, and a many-to-many link to `Role`.
 - **`Role`** (`roles`) — org-scoped permission set. `permissions` is a `Numeric` bitmask column (default `0`) holding the bitwise OR of the granted `Permissions` flags; it is the *only* place authorization data lives, and it is read on every request. `organization_id` is nullable with `ON DELETE CASCADE`. Linked to users via `user_roles` and to invitees via `user_invite_roles`. New organizations are seeded with `member`/`admin`/`owner`, all three carrying the full bitmask — see [Permissions Reference](permissions-reference.md).
 - **`UserRole`** (`user_roles`) — user↔role association table (composite PK, both FKs `ON DELETE CASCADE`). A user may hold several roles; the effective permission set is the **union** of their bitmasks.
@@ -92,7 +92,7 @@ Two deliberate consequences of this design:
    uniqueness moved from `(name, user_id)` to `(name, location_id)` accordingly — category names are
    unique per site, not per person.
 2. **Deleting a user never deletes location data.** The `user_id` FKs on `asset_types`,
-   `asset_type_categories`, `audits`, `documents`, `asset_type_documents`, and `typeplate_documents`
+   `asset_type_categories`, `audits`, `documents`, `asset_types_documents`, and `typeplate_documents`
    are `nullable=True` with `ON DELETE SET NULL`. Removing an employee orphans the created-by
    attribution but preserves the organization's asset definitions, documents, and audit history.
    Contrast this with `Location`/`Organization` FKs, which remain `ON DELETE CASCADE` — deleting a
@@ -118,8 +118,11 @@ graph LR
 # Filtering flows through BaseRepository (see Core Infrastructure):
 await asset_repo.get_one_or_none(device_id="X", location_id=1)
 
-# Computed counts are attached dynamically before querying an organization:
-add_location_count(); add_user_count(); add_role_count()
+# Computed counts are attached dynamically before querying an organization.
+# Each takes the model class itself and installs a column_property on it:
+add_location_count(Organization)
+add_user_count(Organization)
+add_role_count(Organization)
 ```
 
 ## Cross-references
