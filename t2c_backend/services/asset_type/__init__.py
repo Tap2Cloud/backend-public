@@ -8,7 +8,7 @@ from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import asc, desc, exists, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
@@ -299,18 +299,21 @@ class AssetTypeService:
         select_query = (
             select(self._model)
             .options(
-                joinedload(self._model.documents),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.asset_type_category_group),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.typeplate),
-                joinedload(self._model.typeplate).joinedload(Typeplate.documents),
-                joinedload(self._model.typeplate).joinedload(Typeplate.typeplate_images),
+                selectinload(self._model.documents),
+                selectinload(self._model.fields).options(
+                    selectinload(AssetTypeField.asset_type_field_options),
+                    joinedload(AssetTypeField.asset_type_category_field),
+                ),
+                joinedload(self._model.asset_type_category).options(
+                    selectinload(AssetTypeCategory.fields).options(
+                        selectinload(AssetTypeCategoryField.options),
+                        joinedload(AssetTypeCategoryField.asset_type_category_group),
+                    ),
+                ),
+                joinedload(self._model.typeplate).options(
+                    selectinload(Typeplate.documents),
+                    selectinload(Typeplate.typeplate_images),
+                ),
             )
             .where(self._model.location_id == location_id)
             .order_by(sort_order[sort_by])
@@ -346,18 +349,21 @@ class AssetTypeService:
         asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_id,
             options=[
-                joinedload(self._model.documents),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.asset_type_category_group),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.typeplate),
-                joinedload(self._model.typeplate).joinedload(Typeplate.documents),
-                joinedload(self._model.typeplate).joinedload(Typeplate.typeplate_images),
+                selectinload(self._model.documents),
+                selectinload(self._model.fields).options(
+                    selectinload(AssetTypeField.asset_type_field_options),
+                    joinedload(AssetTypeField.asset_type_category_field),
+                ),
+                joinedload(self._model.asset_type_category).options(
+                    selectinload(AssetTypeCategory.fields).options(
+                        selectinload(AssetTypeCategoryField.options),
+                        joinedload(AssetTypeCategoryField.asset_type_category_group),
+                    ),
+                ),
+                joinedload(self._model.typeplate).options(
+                    selectinload(Typeplate.documents),
+                    selectinload(Typeplate.typeplate_images),
+                ),
                 joinedload(self._model.user),
             ],
         )
