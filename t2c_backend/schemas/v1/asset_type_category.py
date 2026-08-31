@@ -150,10 +150,12 @@ class UpdateAssetTypeCategoryRequest(BaseModel):
     @classmethod
     def check_fields(cls, data: Any) -> Any:
         seen_orders, seen_names, seen_field_ids = set(), set(), set()
+        has_required_field = False
         for field in data["fields"]:
             field_order = field.get("fieldOrder")
             field_name = field.get("fieldName")
             field_id = field.get("id")
+            field_is_required = field.get("fieldIsRequired")
             if field_order in seen_orders:
                 raise ValueError(f"Multiple fields have the same field order '{field_order}'.")
             if field_name in seen_names:
@@ -162,9 +164,12 @@ class UpdateAssetTypeCategoryRequest(BaseModel):
                 raise ValueError(f"Multiple fields have the same field id '{field_id}'.")
             if field_id is not None:
                 seen_field_ids.add(field_id)
-
+            if field_is_required is True:
+                has_required_field = True
             seen_orders.add(field_order)
             seen_names.add(field_name)
+        if not has_required_field:
+            raise ValueError("One field must be required")
         return data
 
     model_config = ConfigDict(from_attributes=True)
