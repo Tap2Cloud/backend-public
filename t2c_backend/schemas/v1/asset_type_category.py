@@ -82,15 +82,21 @@ class CreateAssetTypeCategoryRequest(BaseModel):
     @classmethod
     def check_fields(cls, data: Any) -> Any:
         seen_orders, seen_names = set(), set()
+        has_required_field = False
         for field in data["fields"]:
             field_order = field.get("fieldOrder")
             field_name = field.get("fieldName")
+            field_is_required = field.get("fieldIsRequired")
             if field_order in seen_orders:
                 raise ValueError(f"Multiple fields have the same field order '{field_order}'.")
             if field_name in seen_names:
                 raise ValueError(f"Multiple fields have the same field name '{field_name}'.")
+            if field_is_required is True:
+                has_required_field = True
             seen_orders.add(field_order)
             seen_names.add(field_name)
+        if not has_required_field:
+            raise ValueError("One field must be required")
         return data
 
     model_config = ConfigDict(from_attributes=True)
@@ -98,8 +104,8 @@ class CreateAssetTypeCategoryRequest(BaseModel):
 
 class UpdateBaseFieldOption(BaseModel):
     id: int | None
-    option_id: str | None = PydanticField(None, alias="optionId")
-    option_label: str | None = PydanticField(None, alias="optionLabel")
+    option_id: str = PydanticField(..., alias="optionId")
+    option_label: str = PydanticField(..., alias="optionLabel")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -107,7 +113,7 @@ class UpdateBaseFieldOption(BaseModel):
 class UpdateBaseFields(BaseModel):
     id: int | None
     field_name: str = PydanticField(..., alias="fieldName")
-    field_place_holder: str = PydanticField(..., alias="fieldPlaceHolder")
+    field_place_holder: str | None = PydanticField(None, alias="fieldPlaceHolder")
     field_display_name: str = PydanticField(..., alias="fieldDisplayName")
     field_order: int = PydanticField(..., alias="fieldOrder")
     asset_type_category_group_id: int = PydanticField(..., alias="fieldGroupId")
@@ -120,14 +126,18 @@ class UpdateBaseFields(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_options(cls, data: Any) -> Any:
-        seen_option_ids = set()
+        seen_option_ids, seen_option_option_ids = set(), set()
         field_order = data.get("fieldOrder")
         if field_order <= 0:
             raise ValueError("fieldOrder must be greater than 0.")
         field_type = data.get("fieldType")
-        options = data.get("options")
+        options = data.get("options", [])
         for option in options:
             option_id = option.get("id")
+            option_option_id = option.get("optionId")
+            if option_option_id in seen_option_option_ids:
+                raise ValueError(f"Multiple options have the same option_id '{option_option_id}'.")
+            seen_option_option_ids.add(option_option_id)
             if option_id is None:
                 continue
             if option_id in seen_option_ids:

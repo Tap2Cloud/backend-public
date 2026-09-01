@@ -136,6 +136,8 @@ class AssetTypeCategoryService:
 
                 if not asset_type_category_field:
                     raise NotFoundError("Asset type category field not found")
+                if category_field.field_type != asset_type_category_field.field_type:
+                    raise BadRequestError("Field type cannot be changed")
 
                 for key, value in category_field.model_dump(
                     exclude={"id", "options", "field_type"}, exclude_none=True
@@ -175,8 +177,10 @@ class AssetTypeCategoryService:
                         )
                         if existing_option is None:
                             raise NotFoundError("Asset type category field option not found")
-                        existing_option.option_id = option_data.option_id
-                        existing_option.option_label = option_data.option_label
+                        for key, value in option_data.model_dump(
+                            exclude={"id"}, exclude_unset=True
+                        ).items():
+                            setattr(existing_option, key, value)
         all_field_orders = []
         for field in db_asset_type_details.fields:
             normalized_order = abs(field.field_order)
