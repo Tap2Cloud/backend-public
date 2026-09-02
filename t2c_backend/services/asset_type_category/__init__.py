@@ -166,29 +166,42 @@ class AssetTypeCategoryService:
                 for option in options_to_remove:
                     asset_type_category_field.options.remove(option)
                 await self.repository.save(asset_type_category_field)
+
+                existing_option_updates, new_option_data = [], []
                 for option_data in category_field.options:
                     if option_data.id is None:
-                        asset_type_category_field.options.append(
-                            AssetTypeCategoryFieldOption(
-                                option_id=option_data.option_id,
-                                option_label=option_data.option_label,
-                            )
+                        new_option_data.append(option_data)
+                        continue
+                    existing_option = next(
+                        (o for o in asset_type_category_field.options if o.id == option_data.id),
+                        None,
+                    )
+                    if existing_option is None:
+                        raise NotFoundError("Asset type category field option not found")
+                    existing_option_updates.append((existing_option, option_data))
+
+                parked_options = [
+                    option
+                    for option, option_data in existing_option_updates
+                    if option.option_id != option_data.option_id
+                ]
+                for option in parked_options:
+                    option.option_id = f"__parked__{option.id}"
+                if parked_options:
+                    await self.field_options_repository.save_all(parked_options)
+
+                for existing_option, option_data in existing_option_updates:
+                    for key, value in option_data.model_dump(
+                        exclude={"id"}, exclude_unset=True
+                    ).items():
+                        setattr(existing_option, key, value)
+                for option_data in new_option_data:
+                    asset_type_category_field.options.append(
+                        AssetTypeCategoryFieldOption(
+                            option_id=option_data.option_id,
+                            option_label=option_data.option_label,
                         )
-                    else:
-                        existing_option = next(
-                            (
-                                o
-                                for o in asset_type_category_field.options
-                                if o.id == option_data.id
-                            ),
-                            None,
-                        )
-                        if existing_option is None:
-                            raise NotFoundError("Asset type category field option not found")
-                        for key, value in option_data.model_dump(
-                            exclude={"id"}, exclude_unset=True
-                        ).items():
-                            setattr(existing_option, key, value)
+                    )
         all_field_orders = []
         for field in db_asset_type_details.fields:
             normalized_order = abs(field.field_order)
