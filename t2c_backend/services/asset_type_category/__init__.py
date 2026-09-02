@@ -140,7 +140,7 @@ class AssetTypeCategoryService:
                     raise BadRequestError("Field type cannot be changed")
 
                 for key, value in category_field.model_dump(
-                    exclude={"id", "options", "field_type"}, exclude_none=True
+                    exclude={"id", "options", "field_type"}
                 ).items():
                     if key == "field_order":
                         setattr(asset_type_category_field, key, -value)

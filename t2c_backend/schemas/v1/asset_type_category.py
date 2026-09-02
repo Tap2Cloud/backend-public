@@ -42,7 +42,7 @@ class BaseFieldOption(BaseModel):
 
 class BaseField(BaseModel):
     field_name: str = PydanticField(..., alias="fieldName")
-    field_place_holder: str | None = PydanticField(..., alias="fieldPlaceHolder")
+    field_place_holder: str | None = PydanticField(None, alias="fieldPlaceHolder")
     field_display_name: str = PydanticField(..., alias="fieldDisplayName")
     field_is_required: bool = PydanticField(..., alias="fieldIsRequired")
     field_order: int = PydanticField(..., alias="fieldOrder")
@@ -54,16 +54,27 @@ class BaseField(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_options(cls, data: Any) -> Any:
+        seen_option_option_ids = set()
         field_type = data.get("fieldType")
         options = data.get("options", [])
         field_order = data.get("fieldOrder")
 
-        if field_type in ["text", "number"] and options:
+        if field_type in ["radio", "checkbox", "multiselect", "select"]:
+            if not options or len(options) <= 1:
+                raise ValueError(
+                    f"`options` must have more than one item for field type '{field_type}'.",
+                )
+            else:
+                for option in options:
+                    option_option_id = option.get("optionId")
+                    if option_option_id in seen_option_option_ids:
+                        raise ValueError(
+                            f"Multiple options have the same option_id '{option_option_id}'."
+                        )
+                    seen_option_option_ids.add(option_option_id)
+        elif options:
             raise ValueError(f"`options` must be empty for field type '{field_type}'.")
-        if field_type in ["radio", "multiselect"] and len(options) <= 1:
-            raise ValueError(
-                f"`options` must have more than one item for field type '{field_type}'.",
-            )
+
         if field_order <= 0:
             raise ValueError("fieldOrder must be greater than 0.")
 
@@ -132,20 +143,23 @@ class UpdateBaseFields(BaseModel):
             raise ValueError("fieldOrder must be greater than 0.")
         field_type = data.get("fieldType")
         options = data.get("options", [])
-        for option in options:
-            option_id = option.get("id")
-            option_option_id = option.get("optionId")
-            if option_option_id in seen_option_option_ids:
-                raise ValueError(f"Multiple options have the same option_id '{option_option_id}'.")
-            seen_option_option_ids.add(option_option_id)
-            if option_id is None:
-                continue
-            if option_id in seen_option_ids:
-                raise ValueError(f"Multiple options have the same option id '{option_id}'.")
-            seen_option_ids.add(option_id)
         if field_type in {"radio", "checkbox", "multiselect", "select"}:
             if not options:
                 raise ValueError("Field requires at least one option")
+            else:
+                for option in options:
+                    option_id = option.get("id")
+                    option_option_id = option.get("optionId")
+                    if option_option_id in seen_option_option_ids:
+                        raise ValueError(
+                            f"Multiple options have the same option_id '{option_option_id}'."
+                        )
+                    seen_option_option_ids.add(option_option_id)
+                    if option_id is None:
+                        continue
+                    if option_id in seen_option_ids:
+                        raise ValueError(f"Multiple options have the same option id '{option_id}'.")
+                    seen_option_ids.add(option_id)
         elif options:
             raise ValueError(f"Option should empty for this field type {field_type}")
         return data
@@ -201,7 +215,7 @@ class FieldOption(BaseFieldOption):
 class Field(BaseModel):
     id: int
     field_name: str = PydanticField(..., alias="fieldName")
-    field_place_holder: str = PydanticField(..., alias="fieldPlaceHolder")
+    field_place_holder: str | None = PydanticField(None, alias="fieldPlaceHolder")
     field_display_name: str = PydanticField(..., alias="fieldDisplayName")
     field_is_required: bool = PydanticField(..., alias="fieldIsRequired")
     field_order: int = PydanticField(..., alias="fieldOrder")
