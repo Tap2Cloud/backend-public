@@ -3,7 +3,8 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import InputType
+
+from t2c_backend.utils.enums import InputType
 
 
 @pytest.mark.order(after="test_user.py::test_get_org_all_users_with_unauthenticated_client")
@@ -466,8 +467,7 @@ def test_get_asset_type_category_mapping(
 def test_get_asset_type_category_by_unauthenticated_client(
     client: TestClient,
 ):
-    response = client.get("/api/v1/asset-type-category", headers={"language": "en"})
-
+    response = client.get("/api/v1/filter/asset-type-category/mapping")
     assert response.status_code == 401
 
 
@@ -540,41 +540,869 @@ def test_get_list_of_asset_type_category_name(
 
 
 @pytest.mark.order(after="test_get_list_of_asset_type_category_name")
-def test_update_asset_type_category(
+def test_get_list_of_asset_type_category_by_unauthenticated_client(
+    client: TestClient,
+):
+    response = client.get("/api/v1/filter/asset-type-category")
+
+    assert response.status_code == 401
+
+
+@pytest.mark.order(after="test_get_list_of_asset_type_category_by_unauthenticated_client")
+def test_update_asset_type_category_add_integer_field(
     authenticated_client: TestClient,
+    fake: Faker,
     container,
     asset_type_category_field,
-    asset_type_category,
+):
+    existing_category = container.get("integer_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_integer_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.time.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_integer_field],
+        },
+    )
+    container["integer_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_integer_field")
+def test_update_asset_type_category_add_time_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("time_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_time_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.time.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_time_field],
+        },
+    )
+    container["time_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_time_field")
+def test_update_asset_type_category_add_url_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("url_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_url_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.url.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_url_field],
+        },
+    )
+    container["url_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_url_field")
+def test_update_asset_type_category_add_text_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("string_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_text_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.text.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_text_field],
+        },
+    )
+    container["string_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_text_field")
+def test_update_asset_type_category_add_password_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("password_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_password_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.password.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_password_field],
+        },
+    )
+    container["password_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_password_field")
+def test_update_asset_type_category_add_image_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("image_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_image_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.image.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_image_field],
+        },
+    )
+    container["image_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_image_field")
+def test_update_asset_type_category_add_file_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("file_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_file_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.file.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_file_field],
+        },
+    )
+    container["file_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_file_field")
+def test_update_asset_type_category_add_email_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("email_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_email_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.email.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_email_field],
+        },
+    )
+    container["email_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_email_field")
+def test_update_asset_type_category_add_date_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("date_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_date_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.date.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_date_field],
+        },
+    )
+    container["date_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_date_field")
+def test_update_asset_type_category_add_datetime_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+):
+    existing_category = container.get("datetime_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    new_datetime_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.datetime.value,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_datetime_field],
+        },
+    )
+    container["datetime_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_datetime_field")
+def test_update_asset_type_category_add_radio_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
     asset_type_category_field_options,
 ):
-    updated_asset_type_category = {
-        "name": asset_type_category["name"],
-        "fields": [
-            {
-                "id": container["multiselect_asset_type_category"]["fields"][0]["id"],
-                **asset_type_category_field,
-                "options": [
-                    {
-                        "id": container["multiselect_asset_type_category"]["fields"][0]["options"][
-                            0
-                        ]["id"],
-                        **asset_type_category_field_options[0],
-                    }
-                ],
-            }
-        ],
+    existing_category = container.get("radio_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+    clean_options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+    new_radio_field = {
+        **asset_type_category_field,
+        "fieldType": InputType.radio.value,
+        "id": None,
+        "options": clean_options,
     }
-    response = authenticated_client.patch(
-        f"/api/v1/asset-type-category/{container['multiselect_asset_type_category']['id']}",
-        json=updated_asset_type_category,
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_radio_field],
+        },
+    )
+    container["radio_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_radio_field")
+def test_update_asset_type_category_add_checkbox_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+    asset_type_category_field_options,
+):
+    existing_category = container.get("checkbox_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    clean_options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+
+    new_checkbox_field = {
+        **asset_type_category_field,
+        "fieldType": InputType.checkbox.value,
+        "id": None,
+        "options": clean_options,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_checkbox_field],
+        },
+    )
+    container["checkbox_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_checkbox_field")
+def test_update_asset_type_category_add_multiselect_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+    asset_type_category_field_options,
+):
+    existing_category = container.get("multiselect_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+    clean_options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+
+    new_multiselect_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.multiselect.value,
+        "options": clean_options,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_multiselect_field],
+        },
+    )
+    container["multiselect_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_multiselect_field")
+def test_update_asset_type_category_add_select_field(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+    asset_type_category_field_options,
+):
+    existing_category = container.get("select_type_asset_type_category")
+    raw_first_field = existing_category["fields"][0]
+    saved_first_field = {**raw_first_field}
+    saved_first_field["fieldGroupId"] = saved_first_field["fieldGroup"].get("id")
+    saved_first_field.pop("fieldGroup", None)
+
+    clean_options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+
+    new_select_field = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.select.value,
+        "options": clean_options,
+    }
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [saved_first_field, new_select_field],
+        },
+    )
+    container["select_asset_type_category"] = response.json()
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_category_add_select_field")
+def test_update_asset_type_category_delete_integer_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("integer_asset_type_category")
+
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["integer_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_integer_field")
+def test_update_asset_type_category_delete_time_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("time_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["time_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_time_field")
+def test_update_asset_type_category_delete_url_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("url_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["url_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_url_field")
+def test_update_asset_type_category_delete_text_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("string_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["string_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_text_field")
+def test_update_asset_type_category_delete_password_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("password_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["password_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_password_field")
+def test_update_asset_type_category_delete_image_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("image_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["image_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_image_field")
+def test_update_asset_type_category_delete_file_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("file_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["file_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_file_field")
+def test_update_asset_type_category_delete_email_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("email_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["email_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_email_field")
+def test_update_asset_type_category_delete_date_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("date_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["date_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_date_field")
+def test_update_asset_type_category_delete_datetime_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("datetime_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["datetime_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_datetime_field")
+def test_update_asset_type_category_delete_checkbox_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("checkbox_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["checkbox_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_checkbox_field")
+def test_update_asset_type_category_delete_multiselect_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("multiselect_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
+    )
+    assert response.status_code == 200
+    container["multiselect_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_delete_multiselect_field")
+def test_update_asset_type_category_delete_select_field(
+    authenticated_client: TestClient,
+    container,
+):
+    existing_category = container.get("select_type_asset_type_category")
+    raw_remaining_field = existing_category["fields"][0]
+    remaining_field = {**raw_remaining_field}
+    remaining_field["fieldGroupId"] = remaining_field["fieldGroup"].get("id")
+    remaining_field.pop("fieldGroup", None)
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [remaining_field],
+        },
     )
 
-    updated_category = response.json()
     assert response.status_code == 200
-    assert updated_category["name"] == updated_asset_type_category["name"]
+    container["select_type_asset_type_category"] = response.json()
 
 
-@pytest.mark.order(after="test_update_asset_type_category")
+@pytest.mark.order(after="test_update_asset_type_category_delete_select_field")
+def test_update_category_fields_with_simultaneous_add_edit_delete_and_reorder(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_field,
+    asset_type_category_field_options,
+):
+    existing_category = container.get("radio_asset_type_category")
+    raw_field_1 = existing_category["fields"][0]
+    raw_field_2 = existing_category["fields"][1]
+
+    field_1_original_order = raw_field_1["fieldOrder"]
+    field_2_deleted_order = raw_field_2["fieldOrder"]
+    group_id = raw_field_1["fieldGroup"]["id"]
+    option_a = raw_field_1["options"][0]
+    option_b = raw_field_1["options"][1]
+
+    updated_field_1 = {
+        "id": raw_field_1["id"],
+        "fieldName": fake.word(),
+        "fieldPlaceHolder": raw_field_1["fieldPlaceHolder"],
+        "fieldDisplayName": raw_field_1["fieldDisplayName"],
+        "fieldIsRequired": raw_field_1["fieldIsRequired"],
+        "fieldType": raw_field_1["fieldType"],
+        "fieldGroupId": group_id,
+        "fieldOrder": field_2_deleted_order,
+        "options": [
+            {"id": None, "optionId": option_a["optionId"], "optionLabel": fake.word()},
+            {
+                "id": option_b["id"],
+                "optionId": option_b["optionId"],
+                "optionLabel": option_b["optionLabel"],
+            },
+        ],
+    }
+
+    options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+    new_field_3 = {
+        **asset_type_category_field,
+        "id": None,
+        "fieldType": InputType.radio.value,
+        "fieldGroupId": group_id,
+        "fieldOrder": field_1_original_order,
+        "options": options,
+    }
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [updated_field_1, new_field_3],
+        },
+    )
+    container["radio_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(
+    after="test_update_category_fields_with_simultaneous_add_edit_delete_and_reorder"
+)
+def test_update_asset_type_category_replace_all_options(
+    authenticated_client: TestClient, fake: Faker, container, asset_type_category_field_options
+):
+    existing_category = container.get("radio_asset_type_category")
+    field_to_modify = existing_category["fields"][0]
+    options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+
+    updated_field = {
+        **field_to_modify,
+        "fieldGroupId": field_to_modify["fieldGroup"]["id"],
+        "options": options,
+    }
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": [updated_field],
+        },
+    )
+    assert response.status_code == 200
+    container["radio_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_replace_all_options")
+def test_update_asset_type_category_replace_all_fields(
+    authenticated_client: TestClient,
+    fake: Faker,
+    container,
+    asset_type_category_fields,
+    asset_type_category_group_container,
+    asset_type_category_field_options,
+):
+    existing_category = container.get("radio_asset_type_category")
+    options = [{**opt, "id": None} for opt in asset_type_category_field_options]
+    fields_payload = [
+        {
+            **field,
+            "fieldType": InputType.radio,
+            "options": options,
+            "id": None,
+        }
+        for field in asset_type_category_fields
+    ]
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type-category/{existing_category['id']}",
+        json={
+            "name": existing_category["name"],
+            "hasTypeplates": existing_category["hasTypeplates"],
+            "fields": fields_payload,
+        },
+    )
+
+    assert response.status_code == 200
+    container["radio_asset_type_category"] = response.json()
+
+
+@pytest.mark.order(after="test_update_asset_type_category_replace_all_fields")
 def test_update_asset_type_category_with_unauthenticated_client(
     client: TestClient,
     container,
@@ -599,7 +1427,7 @@ def test_update_asset_type_category_with_unauthenticated_client(
             }
         ],
     }
-    response = client.patch(
+    response = client.put(
         f"/api/v1/asset-type-category/{container['multiselect_asset_type_category']['id']}",
         json=updated_asset_type_category,
     )
@@ -621,18 +1449,11 @@ def test_update_asset_type_category_with_invalid_id(
             {
                 "id": container["multiselect_asset_type_category"]["fields"][0]["id"],
                 **asset_type_category_field,
-                "options": [
-                    {
-                        "id": container["multiselect_asset_type_category"]["fields"][0]["options"][
-                            0
-                        ]["id"],
-                        **asset_type_category_field_options[0],
-                    }
-                ],
+                "options": [],
             }
         ],
     }
-    response = authenticated_client.patch(
+    response = authenticated_client.put(
         "/api/v1/asset-type-category/-1",
         json=updated_asset_type_category,
     )
@@ -654,18 +1475,11 @@ def test_update_asset_type_category_with_invalid_field_id(
             {
                 "id": -1,
                 **asset_type_category_field,
-                "options": [
-                    {
-                        "id": container["multiselect_asset_type_category"]["fields"][0]["options"][
-                            0
-                        ]["id"],
-                        **asset_type_category_field_options[0],
-                    }
-                ],
+                "options": [],
             }
         ],
     }
-    response = authenticated_client.patch(
+    response = authenticated_client.put(
         f"/api/v1/asset-type-category/{container['multiselect_asset_type_category']['id']}",
         json=updated_asset_type_category,
     )
@@ -677,7 +1491,7 @@ def test_update_asset_type_category_with_invalid_field_id(
 def test_asset_type_category_with_invalid_options_id(
     authenticated_client: TestClient,
     container,
-    asset_type_category_field,
+    asset_type_category_fields,
     asset_type_category,
     asset_type_category_field_options,
 ):
@@ -686,17 +1500,26 @@ def test_asset_type_category_with_invalid_options_id(
         "fields": [
             {
                 "id": container["multiselect_asset_type_category"]["fields"][0]["id"],
-                **asset_type_category_field,
+                **asset_type_category_fields[0],
+                "fieldType": container["multiselect_asset_type_category"]["fields"][0]["fieldType"],
                 "options": [
                     {
                         "id": -1,
                         **asset_type_category_field_options[0],
-                    }
+                    },
+                    {
+                        "id": -2,
+                        **asset_type_category_field_options[1],
+                    },
                 ],
-            }
+            },
+            {
+                **asset_type_category_fields[1],
+                "id": None,
+            },
         ],
     }
-    response = authenticated_client.patch(
+    response = authenticated_client.put(
         f"/api/v1/asset-type-category/{container['multiselect_asset_type_category']['id']}",
         json=updated_asset_type_category,
     )
@@ -742,7 +1565,7 @@ def test_asset_type_category_with_duplicate_field_order(
         ],
     }
 
-    response = authenticated_client.patch(
+    response = authenticated_client.put(
         f"/api/v1/asset-type-category/{container['checkbox_asset_type_category']['id']}",
         json=updated_asset_type_category,
     )
@@ -765,16 +1588,11 @@ def test_asset_type_category_with_invalid_group_id(
             {
                 "id": container["multiselect_asset_type_category"]["fields"][0]["id"],
                 **asset_type_category_field,
-                "options": [
-                    {
-                        "id": -1,
-                        **asset_type_category_field_options[0],
-                    }
-                ],
+                "options": [],
             }
         ],
     }
-    response = authenticated_client.patch(
+    response = authenticated_client.put(
         f"/api/v1/asset-type-category/{container['multiselect_asset_type_category']['id']}",
         json=updated_asset_type_category,
     )

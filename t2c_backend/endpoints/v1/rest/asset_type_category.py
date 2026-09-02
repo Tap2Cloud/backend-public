@@ -66,7 +66,7 @@ async def get_asset_type_categories(
     )
 
 
-@router.patch(
+@router.put(
     "/asset-type-category/{assetTypeCategoryId}",
     operation_id="update asset type category",
     response_model=AssetTypeCategoryResponse,
