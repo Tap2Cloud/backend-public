@@ -92,8 +92,9 @@ class AssetTypeCategoryService:
             category_with_same_name = await self.repository.get_one_or_none(
                 name=updated_asset_type_category_data.name,
                 location_id=location_id,
+                id__ne=asset_type_category_id,
             )
-            if category_with_same_name and category_with_same_name.id != asset_type_category_id:
+            if category_with_same_name:
                 raise AlreadyExistsError("Category name already exist")
 
         for key, value in updated_asset_type_category_data.model_dump(

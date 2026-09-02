@@ -350,6 +350,7 @@ class AssetTypeService:
     async def get_asset_type_by_id(self, asset_type_id: int, location_id: int):
         asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 selectinload(self._model.documents),
                 selectinload(self._model.fields).options(
@@ -369,7 +370,7 @@ class AssetTypeService:
                 joinedload(self._model.user),
             ],
         )
-        if not asset_type_details or asset_type_details.location_id != location_id:
+        if not asset_type_details:
             raise NotFoundError("Asset type not found")
         return asset_type_details
 
@@ -428,6 +429,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -445,7 +447,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         new_db_documents = []
@@ -481,6 +483,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -498,7 +501,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         for asset_type_field in asset_type.fields:

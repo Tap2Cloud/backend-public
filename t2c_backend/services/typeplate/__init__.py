@@ -208,7 +208,7 @@ class TypeplateService:
     ):
         typeplate_document = await self.typeplate_document_repository.get_one_or_none(
             typeplate_id=typeplate_id,
-            document_id=document_id,
+            id=document_id,
             location_id=location_id,
         )
 

@@ -75,14 +75,13 @@ class ServiceService:
         return await self.repository.save(service)
 
     async def delete_service(self, service_id: int, location_id: int) -> None:
-        service = await self.repository.get_one_or_none(id=service_id)
+        service = await self.repository.get_one_or_none(
+            id=service_id,
+            join=[self._model.asset],
+            where=[Asset.location_id == location_id],
+        )
 
         if not service:
-            raise NotFoundError("Service not found")
-
-        asset = await self.asset_repository.exists(id=service.asset_id, location_id=location_id)
-
-        if not asset:
             raise NotFoundError("Service not found")
 
         await self.repository.delete(id=service_id)
