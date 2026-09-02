@@ -1491,7 +1491,7 @@ def test_update_asset_type_category_with_invalid_field_id(
 def test_asset_type_category_with_invalid_options_id(
     authenticated_client: TestClient,
     container,
-    asset_type_category_field,
+    asset_type_category_fields,
     asset_type_category,
     asset_type_category_field_options,
 ):
@@ -1500,15 +1500,23 @@ def test_asset_type_category_with_invalid_options_id(
         "fields": [
             {
                 "id": container["multiselect_asset_type_category"]["fields"][0]["id"],
-                **asset_type_category_field,
+                **asset_type_category_fields[0],
                 "fieldType": container["multiselect_asset_type_category"]["fields"][0]["fieldType"],
                 "options": [
                     {
                         "id": -1,
                         **asset_type_category_field_options[0],
-                    }
+                    },
+                    {
+                        "id": -2,
+                        **asset_type_category_field_options[1],
+                    },
                 ],
-            }
+            },
+            {
+                **asset_type_category_fields[1],
+                "id": None,
+            },
         ],
     }
     response = authenticated_client.put(
