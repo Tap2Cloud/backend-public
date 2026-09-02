@@ -144,7 +144,7 @@ class UpdateBaseFields(BaseModel):
         field_type = data.get("fieldType")
         options = data.get("options", [])
         if field_type in {"radio", "checkbox", "multiselect", "select"}:
-            if not options:
+            if not options or len(options) <= 1:
                 raise ValueError("Field requires at least one option")
             else:
                 for option in options:
