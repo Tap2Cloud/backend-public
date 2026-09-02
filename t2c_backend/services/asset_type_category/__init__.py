@@ -82,9 +82,10 @@ class AssetTypeCategoryService:
     ):
         db_asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_category_id,
+            location_id=location_id,
             options=[joinedload(self._model.user)],
         )
-        if not db_asset_type_details or db_asset_type_details.location_id != location_id:
+        if not db_asset_type_details:
             raise NotFoundError("Asset type category not found")
 
         if updated_asset_type_category_data.name is not None:
@@ -225,8 +226,10 @@ class AssetTypeCategoryService:
         )
 
     async def delete_asset_type_category(self, asset_type_category_id: int, location_id: int):
-        db_asset_type_category = await self.repository.get_one_or_none(id=asset_type_category_id)
-        if not db_asset_type_category or db_asset_type_category.location_id != location_id:
+        db_asset_type_category = await self.repository.get_one_or_none(
+            id=asset_type_category_id, location_id=location_id
+        )
+        if not db_asset_type_category:
             raise NotFoundError("Asset type category not found")
         return await self.repository.delete(id=asset_type_category_id)
 

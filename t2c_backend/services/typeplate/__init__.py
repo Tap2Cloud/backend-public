@@ -14,6 +14,7 @@ from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import (
     AssetType,
     AssetTypeCategory,
+    Location,
     TypelateImageMapping,
     Typeplate,
     TypeplateDocument,
@@ -141,13 +142,15 @@ class TypeplateService:
     ):
         typeplate = await self.repository.get_one_or_none(
             id=typeplate_id,
+            join=[self._model.asset_type],
+            where=[AssetType.location_id == location_id],
             options=[
                 joinedload(self._model.asset_type),
                 selectinload(self._model.documents),
                 selectinload(self._model.typeplate_images),
             ],
         )
-        if not typeplate or typeplate.asset_type.location_id != location_id:
+        if not typeplate:
             raise NotFoundError(msg="Typeplate not found")
 
         for key, value in typeplate_data.model_dump(exclude={"typeplate_images"}).items():
@@ -227,9 +230,11 @@ class TypeplateService:
         typeplate_document = await self.typeplate_document_repository.get_one_or_none(
             id=eu_file_id,
             typeplate_id=typeplate_id,
+            join=[TypeplateDocument.location],
+            where=[Location.organization_id == organization_id],
             options=[joinedload(TypeplateDocument.location)],
         )
-        if not typeplate_document or typeplate_document.location.organization_id != organization_id:
+        if not typeplate_document:
             raise NotFoundError("typeplate document not found")
 
         return StreamingResponse(
