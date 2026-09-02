@@ -87,6 +87,14 @@ class AssetTypeCategoryService:
         if not db_asset_type_details or db_asset_type_details.location_id != location_id:
             raise NotFoundError("Asset type category not found")
 
+        if updated_asset_type_category_data.name is not None:
+            category_with_same_name = await self.repository.get_one_or_none(
+                name=updated_asset_type_category_data.name,
+                location_id=location_id,
+            )
+            if category_with_same_name and category_with_same_name.id != asset_type_category_id:
+                raise AlreadyExistsError("Category name already exist")
+
         for key, value in updated_asset_type_category_data.model_dump(
             exclude={"fields"}, exclude_none=True
         ).items():
