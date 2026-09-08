@@ -5,7 +5,6 @@ from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import asc, desc, or_, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
@@ -49,6 +48,19 @@ class AssetService:
         location = await self.repository.session.merge(location)
         asset_type = await self.repository.session.merge(asset_type)
 
+        await self.repository.lock_values(
+            device_id=asset_data.device_id,
+            location_id=location.id,
+        )
+
+        is_device_id_exists = await self.repository.exists(
+            device_id=asset_data.device_id,
+            location_id=location.id,
+        )
+
+        if is_device_id_exists:
+            raise AlreadyExistsError("Device ID already exists")
+
         asset = Asset(
             device_id=asset_data.device_id,
             pass_id=self.app.clients.cryptography.encode(f"{location.id}_{asset_data.device_id}"),
@@ -62,10 +74,7 @@ class AssetService:
         asset.location = location
         asset.asset_type = asset_type
 
-        try:
-            return await self.repository.save(asset)
-        except IntegrityError:
-            raise AlreadyExistsError("Device ID already exists")
+        return await self.repository.save(asset)
 
     async def update_asset(
         self,
