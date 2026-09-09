@@ -193,12 +193,13 @@ class AssetTypeService:
     ):
         db_asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.typeplate),
                 joinedload(self._model.asset_type_category),
             ],
         )
-        if not db_asset_type or db_asset_type.location_id != location_id:
+        if not db_asset_type:
             raise NotFoundError("Asset type not found")
 
         db_asset_type.name = asset_type_details.name
@@ -242,6 +243,7 @@ class AssetTypeService:
     async def delete_asset_type(self, asset_type_id: int, location_id: int) -> None:
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.location),
                 joinedload(self._model.typeplate),
@@ -251,7 +253,7 @@ class AssetTypeService:
             ],
         )
 
-        if asset_type is None or asset_type.location_id != location_id:
+        if asset_type is None:
             raise NotFoundError("Asset type not found")
 
         organization_id = asset_type.location.organization_id
@@ -348,6 +350,7 @@ class AssetTypeService:
     async def get_asset_type_by_id(self, asset_type_id: int, location_id: int):
         asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 selectinload(self._model.documents),
                 selectinload(self._model.fields).options(
@@ -367,7 +370,7 @@ class AssetTypeService:
                 joinedload(self._model.user),
             ],
         )
-        if not asset_type_details or asset_type_details.location_id != location_id:
+        if not asset_type_details:
             raise NotFoundError("Asset type not found")
         return asset_type_details
 
@@ -426,6 +429,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -443,7 +447,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         new_db_documents = []
@@ -479,6 +483,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -496,7 +501,7 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         for asset_type_field in asset_type.fields:
@@ -539,10 +544,11 @@ class AssetTypeService:
         document = await self.asset_types_documents_repository.get_one_or_none(
             id=document_id,
             asset_type_id=asset_type_id,
+            location_id=location_id,
             options=[joinedload(AssetTypeDocumentModel.location)],
         )
 
-        if not document or document.location_id != location_id:
+        if not document:
             raise NotFoundError("Asset type document not found")
 
         await self.app.clients.storage.delete_document(
@@ -559,17 +565,16 @@ class AssetTypeService:
     ):
         document = await self.field_repository.get_one_or_none(
             id=document_id,
+            asset_type_id=asset_type_id,
+            join=[AssetTypeField.asset_type],
+            where=[AssetType.location_id == location_id],
             options=[
                 joinedload(AssetTypeField.asset_type),
                 joinedload(AssetTypeField.asset_type).joinedload(AssetType.location),
             ],
         )
 
-        if (
-            not document
-            or document.asset_type_id != asset_type_id
-            or document.asset_type.location_id != location_id
-        ):
+        if not document:
             raise NotFoundError("Asset type field's document not found")
 
         await self.app.clients.storage.delete_document(
@@ -591,12 +596,13 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.location),
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         mime_type, encoding = mimetypes.guess_type(document_name)

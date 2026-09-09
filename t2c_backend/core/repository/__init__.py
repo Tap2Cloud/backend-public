@@ -280,8 +280,15 @@ class BaseRepository:
         self,
         options: list | None = None,
         join: list[InstrumentedAttribute] | None = None,
+        where: list[ColumnElement] | None = None,
         **kwargs,
     ) -> ModelType:
+        """
+        The kwargs filters only reach columns of this repository's own model, since that is the
+        only model parse_filters is given. Pass a condition on a joined model through `where`
+        instead, alongside the `join` that brings it into the query - scoping a user to an
+        organization, say, which lives on Location rather than on User.
+        """
         filters = self.parse_filters(model=self.model, **kwargs)
         statement = select(self.model)
 
@@ -291,6 +298,9 @@ class BaseRepository:
 
         if options:
             statement = statement.options(*options)
+
+        if where:
+            filters.extend(where)
 
         statement = statement.filter(*filters)
         result = await self.execute(statement)

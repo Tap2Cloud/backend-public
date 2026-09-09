@@ -197,16 +197,13 @@ class AuditService:
         )
 
     async def delete_audit(self, audit_id: int, location_id: int):
-        audit = await self.repository.get_one_or_none(id=audit_id)
-
-        if not audit:
-            raise NotFoundError("Audit not found")
-
-        asset = await self.app.services.asset_service.repository.exists(
-            id=audit.asset_id, location_id=location_id
+        audit = await self.repository.get_one_or_none(
+            id=audit_id,
+            join=[self._model.asset],
+            where=[Asset.location_id == location_id],
         )
 
-        if not asset:
+        if not audit:
             raise NotFoundError("Audit not found")
 
         await self.repository.delete(id=audit.id)
@@ -232,7 +229,7 @@ class AuditService:
             raise NotFoundError("Document not found")
 
         document = await self.task_document_repository.get_one_or_none(
-            id=document_id, task_id=task.id
+            id=document_id, audit_task_id=task.id
         )
         if not document:
             raise NotFoundError("Document not found")

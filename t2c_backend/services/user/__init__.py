@@ -103,14 +103,13 @@ class UserService:
 
     async def delete_user(self, user_id: int, organization_id: int, cascade_org: bool) -> bool:
         db_user = await self.repository.get_one_or_none(
-            id=user_id, options=[joinedload(User.location)]
+            id=user_id,
+            join=[User.location],
+            where=[Location.organization_id == organization_id],
+            options=[joinedload(User.location)],
         )
 
-        if (
-            not db_user
-            or not db_user.location
-            or db_user.location.organization_id != organization_id
-        ):
+        if not db_user:
             raise NotFoundError("User not found")
 
         other_users_exist = await self.repository.session.scalar(
