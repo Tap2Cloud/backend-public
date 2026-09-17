@@ -57,6 +57,56 @@ def test_create_asset_type_string(
     assert response.status_code == 204
 
 
+@pytest.mark.order(
+    after="test_create_asset_type_string",
+)
+def test_create_second_asset_type_string(
+    authenticated_client: TestClient,
+    fake: Faker,
+    updated_asset_type,
+    asset_type_field,
+    container,
+    typeplate_details,
+):
+    fake_file = fake.file_name()
+    document_content = fake.text().encode("utf-8")
+
+    asset_type_field["responseValue"] = fake.name()
+    for field in container["string_asset_type_category"]["fields"]:
+        asset_type_field["fieldId"] = field["id"]
+
+    asset_type_data = {
+        "name": updated_asset_type["name"],
+        "videoTitle": updated_asset_type["videoTitle"],
+        "videoLinks": updated_asset_type["videoLinks"],
+        "webLink": updated_asset_type["webLink"],
+        "webLinkTitle": updated_asset_type["webLinkTitle"],
+        "description": updated_asset_type["description"],
+        "weight": updated_asset_type["weight"],
+        "manufacturer": updated_asset_type["manufacturer"],
+        "assetTypeCategoryId": container["string_asset_type_category"]["id"],
+        "fields": [asset_type_field],
+        "typeplateDetails": typeplate_details,
+    }
+
+    form_data = {
+        "asset_type_data": json.dumps(asset_type_data),
+    }
+    files = [
+        ("instruction_manuals", (fake_file, document_content, "text/plain")),
+    ]
+    if container["string_asset_type_category"]["hasTypeplates"]:
+        files.append(("eu_file", (fake_file, document_content, "text/plain")))
+
+    response = authenticated_client.post(
+        "/api/v1/asset-type",
+        data=form_data,
+        files=files,
+    )
+
+    assert response.status_code == 204
+
+
 @pytest.mark.order(after="test_create_asset_type_string")
 def test_create_asset_type_string_for_second_user(
     second_user_client: TestClient,
@@ -94,6 +144,54 @@ def test_create_asset_type_string_for_second_user(
     )
 
     assert response.status_code == 204
+
+
+@pytest.mark.order(after="test_create_asset_type_string_for_second_user")
+def test_create_asset_type_with_duplicate_name(
+    authenticated_client: TestClient,
+    fake: Faker,
+    asset_type,
+    asset_type_field,
+    container,
+    typeplate_details,
+):
+    fake_file = fake.file_name()
+    document_content = fake.text().encode("utf-8")
+
+    asset_type_field["responseValue"] = fake.name()
+    for field in container["string_asset_type_category"]["fields"]:
+        asset_type_field["fieldId"] = field["id"]
+
+    asset_type_data = {
+        "name": asset_type["name"],
+        "videoTitle": asset_type["videoTitle"],
+        "videoLinks": asset_type["videoLinks"],
+        "webLink": asset_type["webLink"],
+        "webLinkTitle": asset_type["webLinkTitle"],
+        "description": asset_type["description"],
+        "weight": asset_type["weight"],
+        "manufacturer": asset_type["manufacturer"],
+        "assetTypeCategoryId": container["string_asset_type_category"]["id"],
+        "fields": [asset_type_field],
+        "typeplateDetails": typeplate_details,
+    }
+
+    form_data = {
+        "asset_type_data": json.dumps(asset_type_data),
+    }
+    files = [
+        ("instruction_manuals", (fake_file, document_content, "text/plain")),
+    ]
+    if container["string_asset_type_category"]["hasTypeplates"]:
+        files.append(("eu_file", (fake_file, document_content, "text/plain")))
+
+    response = authenticated_client.post(
+        "/api/v1/asset-type",
+        data=form_data,
+        files=files,
+    )
+
+    assert response.status_code == 409
 
 
 @pytest.mark.order(after="test_asset_type_category.py::test_get_asset_type_category_mapping")
@@ -1105,6 +1203,55 @@ def test_update_asset_type(
 
 
 @pytest.mark.order(after="test_update_asset_type")
+def test_update_asset_type_with_duplicate_name(
+    authenticated_client: TestClient,
+    asset_type_field,
+    fake,
+    asset_type_container,
+    container,
+    updated_asset_type,
+):
+    asset_type_field["responseValue"] = fake.name()
+    for field in container["string_asset_type_category"]["fields"]:
+        asset_type_field["fieldId"] = field["id"]
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type/{asset_type_container['asset_types']['items'][-1]['id']}",
+        json={
+            **updated_asset_type,
+            "fields": [asset_type_field],
+            "name": asset_type_container["asset_types"]["items"][-2]["name"],
+        },
+    )
+    assert response.status_code == 409
+
+
+@pytest.mark.order(after="test_update_asset_type_with_duplicate_name")
+def test_update_asset_type_keeping_its_own_name(
+    authenticated_client: TestClient,
+    asset_type_field,
+    fake,
+    asset_type_container,
+    container,
+    updated_asset_type,
+):
+    """An asset type does not count as a duplicate of itself, so a resubmitted name passes."""
+    asset_type_field["responseValue"] = fake.name()
+    for field in container["string_asset_type_category"]["fields"]:
+        asset_type_field["fieldId"] = field["id"]
+
+    response = authenticated_client.put(
+        f"/api/v1/asset-type/{asset_type_container['asset_types']['items'][-1]['id']}",
+        json={
+            **updated_asset_type,
+            "fields": [asset_type_field],
+            "name": asset_type_container["asset_types"]["items"][-1]["name"],
+        },
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_update_asset_type_keeping_its_own_name")
 def test_update_asset_type_with_unauthenticated_client(
     client: TestClient, asset_type_with_documents_container, updated_asset_type
 ):

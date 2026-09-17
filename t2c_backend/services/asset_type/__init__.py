@@ -6,7 +6,7 @@ from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from sqlalchemy import asc, desc, exists, select
+from sqlalchemy import Text, asc, cast, desc, exists, literal, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -24,6 +24,7 @@ from t2c_backend.models import (
     TypeplateDocument,
 )
 from t2c_backend.models.asset_type import AssetTypeDocument as AssetTypeDocumentModel
+from t2c_backend.models.asset_type import normalized_asset_type_name
 from t2c_backend.schemas.v1.asset_type import (
     AssetTypeResponse,
     InstructionManualAssetTypeResponse,
@@ -32,7 +33,7 @@ from t2c_backend.schemas.v1.asset_type import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.schemas.v1.typeplates import TypeplateImageRequest
 from t2c_backend.utils.enums import DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
 
 
 class AssetTypeService:
@@ -46,6 +47,33 @@ class AssetTypeService:
         self.field_options_repository = BaseRepository(app, session, AssetTypeFieldOptions)
         self.asset_types_documents_repository = BaseRepository(app, session, AssetTypeDocumentModel)
         self.typeplate_documents_repository = BaseRepository(app, session, TypeplateDocument)
+
+    async def ensure_name_is_free(
+        self,
+        name: str,
+        asset_type_category_id: int,
+        asset_type_id: int | None = None,
+    ) -> None:
+        """
+        Refuse a name another asset type in the same category already carries.
+        """
+        folded_name = normalized_asset_type_name(cast(literal(name), Text))
+
+        await self.repository.lock_values(
+            asset_type_category_id=asset_type_category_id,
+            name=folded_name,
+        )
+
+        filters = {"asset_type_category_id": asset_type_category_id}
+        if asset_type_id is not None:
+            filters["id__ne"] = asset_type_id
+
+        duplicate = await self.repository.get_one_or_none(
+            where=[normalized_asset_type_name(self._model.name) == folded_name],
+            **filters,
+        )
+        if duplicate:
+            raise AlreadyExistsError("Asset type name already exists in this category")
 
     async def create_asset_type(
         self,
@@ -67,6 +95,11 @@ class AssetTypeService:
         )
         if not asset_type_form:
             raise NotFoundError(msg="Asset type category not found")
+
+        await self.ensure_name_is_free(
+            name=asset_type_data.get("name"),
+            asset_type_category_id=asset_type_form.id,
+        )
 
         typeplate_details = asset_type_data.get("typeplate_details")
         typeplate = None
@@ -201,6 +234,12 @@ class AssetTypeService:
         )
         if not db_asset_type:
             raise NotFoundError("Asset type not found")
+
+        await self.ensure_name_is_free(
+            name=asset_type_details.name,
+            asset_type_category_id=db_asset_type.asset_type_category_id,
+            asset_type_id=db_asset_type.id,
+        )
 
         db_asset_type.name = asset_type_details.name
         db_asset_type.video_links = asset_type_details.video_links
