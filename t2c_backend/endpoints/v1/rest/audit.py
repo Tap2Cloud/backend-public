@@ -87,7 +87,9 @@ async def delete_audit(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
-    return await services.audit_service.delete_audit(audit_id, token.location_id)
+    return await services.audit_service.delete_audit(
+        audit_id, token.location_id, token.organization_id
+    )
 
 
 @router.delete("/audit/task/{auditTaskId}", status_code=204)
@@ -96,7 +98,7 @@ async def delete_audit_task(
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_delete": True})),
     services: DictContainer = Depends(get_services),
 ):
-    return await services.audit_service.delete_audit_task(audit_task_id)
+    return await services.audit_service.delete_audit_task(audit_task_id, token.organization_id)
 
 
 @router.get(
