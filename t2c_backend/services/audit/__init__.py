@@ -196,11 +196,15 @@ class AuditService:
             ],
         )
 
-    async def delete_audit(self, audit_id: int, location_id: int):
+    async def delete_audit(self, audit_id: int, location_id: int, organization_id: int):
         audit = await self.repository.get_one_or_none(
             id=audit_id,
             join=[self._model.asset],
             where=[Asset.location_id == location_id],
+            options=[
+                joinedload(Audit.audit_tasks),
+                joinedload(Audit.audit_tasks).joinedload(AuditTask.documents),
+            ],
         )
 
         if not audit:
@@ -208,14 +212,33 @@ class AuditService:
 
         await self.repository.delete(id=audit.id)
 
-    async def delete_audit_task(self, audit_task_id: int):
-        audit_task = await self.task_repository.get_one_or_none(id=audit_task_id)
+        for audit_task in audit.audit_tasks:
+            for document in audit_task.documents:
+                await self.app.clients.storage.delete_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.AuditTaskDocuments,
+                    file_id=audit_task.id,
+                    filename=document.name,
+                )
+
+    async def delete_audit_task(self, audit_task_id: int, organization_id: int):
+        audit_task = await self.task_repository.get_one_or_none(
+            id=audit_task_id, options=[joinedload(AuditTask.documents)]
+        )
 
         if not audit_task:
             raise NotFoundError("Audit task not found")
 
         await self.task_repository.delete(id=audit_task.id)
         await self.task_document_repository.delete(audit_task_id=audit_task.id)
+
+        for document in audit_task.documents:
+            await self.app.clients.storage.delete_document(
+                organization_id=organization_id,
+                document_for=DocumentFor.AuditTaskDocuments,
+                file_id=audit_task.id,
+                filename=document.name,
+            )
 
     async def document_get_download(
         self, organization_id, audit_id: int, task_id: int, document_id: str

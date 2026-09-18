@@ -145,6 +145,7 @@ class AssetTypeService:
 
         asset_type = await self.repository.save(asset_type)
 
+        documents_to_store = []
         for at in asset_type.fields:
             asset_type_category_field = await self.category_fields_repository.get_one_or_none(
                 id=at.field_id
@@ -157,11 +158,13 @@ class AssetTypeService:
                     (f for f in custom_media_fields if f.filename == at.response_value), None
                 )
                 if file:
-                    await self.app.clients.storage.save_document(
-                        organization_id=organization_id,
-                        document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                        file_id=at.id,
-                        file=file,
+                    documents_to_store.append(
+                        self.app.clients.storage.save_document(
+                            organization_id=organization_id,
+                            document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+                            file_id=at.id,
+                            file=file,
+                        )
                     )
 
         for typeplate_image in typeplate_images if typeplate_images else []:
@@ -188,11 +191,13 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.EuFiles,
-                file_id=eu_file_data.id,
-                file=eu_file,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.EuFiles,
+                    file_id=eu_file_data.id,
+                    file=eu_file,
+                )
             )
 
         asset_type_documents = None
@@ -206,13 +211,16 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.InstructionManualDocuments,
-                file_id=asset_type_documents.id,
-                file=doc,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.InstructionManualDocuments,
+                    file_id=asset_type_documents.id,
+                    file=doc,
+                )
             )
 
+        await asyncio.gather(*documents_to_store)
         return {
             "created_asset_type": asset_type,
             "instruction_manuals": asset_type_documents,
