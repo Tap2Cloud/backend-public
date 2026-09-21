@@ -557,19 +557,12 @@ class AssetTypeService:
         if not asset_type:
             raise NotFoundError("Asset type not found")
 
-        update_storage = []
+        replaced_filename = None
 
         for asset_type_field in asset_type.fields:
             if custom_field_id != asset_type_field.field_id:
                 continue
-            update_storage.append(
-                self.app.clients.storage.delete_document(
-                    organization_id=organization_id,
-                    document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                    file_id=asset_type_field.id,
-                    filename=asset_type_field.response_value,
-                )
-            )
+            replaced_filename = asset_type_field.response_value
             custom_field_value_id = asset_type_field.id
             asset_type_field.response_value = documents.filename
             break
@@ -586,17 +579,22 @@ class AssetTypeService:
                 raise NotFoundError("Custom Field not found")
             custom_field_value_id = custom_field_value_id.id
 
-        update_storage.append(
-            self.app.clients.storage.save_document(
+        updated_asset_type = await self.repository.save(asset_type)
+
+        if replaced_filename:
+            await self.app.clients.storage.delete_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
                 file_id=custom_field_value_id,
-                file=documents,
+                filename=replaced_filename,
             )
-        )
 
-        updated_asset_type = await self.repository.save(asset_type)
-        await asyncio.gather(*update_storage)
+        await self.app.clients.storage.save_document(
+            organization_id=organization_id,
+            document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+            file_id=custom_field_value_id,
+            file=documents,
+        )
 
         return updated_asset_type
 
