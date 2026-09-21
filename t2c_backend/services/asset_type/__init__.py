@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import mimetypes
 import uuid
@@ -144,6 +145,7 @@ class AssetTypeService:
 
         asset_type = await self.repository.save(asset_type)
 
+        documents_to_store = []
         for at in asset_type.fields:
             asset_type_category_field = await self.category_fields_repository.get_one_or_none(
                 id=at.field_id
@@ -156,11 +158,13 @@ class AssetTypeService:
                     (f for f in custom_media_fields if f.filename == at.response_value), None
                 )
                 if file:
-                    await self.app.clients.storage.save_document(
-                        organization_id=organization_id,
-                        document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                        file_id=at.id,
-                        file=file,
+                    documents_to_store.append(
+                        self.app.clients.storage.save_document(
+                            organization_id=organization_id,
+                            document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+                            file_id=at.id,
+                            file=file,
+                        )
                     )
 
         for typeplate_image in typeplate_images if typeplate_images else []:
@@ -187,11 +191,13 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.EuFiles,
-                file_id=eu_file_data.id,
-                file=eu_file,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.EuFiles,
+                    file_id=eu_file_data.id,
+                    file=eu_file,
+                )
             )
 
         asset_type_documents = None
@@ -205,13 +211,16 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.InstructionManualDocuments,
-                file_id=asset_type_documents.id,
-                file=doc,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.InstructionManualDocuments,
+                    file_id=asset_type_documents.id,
+                    file=doc,
+                )
             )
 
+        await asyncio.gather(*documents_to_store)
         return {
             "created_asset_type": asset_type,
             "instruction_manuals": asset_type_documents,
@@ -289,6 +298,7 @@ class AssetTypeService:
                 joinedload(self._model.typeplate).joinedload(Typeplate.documents),
                 joinedload(self._model.documents),
                 joinedload(self._model.fields),
+                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
@@ -296,6 +306,8 @@ class AssetTypeService:
             raise NotFoundError("Asset type not found")
 
         organization_id = asset_type.location.organization_id
+
+        await self.repository.delete(id=asset_type_id)
 
         if asset_type.documents:
             for instruction_manual in asset_type.documents:
@@ -315,14 +327,19 @@ class AssetTypeService:
                 )
 
         for asset_type_field in asset_type.fields:
+            category_field = asset_type_field.asset_type_category_field
+            if not category_field or category_field.field_type not in (
+                InputType.image,
+                InputType.file,
+            ):
+                continue
+
             await self.app.clients.storage.delete_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
                 file_id=asset_type_field.id,
                 filename=asset_type_field.response_value,
             )
-
-        await self.repository.delete(id=asset_type_id)
 
     async def list_asset_types(
         self,
@@ -490,6 +507,7 @@ class AssetTypeService:
             raise NotFoundError("Asset type not found")
 
         new_db_documents = []
+        new_documents = []
         for doc in documents or []:
             new_document = await self.asset_types_documents_repository.save(
                 AssetTypeDocumentModel(
@@ -500,17 +518,21 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.InstructionManualDocuments,
-                file_id=new_document.id,
-                file=doc,
+            new_documents.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.InstructionManualDocuments,
+                    file_id=new_document.id,
+                    file=doc,
+                )
             )
             new_db_documents.append(new_document)
 
         asset_type.documents.extend(new_db_documents)
 
-        return await self.repository.save(asset_type)
+        asset_type = await self.repository.save(asset_type)
+        await asyncio.gather(*new_documents)
+        return asset_type
 
     async def save_asset_type_custom_field_document(
         self,
@@ -543,15 +565,12 @@ class AssetTypeService:
         if not asset_type:
             raise NotFoundError("Asset type not found")
 
+        replaced_filename = None
+
         for asset_type_field in asset_type.fields:
             if custom_field_id != asset_type_field.field_id:
                 continue
-            await self.app.clients.storage.delete_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                file_id=asset_type_field.id,
-                filename=asset_type_field.response_value,
-            )
+            replaced_filename = asset_type_field.response_value
             custom_field_value_id = asset_type_field.id
             asset_type_field.response_value = documents.filename
             break
@@ -568,6 +587,16 @@ class AssetTypeService:
                 raise NotFoundError("Custom Field not found")
             custom_field_value_id = custom_field_value_id.id
 
+        updated_asset_type = await self.repository.save(asset_type)
+
+        if replaced_filename:
+            await self.app.clients.storage.delete_document(
+                organization_id=organization_id,
+                document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+                file_id=custom_field_value_id,
+                filename=replaced_filename,
+            )
+
         await self.app.clients.storage.save_document(
             organization_id=organization_id,
             document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
@@ -575,7 +604,7 @@ class AssetTypeService:
             file=documents,
         )
 
-        return await self.repository.save(asset_type)
+        return updated_asset_type
 
     async def delete_asset_type_document(
         self, asset_type_id: int, document_id: uuid.UUID, location_id: int
@@ -610,10 +639,17 @@ class AssetTypeService:
             options=[
                 joinedload(AssetTypeField.asset_type),
                 joinedload(AssetTypeField.asset_type).joinedload(AssetType.location),
+                joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
-        if not document:
+        if (
+            not document
+            or not document.response_value
+            or not document.asset_type_category_field
+            or document.asset_type_category_field.field_type
+            not in (InputType.image, InputType.file)
+        ):
             raise NotFoundError("Asset type field's document not found")
 
         await self.app.clients.storage.delete_document(
