@@ -639,10 +639,17 @@ class AssetTypeService:
             options=[
                 joinedload(AssetTypeField.asset_type),
                 joinedload(AssetTypeField.asset_type).joinedload(AssetType.location),
+                joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
-        if not document:
+        if (
+            not document
+            or not document.response_value
+            or not document.asset_type_category_field
+            or document.asset_type_category_field.field_type
+            not in (InputType.image, InputType.file)
+        ):
             raise NotFoundError("Asset type field's document not found")
 
         await self.app.clients.storage.delete_document(
