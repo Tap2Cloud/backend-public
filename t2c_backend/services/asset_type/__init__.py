@@ -298,6 +298,7 @@ class AssetTypeService:
                 joinedload(self._model.typeplate).joinedload(Typeplate.documents),
                 joinedload(self._model.documents),
                 joinedload(self._model.fields),
+                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
@@ -326,6 +327,13 @@ class AssetTypeService:
                 )
 
         for asset_type_field in asset_type.fields:
+            category_field = asset_type_field.asset_type_category_field
+            if not category_field or category_field.field_type not in (
+                InputType.image,
+                InputType.file,
+            ):
+                continue
+
             await self.app.clients.storage.delete_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
