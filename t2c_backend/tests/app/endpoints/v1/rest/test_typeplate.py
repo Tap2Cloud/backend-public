@@ -8,6 +8,16 @@ from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
+    after="test_asset_type_category.py::test_asset_type_category_with_invalid_group_id"
+)
+def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images):
+    response = authenticated_client.get("/api/v1/typeplate/images")
+    typeplate_images["typeplate_images"] = response.json()
+
+    assert response.status_code == 200
+
+
+@pytest.mark.order(
     after="test_instruction_manual.py::test_get_list_of_instruction_manual_with_is_document_and_is_video_filter",
 )
 def test_list_typeplate(authenticated_client: TestClient, typeplate_container):
@@ -70,6 +80,38 @@ def test_list_typeplate_with_typeplate_created_filter(
 
 
 @pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter")
+def test_list_typeplate_with_eu_id_filter(authenticated_client: TestClient, typeplate_container):
+    eu_id = typeplate_container["typeplate"]["items"][0]["typeplateDetails"]["euId"]
+    response = authenticated_client.get(f"/api/v1/typeplate?q={eu_id}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["typeplateDetails"]["euId"] == eu_id
+
+
+@pytest.mark.order(after="test_list_typeplate_with_eu_id_filter")
+def test_list_typeplate_with_typeplate_images_filter(
+    authenticated_client: TestClient, asset_type_container
+):
+    typeplate_image_id = [
+        asset_type["typeplates"]["typeplateImages"][0]["id"]
+        for asset_type in asset_type_container["asset_types"]["items"]
+        if asset_type["typeplates"] and len(asset_type["typeplates"]["typeplateImages"]) > 0
+    ]
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_images_id": typeplate_image_id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.json()["items"][0]["typeplateDetails"]["typeplateImages"][0]["id"]
+        == typeplate_image_id[0]
+    )
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_images_filter")
 def test_get_typeplate_by_id(authenticated_client: TestClient, typeplate_container):
     if len(typeplate_container["typeplate"]["items"]) <= 0:
         assert True
@@ -98,14 +140,6 @@ def test_get_typeplate_by_fake_id(
 
 
 @pytest.mark.order(after="test_get_typeplate_by_fake_id")
-def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images):
-    response = authenticated_client.get("/api/v1/typeplate/images")
-    typeplate_images["typeplate_images"] = response.json()
-
-    assert response.status_code == 200
-
-
-@pytest.mark.order(after="test_typeplate_image_list")
 def test_update_typeplate_api_without_eu_file(
     authenticated_client: TestClient,
     typeplate_container,

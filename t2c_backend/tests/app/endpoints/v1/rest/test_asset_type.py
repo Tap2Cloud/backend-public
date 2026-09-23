@@ -8,7 +8,7 @@ from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
-    after="test_asset_type_category.py::test_asset_type_category_with_invalid_group_id",
+    after="test_typeplate.py::test_typeplate_image_list",
 )
 def test_create_asset_type_string(
     authenticated_client: TestClient,
@@ -362,6 +362,7 @@ def test_create_asset_type_image(
     asset_type_field,
     container,
     typeplate_details,
+    typeplate_images,
     asset_pass_document_container,
 ):
     fake_file = f"image-custom-field-{fake.random_int()}.png"
@@ -373,6 +374,9 @@ def test_create_asset_type_image(
     asset_type_field["responseValue"] = f"{fake_file}"
     for field in container["image_asset_type_category"]["fields"]:
         asset_type_field["fieldId"] = field["id"]
+
+    choice = random.choice(typeplate_images["typeplate_images"])
+    typeplate_image = [{"id": choice.get("id"), "name": choice.get("name")}]
 
     asset_type_data = {
         "name": asset_type["name"],
@@ -386,6 +390,7 @@ def test_create_asset_type_image(
         "assetTypeCategoryId": container["image_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
+        "typeplateImages": typeplate_image,
     }
 
     form_data = {

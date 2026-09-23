@@ -52,6 +52,7 @@ class TypeplateService:
         page_size: int,
         typeplate_created_start_date: date,
         typeplate_created_end_date: date,
+        typeplate_images_id: list[uuid.UUID] | None,
         location_id: int,
     ):
         sort_order = {
@@ -79,11 +80,13 @@ class TypeplateService:
             asset_type_category_filter = BaseRepository.parse_filters(
                 AssetTypeCategory, name__ilike=f"%{q}%"
             )
+            eu_id = BaseRepository.parse_filters(self._model, eu_id__ilike=f"%{q}%")
             asset_type_filters = BaseRepository.parse_filters(model=AssetType, name__ilike=f"%{q}%")
             select_query = select_query.filter(
                 or_(
                     *asset_type_category_filter,
                     *asset_type_filters,
+                    *eu_id,
                 )
             )
 
@@ -95,6 +98,14 @@ class TypeplateService:
                 created_at__between=[typeplate_created_start_date, typeplate_created_end_date],
             )
             select_query = select_query.filter(*filters)
+
+        if typeplate_images_id:
+            typeplate_image_filters = BaseRepository.parse_filters(
+                model=TypelateImageMapping, typeplate_image_id__in=typeplate_images_id
+            )
+            select_query = select_query.filter(
+                AssetType.typeplate.has(Typeplate.typeplate_images.any(*typeplate_image_filters))
+            )
 
         return await apaginate(
             self.repository.session,
