@@ -183,10 +183,12 @@ class AssetService:
 
         if q:
             serial_no_filter = BaseRepository.parse_filters(self._model, serial_no__ilike=f"%{q}%")
+            device_id_filter = BaseRepository.parse_filters(self._model, device_id__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
             select_query = select_query.filter(
                 or_(
                     *serial_no_filter,
+                    *device_id_filter,
                     *[
                         self._model.asset_type.has(condition)
                         for condition in asset_type_name_filter
