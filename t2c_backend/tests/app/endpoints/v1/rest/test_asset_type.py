@@ -872,15 +872,30 @@ def test_list_asset_type_with_authenticated_client(
 
 @pytest.mark.order(after="test_list_asset_type_with_authenticated_client")
 def test_list_asset_type_with_query(authenticated_client: TestClient, asset_type_container):
-    asset_type_name = random.choice(asset_type_container["asset_types"]["items"])
+    asset_type = random.choice(asset_type_container["asset_types"]["items"])
     response = authenticated_client.put(
-        f"api/v1/asset-type?query={asset_type_name['name']}", json={"categories": None}
+        f"api/v1/asset-type?query={asset_type['name']}", json={"categories": None}
     )
 
     assert response.status_code == 200
 
 
 @pytest.mark.order(after="test_list_asset_type_with_query")
+def test_list_asset_type_with_search_manufacturer(
+    authenticated_client: TestClient, asset_type_container
+):
+    asset_type_manufacturer = random.choice(asset_type_container["asset_types"]["items"])[
+        "manufacturer"
+    ]
+    response = authenticated_client.put(
+        f"api/v1/asset-type?query={asset_type_manufacturer}", json={"categories": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["manufacturer"] == asset_type_manufacturer
+
+
+@pytest.mark.order(after="test_list_asset_type_with_search_manufacturer")
 def test_list_asset_type_filter_by_category(
     authenticated_client: TestClient, asset_type_category_detail_container
 ):
