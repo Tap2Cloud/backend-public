@@ -3,6 +3,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
+from utils.enums import ServiceTypes
 
 
 @pytest.mark.order(after="test_audit.py::test_generate_audit_report")
@@ -103,6 +104,26 @@ def test_get_service_with_queries(
 
 
 @pytest.mark.order(after="test_get_service_with_queries")
+def test_get_service_with_query_service_name(authenticated_client: TestClient, service_container):
+    service_name = random.choice(
+        [asset for asset in service_container[-1]["items"] if len(asset["services"]) > 0]
+    )["services"][0]["serviceName"]
+    response = authenticated_client.get(f"api/v1/service?q={service_name}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["services"][0]["serviceName"] == service_name
+
+
+@pytest.mark.order(after="test_get_service_with_query_service_name")
+def test_get_service_with_query_service_type(authenticated_client: TestClient, service_container):
+    service_type = random.choice(list(ServiceTypes))
+    response = authenticated_client.get(f"api/v1/service?service_type={service_type}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["services"][0]["serviceType"] == service_type
+
+
+@pytest.mark.order(after="test_get_service_with_query_service_type")
 def test_get_service_with_id(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.get(f"/api/v1/service/{service_id}")
