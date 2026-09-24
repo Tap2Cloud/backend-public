@@ -97,6 +97,7 @@ class ServiceService:
         expire_end_date: datetime.date,
         page: int,
         page_size: int,
+        service_type: ServiceTypes | None = None,
     ):
         _model = Asset
         sort_order = {
@@ -121,13 +122,22 @@ class ServiceService:
             service_filters.append(filters)
             asset_filters.append(Asset.services.any(filters))
 
+        if service_type:
+            filters = Service.service_type == service_type
+            service_filters.append(filters)
+            asset_filters.append(Asset.services.any(filters))
+
         if q:
             serial_no_filter = BaseRepository.parse_filters(_model, serial_no__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
+            service_name_filter = BaseRepository.parse_filters(
+                Service, service_name__ilike=f"%{q}%"
+            )
             asset_filters.append(
                 or_(
                     *serial_no_filter,
                     *[Asset.asset_type.has(condition) for condition in asset_type_name_filter],
+                    *[Asset.services.any(condition) for condition in service_name_filter],
                 )
             )
 
