@@ -231,6 +231,33 @@ def test_get_audit_with_is_audit_filter(authenticated_client: TestClient, fake: 
 
 
 @pytest.mark.order(after="test_get_audit_with_is_audit_filter")
+def test_get_audit_with_audit_task_name(authenticated_client: TestClient, audit_container):
+    audit_task_name = audit_container[1]["auditTasks"][0]["taskName"]
+
+    response = authenticated_client.get(f"/api/v1/audit?q={audit_task_name}")
+    assert response.status_code == 200
+    assert response.json()["items"][0]["audits"][0]["auditTasks"][0]["taskName"] == audit_task_name
+
+
+@pytest.mark.order(after="test_get_audit_with_audit_task_name")
+def test_get_audit_with_audit_task_type(authenticated_client: TestClient, audit_container):
+    audit_task_type = audit_container[1]["auditTasks"][0]["taskType"]
+
+    response = authenticated_client.get(f"/api/v1/audit?task_type={audit_task_type}")
+    assert response.status_code == 200
+    assert response.json()["items"][0]["audits"][0]["auditTasks"][0]["taskType"] == audit_task_type
+
+
+@pytest.mark.order(after="test_get_audit_with_audit_task_type")
+def test_get_audit_with_audit_task_status(authenticated_client: TestClient, audit_container):
+    audit_task_status = audit_container[1]["auditTasks"][0]["status"]
+
+    response = authenticated_client.get(f"/api/v1/audit?task_status={audit_task_status}")
+    assert response.status_code == 200
+    assert response.json()["items"][0]["audits"][0]["auditTasks"][0]["status"] == audit_task_status
+
+
+@pytest.mark.order(after="test_get_audit_with_audit_task_status")
 def test_get_audit_with_unauthenticated_client(client: TestClient):
     response = client.get("/api/v1/audit")
 
