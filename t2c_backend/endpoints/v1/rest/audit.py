@@ -13,8 +13,8 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
+from t2c_backend.utils.enums import AuditTaskStatus, SortBy, TaskType
 from t2c_backend.utils.enums import Language as LanguageEnum
-from t2c_backend.utils.enums import SortBy
 from t2c_backend.utils.misc import DictContainer
 
 router = APIRouter()
@@ -62,6 +62,8 @@ async def get_audit(
     valid_until_start_date: datetime.date = None,
     valid_until_end_date: datetime.date = None,
     is_audit_available: bool = None,
+    task_type: TaskType | None = None,
+    task_status: AuditTaskStatus | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
@@ -77,6 +79,8 @@ async def get_audit(
         valid_until_start_date=valid_until_start_date,
         valid_until_end_date=valid_until_end_date,
         is_audit_available=is_audit_available,
+        task_type=task_type,
+        task_status=task_status,
         location_id=token.location_id,
     )
 

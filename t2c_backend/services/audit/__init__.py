@@ -13,7 +13,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from sqlalchemy import asc, desc, or_, select
+from sqlalchemy import and_, asc, desc, or_, select
 from sqlalchemy.orm import joinedload
 
 from t2c_backend.core.i18n import _
@@ -130,6 +130,8 @@ class AuditService:
         valid_until_start_date: datetime.date = None,
         valid_until_end_date: datetime.date = None,
         is_audit_available: bool = None,
+        task_type: TaskType | None = None,
+        task_status: AuditTaskStatus | None = None,
     ):
         model = Asset
         sort_order = {
@@ -156,30 +158,51 @@ class AuditService:
             audit_filters.append(filters)
             asset_filters.append(model.audit.any(filters))
 
+        # A single task must match every task filter, and only matching tasks are loaded.
+        audit_task_filters = []
+        if task_type:
+            audit_task_filters.append(AuditTask.task_type == task_type)
+        if task_status:
+            audit_task_filters.append(AuditTask.status == task_status)
+
+        if audit_task_filters:
+            filters = self._model.audit_tasks.any(and_(*audit_task_filters))
+            audit_filters.append(filters)
+            asset_filters.append(model.audit.any(filters))
+
         if is_audit_available:
             asset_filters.append(model.audit.any())
 
         if q:
             serial_no_filter = BaseRepository.parse_filters(model, serial_no__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
+            task_name_filter = BaseRepository.parse_filters(AuditTask, task_name__ilike=f"%{q}%")
             asset_filters.append(
                 or_(
                     *serial_no_filter,
                     *[model.asset_type.has(condition) for condition in asset_type_name_filter],
+                    *[
+                        model.audit.any(self._model.audit_tasks.any(condition))
+                        for condition in task_name_filter
+                    ],
                 )
             )
+
+        audit_relationship = model.audit.and_(*audit_filters) if audit_filters else model.audit
+        audit_task_relationship = (
+            self._model.audit_tasks.and_(*audit_task_filters)
+            if audit_task_filters
+            else self._model.audit_tasks
+        )
 
         select_query = (
             select(model)
             .options(
-                joinedload(model.audit),
-                joinedload(model.audit).joinedload(self._model.audit_tasks),
-                joinedload(model.audit)
-                .joinedload(self._model.audit_tasks)
+                joinedload(audit_relationship)
+                .joinedload(audit_task_relationship)
                 .joinedload(AuditTask.documents),
                 joinedload(model.asset_type),
                 joinedload(model.asset_type).joinedload(AssetType.asset_type_category),
-                joinedload(model.audit.and_(*audit_filters) if audit_filters else model.audit),
             )
             .order_by(sort_order[sort_by])
             .filter(*asset_filters)
