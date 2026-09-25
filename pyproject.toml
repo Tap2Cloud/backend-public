@@ -17,19 +17,19 @@ dependencies = [
     "gunicorn>=26.2.0",
     "jsonschema>=4.26.0",
     "loguru>=0.7.3",
-    "pyjwt>=2.14.0",
+    "pyjwt>=2.15.0",
     "python-gettext>=5.0",
     "reportlab>=5.0.1",
     "sib-api-v3-sdk>=7.6.0",
     "sqlalchemy-utils>=0.42.1",
-    "sqlalchemy[asyncio]>=2.0.54",
+    "sqlalchemy[asyncio]>=2.1.0",
     "tomlkit>=0.15.1",
-    "uvicorn>=0.53.0",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.16.8",
+    "ruff>=0.16.9",
 ]
 test = [
     "faker>=40.39.0",
