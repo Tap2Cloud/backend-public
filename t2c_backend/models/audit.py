@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -26,7 +26,7 @@ class Audit(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
         DateTime(timezone=True),
         default=aware_utcnow,
     )
-    valid_until: Mapped[datetime] = mapped_column(Date(), nullable=False)
+    valid_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # created-by only; audit ownership is location-based via the asset. SET NULL so
     # deleting the creator keeps the audit (its asset still lives in the location).
     user_id: Mapped[int | None] = mapped_column(
