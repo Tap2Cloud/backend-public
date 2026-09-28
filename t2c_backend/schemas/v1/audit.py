@@ -10,6 +10,11 @@ from t2c_backend.models import AuditTask as AuditTaskModel
 from t2c_backend.models import AuditTaskDocument as AuditTaskDocumentModel
 from t2c_backend.utils.enums import AuditTaskStatus, TaskType
 from t2c_backend.utils.errors import BadRequestError
+from t2c_backend.utils.misc import (
+    date_to_datetime_with_timezone,
+    datetime_from_epoch,
+    datetime_to_epoch,
+)
 
 
 class AuditTaskDocument(BaseModel):
@@ -26,7 +31,7 @@ class AuditTaskDocument(BaseModel):
             id=audit_task_document.id,
             name=audit_task_document.name,
             contentType=audit_task_document.content_type,
-            createdAt=int(audit_task_document.created_at.timestamp()),
+            createdAt=datetime_to_epoch(audit_task_document.created_at),
         )
 
     @staticmethod
@@ -34,7 +39,7 @@ class AuditTaskDocument(BaseModel):
         created_at = (
             audit_task_document_response.created_at
             if isinstance(audit_task_document_response.created_at, datetime.datetime)
-            else datetime.datetime.fromtimestamp(audit_task_document_response.created_at)
+            else datetime_from_epoch(audit_task_document_response.created_at)
         )
 
         return AuditTaskDocumentModel(
@@ -146,10 +151,8 @@ class AuditResponse(BaseModel):
     def from_model(audit: AuditModel, audit_tasks: list[AuditTaskModel]) -> "AuditResponse":
         return AuditResponse(
             id=audit.id,
-            inspectionDate=int(audit.inspection_date.timestamp()),
-            validUntil=int(
-                datetime.datetime.combine(audit.valid_until, datetime.time.min).timestamp()
-            ),
+            inspectionDate=datetime_to_epoch(audit.inspection_date),
+            validUntil=datetime_to_epoch(date_to_datetime_with_timezone(audit.valid_until)),
             auditTasks=[AuditTaskResponse.from_model(task, task.documents) for task in audit_tasks],
         )
 
@@ -168,7 +171,7 @@ class AssetAuditResponse(BaseModel):
     def from_model(asset) -> "AssetAuditResponse":
         return AssetAuditResponse(
             id=asset.id,
-            manufacturingDate=int(asset.manufacturing_date.timestamp()),
+            manufacturingDate=datetime_to_epoch(asset.manufacturing_date),
             assetTypeName=asset.asset_type.name,
             assetTypeDescription=asset.asset_type.description,
             serialNo=asset.serial_no,

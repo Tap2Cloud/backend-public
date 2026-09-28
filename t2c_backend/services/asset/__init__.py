@@ -1,5 +1,4 @@
 import mimetypes
-from datetime import datetime
 
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
@@ -30,6 +29,7 @@ from t2c_backend.schemas.v1.asset import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.utils.enums import AssetStatus, DocumentFor, InputType, SortBy
 from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.misc import datetime_from_epoch
 
 
 class AssetService:
@@ -65,7 +65,7 @@ class AssetService:
             device_id=asset_data.device_id,
             pass_id=self.app.clients.cryptography.encode(f"{location.id}_{asset_data.device_id}"),
             asset_type_id=asset_type.id,
-            manufacturing_date=datetime.fromtimestamp(asset_data.manufacturing_date),
+            manufacturing_date=datetime_from_epoch(asset_data.manufacturing_date),
             location_id=location.id,
             status=AssetStatus(asset_data.status),
             serial_no=asset_data.serial_no,

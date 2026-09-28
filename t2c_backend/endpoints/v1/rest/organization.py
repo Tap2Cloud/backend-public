@@ -11,7 +11,7 @@ from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import DictContainer, datetime_to_epoch
 
 router = APIRouter()
 
@@ -70,7 +70,7 @@ async def update_organization(
         name=organization.name,
         number=organization.number,
         logo=organization.logo.get_string() if organization.logo else None,
-        createdAt=int(organization.created_at.timestamp()),
+        createdAt=datetime_to_epoch(organization.created_at),
     )
 
 

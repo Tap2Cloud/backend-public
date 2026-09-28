@@ -11,6 +11,7 @@ from t2c_backend.schemas.v1.location import LocationBaseResponse
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.schemas.v1.service import ServiceResponse
 from t2c_backend.utils.enums import AssetStatus
+from t2c_backend.utils.misc import datetime_to_epoch
 
 
 class CreateAsset(BaseModel):
@@ -51,7 +52,7 @@ class AssetResponse(BaseModel):
             id=asset.id,
             location=LocationBaseResponse.convert(asset.location, asset.location.organization),
             deviceId=asset.device_id,
-            manufacturingDate=int(asset.manufacturing_date.timestamp()),
+            manufacturingDate=datetime_to_epoch(asset.manufacturing_date),
             assetType=AssetTypeResponse.convert(
                 asset.asset_type,
                 [documents for documents in asset.asset_type.documents],

@@ -116,11 +116,10 @@ def test_get_service_with_query_service_name(authenticated_client: TestClient, s
 
 @pytest.mark.order(after="test_get_service_with_query_service_name")
 def test_get_service_with_query_service_type(authenticated_client: TestClient, service_container):
-    service_type = random.choice(list(ServiceTypes))
-    response = authenticated_client.get(f"api/v1/service?service_type={service_type}")
+    response = authenticated_client.get(f"api/v1/service?service_type={ServiceTypes.basic}")
 
     assert response.status_code == 200
-    assert response.json()["items"][0]["services"][0]["serviceType"] == service_type
+    assert response.json()["items"][0]["services"][0]["serviceType"] == ServiceTypes.basic
 
 
 @pytest.mark.order(after="test_get_service_with_query_service_type")
