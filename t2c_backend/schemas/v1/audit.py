@@ -11,7 +11,6 @@ from t2c_backend.models import AuditTaskDocument as AuditTaskDocumentModel
 from t2c_backend.utils.enums import AuditTaskStatus, TaskType
 from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.utils.misc import (
-    date_to_datetime_with_timezone,
     datetime_from_epoch,
     datetime_to_epoch,
 )
@@ -152,7 +151,7 @@ class AuditResponse(BaseModel):
         return AuditResponse(
             id=audit.id,
             inspectionDate=datetime_to_epoch(audit.inspection_date),
-            validUntil=datetime_to_epoch(date_to_datetime_with_timezone(audit.valid_until)),
+            validUntil=datetime_to_epoch(audit.valid_until),
             auditTasks=[AuditTaskResponse.from_model(task, task.documents) for task in audit_tasks],
         )
 
