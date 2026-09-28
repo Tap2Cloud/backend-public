@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, time
+from datetime import date, time
 
 from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
@@ -27,6 +27,7 @@ from t2c_backend.schemas.v1.typeplates import (
 )
 from t2c_backend.utils.enums import DocumentFor, SortBy
 from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.misc import date_to_datetime_with_timezone
 
 
 class TypeplateService:
@@ -91,8 +92,12 @@ class TypeplateService:
             )
 
         if typeplate_created_start_date and typeplate_created_end_date:
-            typeplate_created_start_date = datetime.combine(typeplate_created_start_date, time.min)
-            typeplate_created_end_date = datetime.combine(typeplate_created_end_date, time.max)
+            typeplate_created_start_date = date_to_datetime_with_timezone(
+                typeplate_created_start_date
+            )
+            typeplate_created_end_date = date_to_datetime_with_timezone(
+                typeplate_created_end_date, time.max
+            )
             filters = BaseRepository.parse_filters(
                 model=Typeplate,
                 created_at__between=[typeplate_created_start_date, typeplate_created_end_date],

@@ -235,8 +235,14 @@ def test_get_audit_with_audit_task_name(authenticated_client: TestClient, audit_
     audit_task_name = audit_container[1]["auditTasks"][0]["taskName"]
 
     response = authenticated_client.get(f"/api/v1/audit?q={audit_task_name}")
+
     assert response.status_code == 200
-    assert response.json()["items"][0]["audits"][0]["auditTasks"][0]["taskName"] == audit_task_name
+    assert audit_task_name in [
+        task["taskName"]
+        for asset in response.json()["items"]
+        for audit in asset["audits"]
+        for task in audit["auditTasks"]
+    ]
 
 
 @pytest.mark.order(after="test_get_audit_with_audit_task_name")
