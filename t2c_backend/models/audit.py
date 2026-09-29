@@ -1,7 +1,7 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -16,7 +16,7 @@ from t2c_backend.core.db import (
 )
 from t2c_backend.models.user import User
 from t2c_backend.utils.enums import AuditTaskStatus, TaskType
-from t2c_backend.utils.misc import get_full_name
+from t2c_backend.utils.misc import aware_utcnow, get_full_name
 
 
 class Audit(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
@@ -24,9 +24,9 @@ class Audit(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
 
     inspection_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.now(UTC),
+        default=aware_utcnow,
     )
-    valid_until: Mapped[datetime] = mapped_column(Date(), nullable=False)
+    valid_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # created-by only; audit ownership is location-based via the asset. SET NULL so
     # deleting the creator keeps the audit (its asset still lives in the location).
     user_id: Mapped[int | None] = mapped_column(

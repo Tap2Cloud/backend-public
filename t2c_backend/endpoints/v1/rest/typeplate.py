@@ -49,6 +49,7 @@ async def list_typeplate_details(
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     typeplate_created_start_date: datetime.date = None,
     typeplate_created_end_date: datetime.date = None,
+    typeplate_images_id: list[uuid.UUID] | None = Query(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -59,6 +60,7 @@ async def list_typeplate_details(
         page_size=page_size,
         typeplate_created_start_date=typeplate_created_start_date,
         typeplate_created_end_date=typeplate_created_end_date,
+        typeplate_images_id=typeplate_images_id,
         location_id=token.location_id,
     )
 

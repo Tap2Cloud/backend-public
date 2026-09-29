@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, time
+from datetime import date, time
 
 from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
@@ -27,6 +27,7 @@ from t2c_backend.schemas.v1.typeplates import (
 )
 from t2c_backend.utils.enums import DocumentFor, SortBy
 from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.misc import date_to_datetime_with_timezone
 
 
 class TypeplateService:
@@ -52,6 +53,7 @@ class TypeplateService:
         page_size: int,
         typeplate_created_start_date: date,
         typeplate_created_end_date: date,
+        typeplate_images_id: list[uuid.UUID] | None,
         location_id: int,
     ):
         sort_order = {
@@ -79,22 +81,36 @@ class TypeplateService:
             asset_type_category_filter = BaseRepository.parse_filters(
                 AssetTypeCategory, name__ilike=f"%{q}%"
             )
+            eu_id = BaseRepository.parse_filters(self._model, eu_id__ilike=f"%{q}%")
             asset_type_filters = BaseRepository.parse_filters(model=AssetType, name__ilike=f"%{q}%")
             select_query = select_query.filter(
                 or_(
                     *asset_type_category_filter,
                     *asset_type_filters,
+                    *eu_id,
                 )
             )
 
         if typeplate_created_start_date and typeplate_created_end_date:
-            typeplate_created_start_date = datetime.combine(typeplate_created_start_date, time.min)
-            typeplate_created_end_date = datetime.combine(typeplate_created_end_date, time.max)
+            typeplate_created_start_date = date_to_datetime_with_timezone(
+                typeplate_created_start_date
+            )
+            typeplate_created_end_date = date_to_datetime_with_timezone(
+                typeplate_created_end_date, time.max
+            )
             filters = BaseRepository.parse_filters(
                 model=Typeplate,
                 created_at__between=[typeplate_created_start_date, typeplate_created_end_date],
             )
             select_query = select_query.filter(*filters)
+
+        if typeplate_images_id:
+            typeplate_image_filters = BaseRepository.parse_filters(
+                model=TypelateImageMapping, typeplate_image_id__in=typeplate_images_id
+            )
+            select_query = select_query.filter(
+                AssetType.typeplate.has(Typeplate.typeplate_images.any(*typeplate_image_filters))
+            )
 
         return await apaginate(
             self.repository.session,

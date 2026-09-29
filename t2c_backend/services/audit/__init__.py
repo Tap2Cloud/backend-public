@@ -1,5 +1,5 @@
 import io
-from datetime import datetime, time
+from datetime import date, time
 
 from babel.dates import format_date
 from fastapi import UploadFile
@@ -13,7 +13,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from sqlalchemy import asc, desc, or_, select
+from sqlalchemy import and_, asc, desc, or_, select
 from sqlalchemy.orm import joinedload
 
 from t2c_backend.core.i18n import _
@@ -30,6 +30,7 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
+from t2c_backend.utils.misc import date_to_datetime_with_timezone, datetime_from_epoch
 
 
 class AuditService:
@@ -93,8 +94,8 @@ class AuditService:
 
         audit = await self.repository.save(
             Audit(
-                inspection_date=datetime.fromtimestamp(audit_data.inspection_date),
-                valid_until=datetime.fromtimestamp(audit_data.valid_until),
+                inspection_date=datetime_from_epoch(audit_data.inspection_date),
+                valid_until=datetime_from_epoch(audit_data.valid_until),
                 asset_id=asset_id,
                 user_id=user_id,
             )
@@ -125,11 +126,13 @@ class AuditService:
         page_size: int,
         location_id: int,
         sort_by: SortBy | None,
-        inspection_start_date: datetime.date = None,
-        inspection_end_date: datetime.date = None,
-        valid_until_start_date: datetime.date = None,
-        valid_until_end_date: datetime.date = None,
+        inspection_start_date: date = None,
+        inspection_end_date: date = None,
+        valid_until_start_date: date = None,
+        valid_until_end_date: date = None,
         is_audit_available: bool = None,
+        task_type: TaskType | None = None,
+        task_status: AuditTaskStatus | None = None,
     ):
         model = Asset
         sort_order = {
@@ -141,20 +144,32 @@ class AuditService:
         audit_filters = []
 
         if inspection_start_date and inspection_end_date:
-            inspection_start_date = datetime.combine(inspection_start_date, time.min)
-            inspection_end_date = datetime.combine(inspection_end_date, time.max)
-            filters = self._model.inspection_date.between(
-                inspection_start_date, inspection_end_date
+            inspection_start_date = date_to_datetime_with_timezone(inspection_start_date)
+            inspection_end_date = date_to_datetime_with_timezone(inspection_end_date, time.max)
+            audit_filters.append(
+                self._model.inspection_date.between(inspection_start_date, inspection_end_date)
             )
-            audit_filters.append(filters)
-            asset_filters.append(model.audit.any(filters))
 
         if valid_until_start_date and valid_until_end_date:
-            valid_until_start_date = datetime.combine(valid_until_start_date, time.min)
-            valid_until_end_date = datetime.combine(valid_until_end_date, time.max)
-            filters = self._model.valid_until.between(valid_until_start_date, valid_until_end_date)
-            audit_filters.append(filters)
-            asset_filters.append(model.audit.any(filters))
+            valid_until_start_date = date_to_datetime_with_timezone(valid_until_start_date)
+            valid_until_end_date = date_to_datetime_with_timezone(valid_until_end_date, time.max)
+            audit_filters.append(
+                self._model.valid_until.between(valid_until_start_date, valid_until_end_date)
+            )
+
+        # A single task must match every task filter, and only matching tasks are loaded.
+        audit_task_filters = []
+        if task_type:
+            audit_task_filters.append(AuditTask.task_type == task_type)
+        if task_status:
+            audit_task_filters.append(AuditTask.status == task_status)
+
+        if audit_task_filters:
+            audit_filters.append(self._model.audit_tasks.any(and_(*audit_task_filters)))
+
+        # A single audit must match every audit filter, and only matching audits are loaded.
+        if audit_filters:
+            asset_filters.append(model.audit.any(and_(*audit_filters)))
 
         if is_audit_available:
             asset_filters.append(model.audit.any())
@@ -162,24 +177,37 @@ class AuditService:
         if q:
             serial_no_filter = BaseRepository.parse_filters(model, serial_no__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
-            asset_filters.append(
-                or_(
-                    *serial_no_filter,
-                    *[model.asset_type.has(condition) for condition in asset_type_name_filter],
-                )
+            task_name_filter = BaseRepository.parse_filters(AuditTask, task_name__ilike=f"%{q}%")
+            asset_search = or_(
+                *serial_no_filter,
+                *[model.asset_type.has(condition) for condition in asset_type_name_filter],
             )
+            task_name_match = self._model.audit_tasks.any(
+                and_(*task_name_filter, *audit_task_filters)
+            )
+            asset_filters.append(
+                or_(asset_search, model.audit.any(and_(*audit_filters, task_name_match)))
+            )
+            # Unless the asset itself matched the search, only audits and tasks whose task name
+            # matched are loaded.
+            audit_filters.append(or_(asset_search, task_name_match))
+            audit_task_filters.append(or_(asset_search, *task_name_filter))
+
+        audit_relationship = model.audit.and_(*audit_filters) if audit_filters else model.audit
+        audit_task_relationship = (
+            self._model.audit_tasks.and_(*audit_task_filters)
+            if audit_task_filters
+            else self._model.audit_tasks
+        )
 
         select_query = (
             select(model)
             .options(
-                joinedload(model.audit),
-                joinedload(model.audit).joinedload(self._model.audit_tasks),
-                joinedload(model.audit)
-                .joinedload(self._model.audit_tasks)
+                joinedload(audit_relationship)
+                .joinedload(audit_task_relationship)
                 .joinedload(AuditTask.documents),
                 joinedload(model.asset_type),
                 joinedload(model.asset_type).joinedload(AssetType.asset_type_category),
-                joinedload(model.audit.and_(*audit_filters) if audit_filters else model.audit),
             )
             .order_by(sort_order[sort_by])
             .filter(*asset_filters)

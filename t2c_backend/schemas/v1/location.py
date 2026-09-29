@@ -7,6 +7,7 @@ from t2c_backend.models import Location as LocationModel
 from t2c_backend.models import Organization as OrganizationModel
 from t2c_backend.schemas.v1.organization import DisplayOrganization, Organization
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
+from t2c_backend.utils.misc import datetime_to_epoch
 
 
 class LocationCreateRequest(BaseModel):
@@ -50,7 +51,7 @@ class LocationBaseResponse(LocationCreateRequest):
                 name=organization.name,
                 number=organization.number,
                 logo=organization.logo.get_string() if organization.logo is not None else None,
-                createdAt=int(organization.created_at.timestamp()),
+                createdAt=datetime_to_epoch(organization.created_at),
                 productPassType=ProductPassType.from_model(organization.product_pass_type),
             ),
         )
@@ -78,7 +79,7 @@ class Location(LocationBaseResponse):
                 id=organization.id,
                 name=organization.name,
                 number=organization.number,
-                createdAt=int(organization.created_at.timestamp()),
+                createdAt=datetime_to_epoch(organization.created_at),
                 productPassType=ProductPassType.from_model(organization.product_pass_type),
                 logo=organization.logo.get_string() if organization.logo is not None else None,
             ),

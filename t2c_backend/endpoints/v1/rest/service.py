@@ -12,7 +12,7 @@ from t2c_backend.schemas.v1.service import (
 )
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
-from t2c_backend.utils.enums import SortBy
+from t2c_backend.utils.enums import ServiceTypes, SortBy
 from t2c_backend.utils.misc import DictContainer
 
 router = APIRouter()
@@ -79,6 +79,7 @@ async def list_service(
     service_end_date: datetime.date = None,
     expire_start_date: datetime.date = None,
     expire_end_date: datetime.date = None,
+    service_type: ServiceTypes | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"service_read": True})),
@@ -93,6 +94,7 @@ async def list_service(
         service_end_date=service_end_date,
         expire_start_date=expire_start_date,
         expire_end_date=expire_end_date,
+        service_type=service_type,
         page=page,
         page_size=page_size,
         location_id=token.location_id,

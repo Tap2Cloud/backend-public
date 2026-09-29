@@ -3,7 +3,7 @@ import json
 import re
 import unicodedata
 from calendar import timegm
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time, timezone
 from inspect import isawaitable
 
 import tomlkit
@@ -54,6 +54,12 @@ def datetime_from_epoch(ts):
 
 def get_name_from_email(email: str) -> str | None:
     return (match := re.match(r"^[a-zA-Z]+", email.split("@")[0])) and match.group()
+
+
+def date_to_datetime_with_timezone(
+    from_date: date, to_time: time = time.min, to_timezone: timezone = UTC
+) -> datetime:
+    return datetime.combine(from_date, to_time, tzinfo=to_timezone)
 
 
 # Characters that render as nothing and would otherwise make two identical names look different:
