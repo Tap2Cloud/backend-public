@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Request
 
+from t2c_backend.clients.celery_app.tasks import verification_mail
 from t2c_backend.schemas.v1.token import AccessToken, RefreshToken, TokenResponse
 from t2c_backend.schemas.v1.user import UserRegisterRequest
 from t2c_backend.services import get_services
@@ -25,6 +26,7 @@ async def register(
         user.id,
         TokenType.EmailVerificationToken,
     )
+    verification_mail.delay(user_email="", verification_link="")
     return TokenResponse(
         access_token=str(AccessToken.for_user(user, request.app.clients.token_backend)),
         refresh_token=str(RefreshToken.for_user(user, request.app.clients.token_backend)),

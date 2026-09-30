@@ -24,5 +24,22 @@ services:
     networks:
       - t2c
 
+  t2c-rabbitmq:
+    image: rabbitmq:4.3-management-alpine
+    container_name: t2c-rabbitmq
+    hostname: t2c-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-user}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-root}
+    volumes:
+      - t2c_rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/permit-deprecated.conf:/etc/rabbitmq/conf.d/10-permit-deprecated.conf:ro
+    networks:
+      - t2c
+
 volumes:
   t2c_postgresql_data:
+  t2c_rabbitmq_data:

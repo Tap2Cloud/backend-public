@@ -26,8 +26,10 @@ from t2c_backend.utils.misc import DictContainer, _is_submodule, maybe_coroutine
 
 initial_clients = [
     "t2c_backend.clients.token_backend",
-    "t2c_backend.clients.cryptography",
+    "t2c_backend.clients.cryptography_provider",
     "t2c_backend.clients.storage",
+    "t2c_backend.clients.email_provider",
+    "t2c_backend.clients.celery_app",
 ]
 
 
@@ -219,4 +221,9 @@ def __getattr__(name):
         app = asyncio.run(CustomFastAPI.create())
         globals()["app"] = app
         return app
+    if name == "celery":
+        celery = __getattr__("app").clients.celery_app.celery
+        globals()["celery"] = celery
+        return celery
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

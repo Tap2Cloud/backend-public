@@ -1,7 +1,7 @@
 from .config import Config
 
 
-class Cryptography:
+class CryptographyProvider:
     CUSTOM_KEY = Config().CRYPTOGRAPHY_KEY
 
     def __init__(self, app) -> None:
@@ -31,4 +31,4 @@ class Cryptography:
 
 
 async def setup(app):
-    return app.add_client(Cryptography(app))
+    return app.add_client(CryptographyProvider(app))
