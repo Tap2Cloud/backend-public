@@ -24,14 +24,11 @@ class CreateAsset(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    # noinspection PyNestedDecorators
-    @model_validator(mode="before")
-    @classmethod
-    def validate_manufacturing_date(cls, data):
-        manufacturing_date = data.get("manufacturingDate")
-        if isinstance(manufacturing_date, int) and manufacturing_date <= 0:
+    @model_validator(mode="after")
+    def validate_manufacturing_date(self):
+        if self.manufacturing_date <= 0:
             raise ValueError("Invalid manufacturing date")
-        return data
+        return self
 
 
 class UpdateAsset(BaseModel):
