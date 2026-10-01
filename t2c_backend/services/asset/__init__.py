@@ -29,7 +29,8 @@ from t2c_backend.schemas.v1.asset import (
 )
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.utils.enums import AssetStatus, DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
+from t2c_backend.utils.misc import normalize_name
 
 
 class AssetService:
@@ -45,16 +46,20 @@ class AssetService:
         asset_type: AssetType,
         location: Location,
     ):
+        device_id = normalize_name(asset_data.device_id)
+        if not device_id:
+            raise BadRequestError("Device ID is required")
+
         location = await self.repository.session.merge(location)
         asset_type = await self.repository.session.merge(asset_type)
 
         await self.repository.lock_values(
-            device_id=asset_data.device_id,
+            device_id=device_id,
             location_id=location.id,
         )
 
         is_device_id_exists = await self.repository.exists(
-            device_id=asset_data.device_id,
+            device_id=device_id,
             location_id=location.id,
         )
 
@@ -62,8 +67,8 @@ class AssetService:
             raise AlreadyExistsError("Device ID already exists")
 
         asset = Asset(
-            device_id=asset_data.device_id,
-            pass_id=self.app.clients.cryptography.encode(f"{location.id}_{asset_data.device_id}"),
+            device_id=device_id,
+            pass_id=self.app.clients.cryptography.encode(f"{location.id}_{device_id}"),
             asset_type_id=asset_type.id,
             manufacturing_date=datetime.fromtimestamp(asset_data.manufacturing_date),
             location_id=location.id,
