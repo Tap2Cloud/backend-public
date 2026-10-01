@@ -29,7 +29,7 @@ class CreateAsset(BaseModel):
     @classmethod
     def validate_manufacturing_date(cls, data):
         manufacturing_date = data.get("manufacturingDate")
-        if manufacturing_date <= 0:
+        if isinstance(manufacturing_date, int) and manufacturing_date <= 0:
             raise ValueError("Invalid manufacturing date")
         return data
 
