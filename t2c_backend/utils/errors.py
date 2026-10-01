@@ -46,3 +46,9 @@ class TokenBackendError(ApplicationError):
 class InvitationTokenExpiredError(ApplicationError):
     def __init__(self, msg: str) -> None:
         super().__init__(msg, error_code=ErrorMessageCodes.TOKEN_EXPIRED, status_code=498)
+
+
+class EmailProviderError(ApplicationError):
+    def __init__(self, msg: str, retryable: bool = False) -> None:
+        super().__init__(msg, error_code=ErrorMessageCodes.SERVER_ERROR, status_code=500)
+        self.retryable = retryable
