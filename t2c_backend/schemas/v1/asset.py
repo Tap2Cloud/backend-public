@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from t2c_backend.models import Asset as AssetModel
 from t2c_backend.schemas.v1.asset_type import AssetTypeResponse, DisplayAssetType
@@ -16,7 +16,7 @@ from t2c_backend.utils.enums import AssetStatus
 class CreateAsset(BaseModel):
     location: LocationBaseResponse
     device_id: str = Field(..., alias="deviceId")
-    status: str
+    status: AssetStatus
     serial_no: str | None = Field(..., alias="serialNo")
     economic_operator: str | None = Field(..., alias="economicOperator")
     manufacturing_date: int = Field(..., alias="manufacturingDate")
@@ -24,9 +24,15 @@ class CreateAsset(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode="after")
+    def validate_manufacturing_date(self):
+        if self.manufacturing_date <= 0:
+            raise ValueError("Invalid manufacturing date")
+        return self
+
 
 class UpdateAsset(BaseModel):
-    status: str
+    status: AssetStatus
     serial_no: str | None = Field(..., alias="serialNo")
     economic_operator: str | None = Field(..., alias="economicOperator")
 
