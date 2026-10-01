@@ -22,11 +22,15 @@ async def register(
         user_data.first_name,
         user_data.last_name,
     )
-    await services.user_email_token_service.create_token(
+    email_verification_token = await services.user_email_token_service.create_token(
         user.id,
         TokenType.EmailVerificationToken,
     )
-    verification_mail.delay(user_email="", verification_link="")
+    email_verification_url = await services.authentication_service.create_token(
+        token=email_verification_token
+    )
+
+    verification_mail.delay(user_email=user.email, verification_link=email_verification_url)
     return TokenResponse(
         access_token=str(AccessToken.for_user(user, request.app.clients.token_backend)),
         refresh_token=str(RefreshToken.for_user(user, request.app.clients.token_backend)),
