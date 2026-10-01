@@ -53,6 +53,7 @@ cover/
 
 # Translations
 *.mo
+!t2c_backend/locales/**/*.mo
 *.pot
 
 # Django stuff:
