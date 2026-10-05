@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile
 
@@ -132,3 +133,11 @@ async def audit_report(
         audit_id=audit_id,
         language=accept_language,
     )
+
+
+@router.get("/public/audit-document/{documentId}/download")
+async def public_document_download(
+    document_id: uuid.UUID = Path(..., alias="documentId"),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.audit_service.public_document_download(document_id)

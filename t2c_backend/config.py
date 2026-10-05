@@ -42,6 +42,7 @@ class Config(BaseSettings):
     GUNICORN_WORKERS: int
 
     FRONTEND_URL: AnyHttpUrl
+    BACKEND_URL: AnyHttpUrl
 
     @property
     def project_root_path(self):

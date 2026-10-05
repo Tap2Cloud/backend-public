@@ -1,5 +1,7 @@
 import io
+import uuid
 from datetime import UTC, datetime, time
+from urllib.parse import quote, urljoin
 from xml.sax.saxutils import escape
 
 from babel.dates import format_date
@@ -63,6 +65,8 @@ SECTION = ParagraphStyle(
     "AuditSection", parent=STRONG, fontSize=12, leading=16, spaceBefore=18, spaceAfter=8
 )
 TABLE_HEAD = ParagraphStyle("AuditTableHead", parent=LABEL, textColor=MUTED)
+LINK = colors.HexColor("#0B5CAD")
+ALLOWED_DOCUMENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/svg+xml"}
 
 
 def _file_icon() -> Drawing:
@@ -74,8 +78,13 @@ def _file_icon() -> Drawing:
     return icon
 
 
-def _documents(documents) -> Table:
-    rows = [[_file_icon(), Paragraph(escape(doc.name), BODY)] for doc in documents]
+def _document_name(name: str, url: str) -> Paragraph:
+    href = escape(url, {'"': "&quot;"})
+    return Paragraph(f'<a href="{href}" color="{LINK.hexval()}"><u>{escape(name)}</u></a>', BODY)
+
+
+def _documents(documents, link) -> Table:
+    rows = [[_file_icon(), _document_name(doc.name, link(doc))] for doc in documents]
     table = Table(rows, colWidths=[14, None], hAlign="LEFT")
     table.setStyle(
         TableStyle(
@@ -125,6 +134,13 @@ class AuditService:
     async def create_audit_task(
         self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
     ):
+        documents = documents or []
+        for document in documents:
+            if document.content_type not in ALLOWED_DOCUMENT_TYPES:
+                raise BadRequestError(
+                    "Only JPEG, PNG, WebP or SVG images are allowed as audit documents."
+                )
+
         audit_task = await self.task_repository.save(
             AuditTask(
                 task_name=task.task_name,
@@ -139,7 +155,7 @@ class AuditService:
 
         saved_documents = []
 
-        for document in documents if documents is not None else []:
+        for document in documents:
             saved_document = await self.app.clients.storage.save_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AuditTaskDocuments,
@@ -348,6 +364,36 @@ class AuditService:
             media_type=document.content_type,
         )
 
+    def _document_link(self, document: AuditTaskDocument) -> str:
+        return urljoin(
+            str(self.app.config.BACKEND_URL),
+            f"{self.app.config.API_STR}/v1/public/audit-document/{document.id}/download",
+        )
+
+    async def public_document_download(self, document_id: uuid.UUID):
+        document = await self.task_document_repository.get_one_or_none(
+            id=document_id,
+            options=[
+                joinedload(AuditTaskDocument.audit_task)
+                .joinedload(AuditTask.audit)
+                .joinedload(Audit.asset)
+                .joinedload(Asset.location)
+            ],
+        )
+        if not document or not document.audit_task.audit:
+            raise NotFoundError("Document not found")
+
+        return StreamingResponse(
+            self.app.clients.storage.get_document(
+                organization_id=document.audit_task.audit.asset.location.organization_id,
+                document_for=DocumentFor.AuditTaskDocuments,
+                file_id=document.audit_task_id,
+                file_name=document.name,
+            ),
+            media_type=document.content_type,
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(document.name)}"},
+        )
+
     async def get_audit_report(self, asset_id: int, audit_id: int, language: Language):
         asset = await self.app.services.asset_service.repository.get_one_or_none(
             id=asset_id,
@@ -480,7 +526,9 @@ class AuditService:
                             Paragraph(escape(task.get_full_name()), BODY),
                             Paragraph(performer, SMALL),
                         ],
-                        _documents(task.documents) if task.documents else Paragraph("—", SMALL),
+                        _documents(task.documents, self._document_link)
+                        if task.documents
+                        else Paragraph("—", SMALL),
                     ]
                 )
             task_table = Table(data, colWidths=[26, 140, 110, 127, 120], repeatRows=1)
