@@ -1,3 +1,4 @@
+from endpoints.v1.rest import verification
 from fastapi import APIRouter
 
 from t2c_backend.endpoints.v1.rest import (
@@ -39,3 +40,4 @@ router.include_router(instruction_manual.router, tags=["instruction-manual"])
 router.include_router(service.router, tags=["service"])
 router.include_router(dashboard.router, tags=["dashboard"])
 router.include_router(product_pass_type.router, tags=["product-pass-type"])
+router.include_router(verification.router, tags=["verification"])

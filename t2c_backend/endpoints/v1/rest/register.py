@@ -26,8 +26,8 @@ async def register(
         user.id,
         TokenType.EmailVerificationToken,
     )
-    email_verification_url = await services.authentication_service.create_token(
-        token=email_verification_token
+    email_verification_url = services.authentication.create_link_for_user_email_verification(
+        token=email_verification_token.user_token
     )
 
     verification_mail.delay(user_email=user.email, verification_link=email_verification_url)

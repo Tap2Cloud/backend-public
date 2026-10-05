@@ -43,6 +43,9 @@ class Config(BaseSettings):
 
     FRONTEND_URL: AnyHttpUrl
 
+    USER_EMAIL_TOKEN_EXPIRY_HOURS: int
+    USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS: int
+
     @property
     def project_root_path(self):
         project_root_path = os.path.dirname(os.path.realpath(__file__))
