@@ -1,10 +1,9 @@
 from uuid import uuid4
 
-from utils.misc import aware_utcnow
-
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import UserEmailToken
 from t2c_backend.utils.enums import TokenType
+from t2c_backend.utils.misc import aware_utcnow
 
 
 class UserEmailTokenService:
