@@ -121,3 +121,27 @@ async def change_user_password(
         user_id=token.user_id,
     )
     return Response(status_code=200)
+
+
+@router.post("/user/password/reset", operation_id="reset password", name="reset-user-password")
+async def reset_password(
+    verification_token: str,
+    password: str,
+    services: DictContainer = Depends(get_services),
+):
+    # Verify the forgot password token
+    user_id = await services.user_email_token_service.mark_forgot_password_token(
+        token=verification_token
+    )
+
+    if isinstance(user_id, int):
+        await services.user_service.reset_password(user_id=user_id, password=password)
+
+    status_map = {
+        "invalid token": 401,  # Unauthorized
+        "already verified": 409,  # Conflict
+        "time expired": 400,  # Bad Request
+    }
+
+    # Return appropriate status code or success if the token is valid
+    return Response(status_code=status_map.get(user_id, 200))

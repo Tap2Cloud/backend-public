@@ -341,6 +341,15 @@ class UserService:
             unique=False,
         )
 
+    async def reset_password(self, user_id: int, password: str):
+        db_user = await self.repository.get_one_or_none(id=user_id)
+        salt, hashed_password = self.app.services.authentication.generate_encoded_password(password)
+
+        db_user.salt = salt
+        db_user.hashed_password = hashed_password
+
+        await self.repository.save(db_user)
+
 
 def setup(app, session, *args, **kwargs):
     return app.add_service(UserService(app, session), session.info["session_id"])

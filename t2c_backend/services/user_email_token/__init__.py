@@ -55,6 +55,37 @@ class UserEmailTokenService:
         await self.repository.save(user_email_token)
         return True
 
+    async def verify_forgot_password_token_wrapper(self, token: UserEmailToken) -> str | bool:
+        """Verifies the forgot password token."""
+
+        if not token or token.type == TokenType.EmailVerificationToken:
+            return "invalid token"
+
+        if token.is_used:
+            return "already verified"
+
+        if self._is_token_expired(token, is_forgot_password=True):
+            return "time expired"
+
+        return True
+
+    async def mark_forgot_password_token(self, token: str) -> str | int:
+        user_email_token = await self.find_by_token(token)
+        is_valid_token = await self.verify_forgot_password_token_wrapper(token=user_email_token)
+
+        if is_valid_token is True:
+            user_email_token.is_used = True
+            await self.repository.save(user_email_token)
+            return user_email_token.user_id
+
+        return is_valid_token
+
+    async def verify_forgot_password_token(self, token: str) -> str | bool:
+        """Verifies the forgot password token."""
+
+        user_email_token = await self.find_by_token(token)
+        return await self.verify_forgot_password_token_wrapper(user_email_token)
+
 
 def setup(app, session, *args, **kwargs):
     return app.add_service(UserEmailTokenService(app, session), session.info["session_id"])
