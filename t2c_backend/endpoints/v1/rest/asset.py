@@ -1,3 +1,5 @@
+import datetime
+
 from fastapi import APIRouter, Depends, Path, Query, Response
 
 from t2c_backend.core.pagination import CustomPage
@@ -75,6 +77,8 @@ async def list_asset(
     selective: SelectiveFilters,
     q: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
+    manufacturing_start_date: datetime.date = None,
+    manufacturing_end_date: datetime.date = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_read": True})),
@@ -87,6 +91,8 @@ async def list_asset(
         sort_by=sort_by,
         status=selective.status,
         categories=selective.categories,
+        manufacturing_start_date=manufacturing_start_date,
+        manufacturing_end_date=manufacturing_end_date,
         page=page,
         page_size=page_size,
         location_id=token.location_id,

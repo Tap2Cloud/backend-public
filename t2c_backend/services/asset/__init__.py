@@ -1,4 +1,5 @@
 import mimetypes
+from datetime import date, time
 
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
@@ -29,7 +30,7 @@ from t2c_backend.schemas.v1.asset import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.utils.enums import AssetStatus, DocumentFor, InputType, SortBy
 from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
-from t2c_backend.utils.misc import datetime_from_epoch
+from t2c_backend.utils.misc import date_to_datetime_with_timezone, datetime_from_epoch
 
 
 class AssetService:
@@ -143,6 +144,8 @@ class AssetService:
         status: list[AssetStatus] | None,
         categories: list[DisplayAssetTypeCategory] | None,
         sort_by: SortBy | None,
+        manufacturing_start_date: date = None,
+        manufacturing_end_date: date = None,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.created_at),
@@ -206,6 +209,17 @@ class AssetService:
             )
             select_query = select_query.filter(
                 self._model.asset_type.has(AssetType.asset_type_category.has(*category_condition))
+            )
+
+        if manufacturing_start_date and manufacturing_end_date:
+            manufacturing_start_date = date_to_datetime_with_timezone(manufacturing_start_date)
+            manufacturing_end_date = date_to_datetime_with_timezone(
+                manufacturing_end_date, time.max
+            )
+            select_query = select_query.filter(
+                self._model.manufacturing_date.between(
+                    manufacturing_start_date, manufacturing_end_date
+                )
             )
 
         return await apaginate(
