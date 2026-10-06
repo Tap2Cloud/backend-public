@@ -34,7 +34,8 @@ class UploadLimitMiddleware:
             return
 
         headers = Headers(scope=scope)
-        if not headers.get("content-type", "").startswith("multipart/form-data"):
+        # Media types are case-insensitive, so "Multipart/Form-Data" must be caught too.
+        if not headers.get("content-type", "").lower().startswith("multipart/form-data"):
             await self.app(scope, receive, send)
             return
 
