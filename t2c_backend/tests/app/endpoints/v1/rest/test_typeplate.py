@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import UTC
 
 import pytest
 from faker import Faker
@@ -65,14 +66,14 @@ def test_list_typeplate_with_query_asset_type_category_name(
 def test_list_typeplate_with_typeplate_created_filter(
     authenticated_client: TestClient, fake: Faker
 ):
-    start_date = fake.date_between(start_date="-30d", end_date="-5d")
-    end_date = fake.date_between(start_date=start_date, end_date="today")
+    start_date = fake.date_time_between(start_date="-30d", end_date="-5d", tzinfo=UTC)
+    end_date = fake.date_time_between(start_date=start_date, end_date="now", tzinfo=UTC)
 
     response = authenticated_client.get(
         "/api/v1/typeplate",
         params={
-            "typeplate_created_start_date": start_date.isoformat(),
-            "typeplate_created_end_date": end_date.isoformat(),
+            "typeplate_created_start_date": int(start_date.timestamp()),
+            "typeplate_created_end_date": int(end_date.timestamp()),
         },
     )
 

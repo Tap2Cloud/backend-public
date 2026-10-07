@@ -1,5 +1,3 @@
-import datetime
-
 from fastapi import APIRouter, Depends, Path, Query, Response
 
 from t2c_backend.core.pagination import CustomPage
@@ -75,10 +73,10 @@ async def delete_service_handler(
 async def list_service(
     q: str = None,
     sort_by: SortBy | None = SortBy.Latest,
-    service_start_date: datetime.date = None,
-    service_end_date: datetime.date = None,
-    expire_start_date: datetime.date = None,
-    expire_end_date: datetime.date = None,
+    service_start_date: int | None = None,
+    service_end_date: int | None = None,
+    expire_start_date: int | None = None,
+    expire_end_date: int | None = None,
     service_type: ServiceTypes | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),

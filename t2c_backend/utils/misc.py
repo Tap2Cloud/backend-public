@@ -3,12 +3,14 @@ import json
 import re
 import unicodedata
 from calendar import timegm
-from datetime import UTC, date, datetime, time, timezone
+from datetime import UTC, datetime, tzinfo
 from inspect import isawaitable
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
 
 from t2c_backend.core.db.session import get_session_context
+from t2c_backend.utils.errors import BadRequestError
 
 
 async def maybe_coroutine(func, *args, **kwargs):
@@ -52,14 +54,18 @@ def datetime_from_epoch(ts):
     return datetime.fromtimestamp(ts, tz=UTC)
 
 
+def parse_timezone(name: str | None) -> tzinfo:
+    """Resolve an IANA timezone name (e.g. ``Asia/Kolkata``); ``None`` means UTC."""
+    if not name:
+        return UTC
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise BadRequestError(f"Invalid timezone '{name}'.") from None
+
+
 def get_name_from_email(email: str) -> str | None:
     return (match := re.match(r"^[a-zA-Z]+", email.split("@")[0])) and match.group()
-
-
-def date_to_datetime_with_timezone(
-    from_date: date, to_time: time = time.min, to_timezone: timezone = UTC
-) -> datetime:
-    return datetime.combine(from_date, to_time, tzinfo=to_timezone)
 
 
 # Characters that render as nothing and would otherwise make two identical names look different:

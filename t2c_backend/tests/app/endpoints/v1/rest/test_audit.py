@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import UTC
 
 import pytest
 from faker import Faker
@@ -188,14 +189,14 @@ def test_get_audit_with_query_asset_type_name(
 
 @pytest.mark.order(after="test_get_audit_with_query_asset_type_name")
 def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient, fake: Faker):
-    start_date = fake.date_between(start_date="-30d", end_date="-5d")
-    end_date = fake.date_between(start_date=start_date, end_date="today")
+    start_date = fake.date_time_between(start_date="-30d", end_date="-5d", tzinfo=UTC)
+    end_date = fake.date_time_between(start_date=start_date, end_date="now", tzinfo=UTC)
 
     response = authenticated_client.get(
         "/api/v1/audit",
         params={
-            "inspection_start_date": start_date.isoformat(),
-            "inspection_end_date": end_date.isoformat(),
+            "inspection_start_date": int(start_date.timestamp()),
+            "inspection_end_date": int(end_date.timestamp()),
         },
     )
 
@@ -204,14 +205,16 @@ def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient,
 
 @pytest.mark.order(after="test_get_audit_with_inspection_date_filter")
 def test_get_audit_with_valid_until_filter(authenticated_client: TestClient, fake: Faker):
-    valid_start_date = fake.date_between(start_date="+1d", end_date="+30d")
-    valid_end_date = fake.date_between(start_date=valid_start_date, end_date="+60d")
+    valid_start_date = fake.date_time_between(start_date="+1d", end_date="+30d", tzinfo=UTC)
+    valid_end_date = fake.date_time_between(
+        start_date=valid_start_date, end_date="+60d", tzinfo=UTC
+    )
 
     response = authenticated_client.get(
         "/api/v1/audit",
         params={
-            "valid_until_start_date": valid_start_date.isoformat(),
-            "valid_until_end_date": valid_end_date.isoformat(),
+            "valid_until_start_date": int(valid_start_date.timestamp()),
+            "valid_until_end_date": int(valid_end_date.timestamp()),
         },
     )
 

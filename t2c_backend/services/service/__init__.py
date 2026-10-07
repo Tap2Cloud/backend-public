@@ -1,5 +1,3 @@
-from datetime import date, time
-
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
 from sqlalchemy import and_, asc, desc, or_, select
@@ -12,7 +10,7 @@ from t2c_backend.models.service import Service
 from t2c_backend.schemas.v1.service import AssetServiceResponse, CreateService
 from t2c_backend.utils.enums import ServiceTypes, SortBy
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
-from t2c_backend.utils.misc import aware_utcnow, date_to_datetime_with_timezone, datetime_from_epoch
+from t2c_backend.utils.misc import aware_utcnow, datetime_from_epoch
 
 
 class ServiceService:
@@ -91,10 +89,10 @@ class ServiceService:
         location_id: int,
         q: str,
         sort_by: SortBy | None,
-        service_start_date: date,
-        service_end_date: date,
-        expire_start_date: date,
-        expire_end_date: date,
+        service_start_date: int | None,
+        service_end_date: int | None,
+        expire_start_date: int | None,
+        expire_end_date: int | None,
         page: int,
         page_size: int,
         service_type: ServiceTypes | None = None,
@@ -108,17 +106,19 @@ class ServiceService:
         asset_filters = []
         service_filters = []
 
-        if service_start_date and service_end_date:
-            service_start_date = date_to_datetime_with_timezone(service_start_date, time.min)
-            service_end_date = date_to_datetime_with_timezone(service_end_date, time.max)
+        if service_start_date is not None and service_end_date is not None:
             service_filters.append(
-                Service.service_date.between(service_start_date, service_end_date)
+                Service.service_date.between(
+                    datetime_from_epoch(service_start_date), datetime_from_epoch(service_end_date)
+                )
             )
 
-        if expire_start_date and expire_end_date:
-            expire_start_date = date_to_datetime_with_timezone(expire_start_date, time.min)
-            expire_end_date = date_to_datetime_with_timezone(expire_end_date, time.max)
-            service_filters.append(Service.expire_date.between(expire_start_date, expire_end_date))
+        if expire_start_date is not None and expire_end_date is not None:
+            service_filters.append(
+                Service.expire_date.between(
+                    datetime_from_epoch(expire_start_date), datetime_from_epoch(expire_end_date)
+                )
+            )
 
         if service_type:
             service_filters.append(Service.service_type == service_type)

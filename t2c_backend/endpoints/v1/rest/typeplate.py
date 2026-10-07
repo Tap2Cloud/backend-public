@@ -1,4 +1,3 @@
-import datetime
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile
@@ -47,8 +46,8 @@ async def list_typeplate_details(
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    typeplate_created_start_date: datetime.date = None,
-    typeplate_created_end_date: datetime.date = None,
+    typeplate_created_start_date: int | None = None,
+    typeplate_created_end_date: int | None = None,
     typeplate_images_id: list[uuid.UUID] | None = Query(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),

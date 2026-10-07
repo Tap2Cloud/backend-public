@@ -1,5 +1,3 @@
-import datetime
-
 from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile
 
 from t2c_backend.core.pagination import CustomPage
@@ -15,7 +13,7 @@ from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import AuditTaskStatus, SortBy, TaskType
 from t2c_backend.utils.enums import Language as LanguageEnum
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import DictContainer, parse_timezone
 
 router = APIRouter()
 
@@ -57,10 +55,10 @@ async def create_audit(
 async def get_audit(
     q: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
-    inspection_start_date: datetime.date = None,
-    inspection_end_date: datetime.date = None,
-    valid_until_start_date: datetime.date = None,
-    valid_until_end_date: datetime.date = None,
+    inspection_start_date: int | None = None,
+    inspection_end_date: int | None = None,
+    valid_until_start_date: int | None = None,
+    valid_until_end_date: int | None = None,
     task_type: TaskType | None = None,
     task_status: list[AuditTaskStatus] | None = Query(None),
     page: int = Query(1, ge=1),
@@ -126,6 +124,7 @@ async def audit_report(
     asset_id: int = Path(..., alias="assetId"),
     audit_id: int = Path(..., alias="auditId"),
     accept_language: LanguageEnum | None = Header(..., alias="Accept-Language"),
+    timezone: str | None = Header(None, alias="X-Timezone"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -133,4 +132,5 @@ async def audit_report(
         asset_id=asset_id,
         audit_id=audit_id,
         language=accept_language,
+        timezone=parse_timezone(timezone),
     )

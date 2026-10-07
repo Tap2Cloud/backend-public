@@ -1,5 +1,5 @@
 import io
-from datetime import date, time
+from datetime import UTC, datetime, tzinfo
 
 from babel.dates import format_date
 from fastapi import UploadFile
@@ -30,7 +30,7 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
-from t2c_backend.utils.misc import date_to_datetime_with_timezone, datetime_from_epoch
+from t2c_backend.utils.misc import datetime_from_epoch
 
 
 class AuditService:
@@ -126,10 +126,10 @@ class AuditService:
         page_size: int,
         location_id: int,
         sort_by: SortBy | None,
-        inspection_start_date: date = None,
-        inspection_end_date: date = None,
-        valid_until_start_date: date = None,
-        valid_until_end_date: date = None,
+        inspection_start_date: int | None = None,
+        inspection_end_date: int | None = None,
+        valid_until_start_date: int | None = None,
+        valid_until_end_date: int | None = None,
         task_type: TaskType | None = None,
         task_status: list[AuditTaskStatus] | None = None,
     ):
@@ -142,18 +142,20 @@ class AuditService:
         asset_filters = []
         audit_filters = []
 
-        if inspection_start_date and inspection_end_date:
-            inspection_start_date = date_to_datetime_with_timezone(inspection_start_date)
-            inspection_end_date = date_to_datetime_with_timezone(inspection_end_date, time.max)
+        if inspection_start_date is not None and inspection_end_date is not None:
             audit_filters.append(
-                self._model.inspection_date.between(inspection_start_date, inspection_end_date)
+                self._model.inspection_date.between(
+                    datetime_from_epoch(inspection_start_date),
+                    datetime_from_epoch(inspection_end_date),
+                )
             )
 
-        if valid_until_start_date and valid_until_end_date:
-            valid_until_start_date = date_to_datetime_with_timezone(valid_until_start_date)
-            valid_until_end_date = date_to_datetime_with_timezone(valid_until_end_date, time.max)
+        if valid_until_start_date is not None and valid_until_end_date is not None:
             audit_filters.append(
-                self._model.valid_until.between(valid_until_start_date, valid_until_end_date)
+                self._model.valid_until.between(
+                    datetime_from_epoch(valid_until_start_date),
+                    datetime_from_epoch(valid_until_end_date),
+                )
             )
 
         # A single task must match every task filter, and only matching tasks are loaded.
@@ -291,7 +293,15 @@ class AuditService:
             media_type=document.content_type,
         )
 
-    async def get_audit_report(self, asset_id: int, audit_id: int, language: Language):
+    async def get_audit_report(
+        self, asset_id: int, audit_id: int, language: Language, timezone: tzinfo = UTC
+    ):
+        def local_date(value: datetime) -> str:
+            # Stored values are UTC; show the calendar day as the requester sees it.
+            return format_date(
+                value.astimezone(timezone).date(), format="long", locale=Language(language).value
+            )
+
         asset = await self.app.services.asset_service.repository.get_one_or_none(
             id=asset_id,
             options=[
@@ -352,14 +362,7 @@ class AuditService:
             [Paragraph(f"<b>{_('Asset Details:-')}</b>", styles["Heading4"])],
             [
                 Paragraph(
-                    f"<b>{_('Manufacturing Date:')}</b> "
-                    f"{
-                        format_date(
-                            asset.manufacturing_date.date(),
-                            format='long',
-                            locale=Language(language).value,
-                        )
-                    }",
+                    f"<b>{_('Manufacturing Date:')}</b> {local_date(asset.manufacturing_date)}",
                     normal_bigger,
                 )
             ],
@@ -432,10 +435,8 @@ class AuditService:
                     task.performed_by_org,
                     task.role_of_org,
                     task.get_full_name(),
-                    format_date(
-                        audit.inspection_date.date(), format="long", locale=Language(language).value
-                    ),
-                    format_date(audit.valid_until, format="long", locale=Language(language).value),
+                    local_date(audit.inspection_date),
+                    local_date(audit.valid_until),
                     Paragraph(bullet_docs, style=normal_bigger),
                 ]
             )
@@ -471,22 +472,13 @@ class AuditService:
             canvas.drawCentredString(
                 letter[0] / 2,
                 letter[1] - 40,
-                f"{_('Audit Report for')} "
-                f"{
-                    format_date(
-                        audit.inspection_date.date(), format='long', locale=Language(language).value
-                    )
-                }",
+                f"{_('Audit Report for')} {local_date(audit.inspection_date)}",
             )
 
         doc.build(elements, onFirstPage=draw_header, onLaterPages=draw_header)
 
         buffer.seek(0)
-        filename = f"audit_report_{
-            format_date(
-                audit.inspection_date.date(), format='long', locale=Language(language).value
-            )
-        }.pdf"
+        filename = f"audit_report_{local_date(audit.inspection_date)}.pdf"
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
