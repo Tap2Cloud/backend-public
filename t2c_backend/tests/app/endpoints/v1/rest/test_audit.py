@@ -1,8 +1,10 @@
 import json
 import random
-from datetime import UTC
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
+from babel.dates import format_date
 from faker import Faker
 from fastapi.testclient import TestClient
 from utils.enums import DocumentFor
@@ -188,52 +190,131 @@ def test_get_audit_with_query_asset_type_name(
 
 
 @pytest.mark.order(after="test_get_audit_with_query_asset_type_name")
-def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient, fake: Faker):
-    start_date = fake.date_time_between(start_date="-30d", end_date="-5d", tzinfo=UTC)
-    end_date = fake.date_time_between(start_date=start_date, end_date="now", tzinfo=UTC)
+def test_get_audit_with_inspection_date_filter(authenticated_client: TestClient, audit_container):
+    audit = audit_container[1]
+    inspection_date = audit["inspectionDate"]
+    start_date, end_date = inspection_date - 3600, inspection_date + 3600
 
     response = authenticated_client.get(
         "/api/v1/audit",
         params={
-            "inspection_start_date": int(start_date.timestamp()),
-            "inspection_end_date": int(end_date.timestamp()),
+            "inspection_start_date": start_date,
+            "inspection_end_date": end_date,
+            "pageSize": 1000,
         },
     )
 
     assert response.status_code == 200
+    assert audit["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["audits"]
+    ]
+    assert all(
+        start_date <= audit["inspectionDate"] <= end_date
+        for asset in response.json()["items"]
+        for audit in asset["audits"]
+    )
 
 
 @pytest.mark.order(after="test_get_audit_with_inspection_date_filter")
-def test_get_audit_with_valid_until_filter(authenticated_client: TestClient, fake: Faker):
-    valid_start_date = fake.date_time_between(start_date="+1d", end_date="+30d", tzinfo=UTC)
-    valid_end_date = fake.date_time_between(
-        start_date=valid_start_date, end_date="+60d", tzinfo=UTC
-    )
+def test_get_audit_with_inspection_date_filter_inclusive_bounds(
+    authenticated_client: TestClient, audit_container
+):
+    audit = audit_container[1]
 
     response = authenticated_client.get(
         "/api/v1/audit",
         params={
-            "valid_until_start_date": int(valid_start_date.timestamp()),
-            "valid_until_end_date": int(valid_end_date.timestamp()),
+            "inspection_start_date": audit["inspectionDate"],
+            "inspection_end_date": audit["inspectionDate"],
+            "pageSize": 1000,
         },
     )
 
     assert response.status_code == 200
+    assert audit["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["audits"]
+    ]
+
+
+@pytest.mark.order(after="test_get_audit_with_inspection_date_filter_inclusive_bounds")
+def test_get_audit_with_inspection_date_filter_out_of_range(
+    authenticated_client: TestClient, audit_container
+):
+    audit = audit_container[1]
+
+    response = authenticated_client.get(
+        "/api/v1/audit",
+        params={
+            "inspection_start_date": audit["inspectionDate"] + 1,
+            "inspection_end_date": audit["inspectionDate"] + 3600,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert audit["id"] not in [
+        item["id"] for asset in response.json()["items"] for item in asset["audits"]
+    ]
+
+
+@pytest.mark.order(after="test_get_audit_with_inspection_date_filter_out_of_range")
+def test_get_audit_with_valid_until_filter(authenticated_client: TestClient, audit_container):
+    audit = audit_container[1]
+    valid_until = audit["validUntil"]
+    start_date, end_date = valid_until - 3600, valid_until + 3600
+
+    response = authenticated_client.get(
+        "/api/v1/audit",
+        params={
+            "valid_until_start_date": start_date,
+            "valid_until_end_date": end_date,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert audit["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["audits"]
+    ]
+    assert all(
+        start_date <= audit["validUntil"] <= end_date
+        for asset in response.json()["items"]
+        for audit in asset["audits"]
+    )
 
 
 @pytest.mark.order(after="test_get_audit_with_valid_until_filter")
-def test_get_audit_with_is_audit_filter(authenticated_client: TestClient, fake: Faker):
+def test_get_audit_with_valid_until_filter_out_of_range(
+    authenticated_client: TestClient, audit_container
+):
+    audit = audit_container[1]
+
     response = authenticated_client.get(
         "/api/v1/audit",
         params={
-            "is_audit_available": True,
+            "valid_until_start_date": audit["validUntil"] - 3600,
+            "valid_until_end_date": audit["validUntil"] - 1,
+            "pageSize": 1000,
         },
     )
 
     assert response.status_code == 200
+    assert audit["id"] not in [
+        item["id"] for asset in response.json()["items"] for item in asset["audits"]
+    ]
 
 
-@pytest.mark.order(after="test_get_audit_with_is_audit_filter")
+@pytest.mark.order(after="test_get_audit_with_valid_until_filter_out_of_range")
+def test_get_audit_with_iso_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/audit",
+        params={"inspection_start_date": "2026-01-01", "inspection_end_date": "2026-01-31"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_get_audit_with_iso_date_filter")
 def test_get_audit_with_audit_task_name(authenticated_client: TestClient, audit_container):
     audit_task_name = audit_container[1]["auditTasks"][0]["taskName"]
 
@@ -295,3 +376,53 @@ def test_generate_audit_report(authenticated_client: TestClient, audit_container
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.order(after="test_generate_audit_report")
+def test_generate_audit_report_defaults_to_utc(authenticated_client: TestClient, audit_container):
+    audit = audit_container[1]
+    asset_id = audit_container[0].get("asset_id")
+
+    response = authenticated_client.get(
+        f"/api/v1/asset/{asset_id}/audit/{audit['id']}/audit-report",
+        headers={"Accept-Language": "en"},
+    )
+
+    assert response.status_code == 200
+    filename = response.headers["content-disposition"].split('filename="', 1)[1].rstrip('"')
+    local_date = datetime.fromtimestamp(audit["inspectionDate"], tz=UTC).date()
+    assert filename == f"audit_report_{format_date(local_date, format='long', locale='en')}.pdf"
+
+
+@pytest.mark.order(after="test_generate_audit_report_defaults_to_utc")
+@pytest.mark.parametrize("timezone", ["Asia/Kolkata", "Pacific/Kiritimati", "Pacific/Pago_Pago"])
+def test_generate_audit_report_with_timezone(
+    authenticated_client: TestClient, audit_container, timezone: str
+):
+    audit = audit_container[1]
+    asset_id = audit_container[0].get("asset_id")
+
+    response = authenticated_client.get(
+        f"/api/v1/asset/{asset_id}/audit/{audit['id']}/audit-report",
+        headers={"Accept-Language": "en", "X-Timezone": timezone},
+    )
+
+    assert response.status_code == 200
+    filename = response.headers["content-disposition"].split('filename="', 1)[1].rstrip('"')
+    local_date = datetime.fromtimestamp(audit["inspectionDate"], tz=ZoneInfo(timezone)).date()
+    assert filename == f"audit_report_{format_date(local_date, format='long', locale='en')}.pdf"
+
+
+@pytest.mark.order(after="test_generate_audit_report_with_timezone")
+def test_generate_audit_report_with_invalid_timezone(
+    authenticated_client: TestClient, audit_container
+):
+    audit_id = audit_container[1].get("id")
+    asset_id = audit_container[0].get("asset_id")
+
+    response = authenticated_client.get(
+        f"/api/v1/asset/{asset_id}/audit/{audit_id}/audit-report",
+        headers={"Accept-Language": "en", "X-Timezone": "Mars/Olympus_Mons"},
+    )
+
+    assert response.status_code == 400

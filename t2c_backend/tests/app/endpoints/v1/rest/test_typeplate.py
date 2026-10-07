@@ -1,6 +1,5 @@
 import json
 import random
-from datetime import UTC
 
 import pytest
 from faker import Faker
@@ -64,23 +63,85 @@ def test_list_typeplate_with_query_asset_type_category_name(
 
 @pytest.mark.order(after="test_list_typeplate_with_query_asset_type_category_name")
 def test_list_typeplate_with_typeplate_created_filter(
-    authenticated_client: TestClient, fake: Faker
+    authenticated_client: TestClient, typeplate_container
 ):
-    start_date = fake.date_time_between(start_date="-30d", end_date="-5d", tzinfo=UTC)
-    end_date = fake.date_time_between(start_date=start_date, end_date="now", tzinfo=UTC)
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+    start_date, end_date = created_at - 3600, created_at + 3600
 
     response = authenticated_client.get(
         "/api/v1/typeplate",
         params={
-            "typeplate_created_start_date": int(start_date.timestamp()),
-            "typeplate_created_end_date": int(end_date.timestamp()),
+            "typeplate_created_start_date": start_date,
+            "typeplate_created_end_date": end_date,
+            "pageSize": 1000,
         },
     )
 
     assert response.status_code == 200
+    assert typeplate["id"] in [item["id"] for item in response.json()["items"]]
+    assert all(
+        start_date <= item["typeplateDetails"]["createdAt"] <= end_date
+        for item in response.json()["items"]
+    )
 
 
 @pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter")
+def test_list_typeplate_with_typeplate_created_filter_inclusive_bounds(
+    authenticated_client: TestClient, typeplate_container
+):
+    # createdAt is truncated to the second while the stored value keeps its microseconds, so
+    # the end bound has to be the next second to include it.
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": created_at,
+            "typeplate_created_end_date": created_at + 1,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert typeplate["id"] in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter_inclusive_bounds")
+def test_list_typeplate_with_typeplate_created_filter_out_of_range(
+    authenticated_client: TestClient, typeplate_container
+):
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": created_at + 1,
+            "typeplate_created_end_date": created_at + 3600,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert typeplate["id"] not in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter_out_of_range")
+def test_list_typeplate_with_iso_typeplate_created_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": "2026-01-01",
+            "typeplate_created_end_date": "2026-01-31",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_list_typeplate_with_iso_typeplate_created_filter")
 def test_list_typeplate_with_eu_id_filter(authenticated_client: TestClient, typeplate_container):
     eu_id = typeplate_container["typeplate"]["items"][0]["typeplateDetails"]["euId"]
     response = authenticated_client.get(f"/api/v1/typeplate?q={eu_id}")

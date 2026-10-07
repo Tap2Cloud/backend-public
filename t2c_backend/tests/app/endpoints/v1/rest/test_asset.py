@@ -184,6 +184,86 @@ def test_get_asset_with_filter_category(authenticated_client: TestClient, asset_
 
 
 @pytest.mark.order(after="test_get_asset_with_filter_category")
+def test_get_asset_with_manufacturing_date_filter(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+    start_date = asset["manufacturingDate"] - 3600
+    end_date = asset["manufacturingDate"] + 3600
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": start_date,
+            "manufacturing_end_date": end_date,
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] in [item["id"] for item in response.json()["items"]]
+    assert all(
+        start_date <= item["manufacturingDate"] <= end_date for item in response.json()["items"]
+    )
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter")
+def test_get_asset_with_manufacturing_date_filter_inclusive_bounds(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": asset["manufacturingDate"],
+            "manufacturing_end_date": asset["manufacturingDate"],
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter_inclusive_bounds")
+def test_get_asset_with_manufacturing_date_filter_out_of_range(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": asset["manufacturingDate"] + 1,
+            "manufacturing_end_date": asset["manufacturingDate"] + 3600,
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] not in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter_out_of_range")
+def test_get_asset_with_iso_manufacturing_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": "2026-01-01",
+            "manufacturing_end_date": "2026-01-31",
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_get_asset_with_iso_manufacturing_date_filter")
 def test_get_asset_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):

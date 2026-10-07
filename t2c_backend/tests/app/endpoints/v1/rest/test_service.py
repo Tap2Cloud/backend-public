@@ -123,6 +123,84 @@ def test_get_service_with_query_service_type(authenticated_client: TestClient, s
 
 
 @pytest.mark.order(after="test_get_service_with_query_service_type")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+    start_date, end_date = service[field] - 3600, service[field] + 3600
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={f"{param}_start_date": start_date, f"{param}_end_date": end_date, "pageSize": 1000},
+    )
+
+    assert response.status_code == 200
+    assert service["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+    assert all(
+        start_date <= service[field] <= end_date
+        for asset in response.json()["items"]
+        for service in asset["services"]
+    )
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter_inclusive_bounds(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={
+            f"{param}_start_date": service[field],
+            f"{param}_end_date": service[field],
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert service["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter_inclusive_bounds")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter_out_of_range(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={
+            f"{param}_start_date": service[field] + 1,
+            f"{param}_end_date": service[field] + 3600,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert service["id"] not in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter_out_of_range")
+def test_get_service_with_iso_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={"service_start_date": "2026-01-01", "service_end_date": "2026-01-31"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_get_service_with_iso_date_filter")
 def test_get_service_with_id(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.get(f"/api/v1/service/{service_id}")
