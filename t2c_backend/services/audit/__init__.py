@@ -130,9 +130,8 @@ class AuditService:
         inspection_end_date: date = None,
         valid_until_start_date: date = None,
         valid_until_end_date: date = None,
-        is_audit_available: bool = None,
         task_type: TaskType | None = None,
-        task_status: AuditTaskStatus | None = None,
+        task_status: list[AuditTaskStatus] | None = None,
     ):
         model = Asset
         sort_order = {
@@ -162,7 +161,7 @@ class AuditService:
         if task_type:
             audit_task_filters.append(AuditTask.task_type == task_type)
         if task_status:
-            audit_task_filters.append(AuditTask.status == task_status)
+            audit_task_filters.append(AuditTask.status.in_(task_status))
 
         if audit_task_filters:
             audit_filters.append(self._model.audit_tasks.any(and_(*audit_task_filters)))
@@ -170,9 +169,6 @@ class AuditService:
         # A single audit must match every audit filter, and only matching audits are loaded.
         if audit_filters:
             asset_filters.append(model.audit.any(and_(*audit_filters)))
-
-        if is_audit_available:
-            asset_filters.append(model.audit.any())
 
         if q:
             serial_no_filter = BaseRepository.parse_filters(model, serial_no__ilike=f"%{q}%")
