@@ -19,6 +19,7 @@ from t2c_backend.core.error_handlers import application_exception_handler
 from t2c_backend.core.event_handlers import lifespan
 from t2c_backend.core.middlewares.language import LanguageMiddleware
 from t2c_backend.core.middlewares.sqlalchemy import SQLAlchemyMiddleware
+from t2c_backend.core.middlewares.upload_limit import UploadLimitMiddleware
 from t2c_backend.endpoints.router import api_router
 from t2c_backend.utils.enums import ENVIRONMENT
 from t2c_backend.utils.errors import ApplicationError
@@ -65,6 +66,11 @@ def get_middleware_stack(app_config):
         ),
         Middleware(SQLAlchemyMiddleware),
         Middleware(LanguageMiddleware),
+        # After LanguageMiddleware so the locale is set for the rejection message.
+        Middleware(
+            UploadLimitMiddleware,
+            max_bytes=app_config.MAX_UPLOAD_SIZE_MB * 1024 * 1024,
+        ),
     ]
 
 
