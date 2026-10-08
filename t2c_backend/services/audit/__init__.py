@@ -1,18 +1,21 @@
 import io
+import uuid
 from datetime import UTC, datetime, tzinfo
+from urllib.parse import quote, urljoin
+from xml.sax.saxutils import escape
 
 from babel.dates import format_date
 from fastapi import UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
+from reportlab.graphics.shapes import Drawing, Polygon, PolyLine
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4, landscape, letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen.canvas import Canvas
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy import and_, asc, desc, or_, select
 from sqlalchemy.orm import joinedload
 
@@ -32,6 +35,93 @@ from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, Sort
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
 from t2c_backend.utils.misc import datetime_from_epoch
 
+PAGE = A4
+MARGIN = 36
+HEADER_HEIGHT = 64
+CONTENT_WIDTH = PAGE[0] - 2 * MARGIN
+
+# Matches the frontend theme (frontend/src/theme-config.ts and its grey scale).
+INK = colors.HexColor("#1C252E")
+MUTED = colors.HexColor("#637381")
+BORDER = colors.HexColor("#DFE3E8")
+SURFACE = colors.HexColor("#F9FAFB")
+NEUTRAL = colors.HexColor("#F0F0F0")
+BRAND = colors.HexColor("#AFCB08")
+BRAND_DARK = colors.HexColor("#333333")
+
+# (text colour, background) per task status: the frontend's soft label, its `dark`
+# shade on `main` at 16% opacity over white.
+STATUS_COLORS = {
+    AuditTaskStatus.PASSED: (colors.HexColor("#118D57"), colors.HexColor("#DCF6E5")),
+    AuditTaskStatus.CONDITIONAL: (colors.HexColor("#B76E00"), colors.HexColor("#FFF2D6")),
+    AuditTaskStatus.FAILED: (colors.HexColor("#B71D18"), colors.HexColor("#FFE4DE")),
+}
+
+BODY = ParagraphStyle("AuditBody", fontName="Helvetica", fontSize=9.5, leading=13, textColor=INK)
+STRONG = ParagraphStyle("AuditStrong", parent=BODY, fontName="Helvetica-Bold")
+SMALL = ParagraphStyle("AuditSmall", parent=BODY, fontSize=8, leading=11, textColor=MUTED)
+LABEL = ParagraphStyle("AuditLabel", parent=SMALL, fontName="Helvetica-Bold")
+VALUE = ParagraphStyle("AuditValue", parent=STRONG, fontSize=11, leading=15)
+SECTION = ParagraphStyle(
+    "AuditSection", parent=STRONG, fontSize=12, leading=16, spaceBefore=18, spaceAfter=8
+)
+TABLE_HEAD = ParagraphStyle("AuditTableHead", parent=LABEL, textColor=MUTED)
+LINK = colors.HexColor("#0B5CAD")
+ALLOWED_DOCUMENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/svg+xml"}
+
+
+def _file_icon() -> Drawing:
+    """A page outline with a folded corner, sized to sit beside a line of body text."""
+    icon = Drawing(9, 11)
+    style = {"strokeColor": MUTED, "strokeWidth": 0.8, "strokeLineJoin": 1}
+    icon.add(Polygon([0.5, 0.5, 8.5, 0.5, 8.5, 7.5, 5.5, 10.5, 0.5, 10.5], fillColor=None, **style))
+    icon.add(PolyLine([5.5, 10.5, 5.5, 7.5, 8.5, 7.5], **style))
+    return icon
+
+
+def _document_name(name: str, url: str) -> Paragraph:
+    href = escape(url, {'"': "&quot;"})
+    return Paragraph(f'<a href="{href}" color="{LINK.hexval()}"><u>{escape(name)}</u></a>', BODY)
+
+
+def _documents(documents, link) -> Table:
+    rows = [[_file_icon(), _document_name(doc.name, link(doc))] for doc in documents]
+    table = Table(rows, colWidths=[14, None], hAlign="LEFT")
+    table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (0, -1), 1.5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (1, 0), (1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]
+        )
+    )
+    return table
+
+
+def _pill(text: str, status: AuditTaskStatus) -> Table:
+    fg, bg = STATUS_COLORS[status]
+    style = ParagraphStyle("AuditPill", parent=LABEL, textColor=fg, alignment=1)
+    text = text.upper()
+    width = stringWidth(text, style.fontName, style.fontSize) + 18
+    pill = Table([[Paragraph(text, style)]], colWidths=[width], hAlign="LEFT")
+    pill.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), bg),
+                ("ROUNDEDCORNERS", [8, 8, 8, 8]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]
+        )
+    )
+    return pill
+
 
 class AuditService:
     _model = Audit
@@ -45,6 +135,13 @@ class AuditService:
     async def create_audit_task(
         self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
     ):
+        documents = documents or []
+        for document in documents:
+            if document.content_type not in ALLOWED_DOCUMENT_TYPES:
+                raise BadRequestError(
+                    "Only JPEG, PNG, WebP or SVG images are allowed as audit documents."
+                )
+
         audit_task = await self.task_repository.save(
             AuditTask(
                 task_name=task.task_name,
@@ -59,7 +156,7 @@ class AuditService:
 
         saved_documents = []
 
-        for document in documents if documents is not None else []:
+        for document in documents:
             saved_document = await self.app.clients.storage.save_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AuditTaskDocuments,
@@ -293,15 +390,39 @@ class AuditService:
             media_type=document.content_type,
         )
 
+    def _document_link(self, document: AuditTaskDocument) -> str:
+        return urljoin(
+            str(self.app.config.BACKEND_URL),
+            f"{self.app.config.API_STR}/v1/public/audit-document/{document.id}/download",
+        )
+
+    async def public_document_download(self, document_id: uuid.UUID):
+        document = await self.task_document_repository.get_one_or_none(
+            id=document_id,
+            options=[
+                joinedload(AuditTaskDocument.audit_task)
+                .joinedload(AuditTask.audit)
+                .joinedload(Audit.asset)
+                .joinedload(Asset.location)
+            ],
+        )
+        if not document or not document.audit_task.audit:
+            raise NotFoundError("Document not found")
+
+        return StreamingResponse(
+            self.app.clients.storage.get_document(
+                organization_id=document.audit_task.audit.asset.location.organization_id,
+                document_for=DocumentFor.AuditTaskDocuments,
+                file_id=document.audit_task_id,
+                file_name=document.name,
+            ),
+            media_type=document.content_type,
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(document.name)}"},
+        )
+
     async def get_audit_report(
         self, asset_id: int, audit_id: int, language: Language, timezone: tzinfo = UTC
     ):
-        def local_date(value: datetime) -> str:
-            # Stored values are UTC; show the calendar day as the requester sees it.
-            return format_date(
-                value.astimezone(timezone).date(), format="long", locale=Language(language).value
-            )
-
         asset = await self.app.services.asset_service.repository.get_one_or_none(
             id=asset_id,
             options=[
@@ -323,162 +444,205 @@ class AuditService:
         if not audit:
             raise NotFoundError("Audit not found")
 
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer, pagesize=landscape(A4), topMargin=70, leftMargin=40, rightMargin=40
-        )
-        elements = []
-        styles = getSampleStyleSheet()
+        locale = Language(language).value
 
-        normal_bigger = ParagraphStyle(
-            name="NormalBigger", parent=styles["Normal"], fontSize=11, leading=14
-        )
-        green_bold = ParagraphStyle(
-            "GreenBold",
-            parent=styles["Normal"],
-            alignment=TA_CENTER,
-            textColor=colors.green,
-            fontSize=11,
-            leading=14,
-        )
-        red_bold = ParagraphStyle(
-            "RedBold",
-            parent=styles["Normal"],
-            alignment=TA_CENTER,
-            textColor=colors.red,
-            fontSize=11,
-            leading=14,
-        )
-        orange_bold = ParagraphStyle(
-            "OrangeBold",
-            parent=styles["Normal"],
-            alignment=TA_CENTER,
-            textColor=colors.orange,
-            fontSize=11,
-            leading=14,
-        )
+        def date(value: datetime) -> str:
+            # Stored values are UTC; show the calendar day as the requester sees it.
+            return format_date(value.astimezone(timezone).date(), format="long", locale=locale)
 
-        asset_info_data = [
-            [Paragraph(f"<b>{_('Asset Details:-')}</b>", styles["Heading4"])],
-            [
-                Paragraph(
-                    f"<b>{_('Manufacturing Date:')}</b> {local_date(asset.manufacturing_date)}",
-                    normal_bigger,
-                )
-            ],
+        status_labels = {
+            AuditTaskStatus.PASSED: _("Passed"),
+            AuditTaskStatus.CONDITIONAL: _("Conditional"),
+            AuditTaskStatus.FAILED: _("Failed"),
+        }
+        type_labels = {TaskType.audit: _("Audit"), TaskType.inspection: _("Inspection")}
+
+        tasks = audit.audit_tasks
+        statuses = [AuditTaskStatus(task.status) for task in tasks]
+        inspection_date = date(audit.inspection_date)
+        generated_on = date(datetime.now(UTC))
+
+        # Summary cards
+        counts = ", ".join(
+            f"{statuses.count(status)} {status_labels[status].lower()}"
+            for status in STATUS_COLORS
+            if statuses.count(status)
+        )
+        cards = [
+            (_("Inspection Date"), inspection_date),
+            (_("Valid Until"), date(audit.valid_until)),
+            (_("Tasks"), f"{len(tasks)}", counts),
         ]
-        if asset.serial_no:
-            asset_info_data.append(
-                [Paragraph(f"<b>{_('Serial Number:')}</b> {asset.serial_no}", normal_bigger)]
-            )
-        asset_info_data.append(
-            [Paragraph(f"<b>{_('Asset Type:')}</b> {asset.asset_type.name}", normal_bigger)]
-        )
-        asset_info_data.append(
-            [
-                Paragraph(
-                    f"<b>{_('Asset Type Category:')}</b> "
-                    f"{asset.asset_type.asset_type_category.name}",
-                    normal_bigger,
-                )
+        # Cards alternate with empty gap columns so each can have its own box.
+        gap = 10
+        card_width = (CONTENT_WIDTH - gap * (len(cards) - 1)) / len(cards)
+        row, widths = [], []
+        for label, value, *note in cards:
+            cell = [Paragraph(escape(label).upper(), LABEL), Spacer(1, 6)]
+            cell.append(Paragraph(escape(value), VALUE))
+            if note and note[0]:
+                cell.append(Paragraph(escape(note[0]), SMALL))
+            row += [cell, ""]
+            widths += [card_width, gap]
+        summary = Table([row[:-1]], colWidths=widths[:-1])
+        summary_style = [
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+        ]
+        for i in range(0, len(cards) * 2, 2):
+            summary_style += [
+                ("BACKGROUND", (i, 0), (i, 0), SURFACE),
+                ("BOX", (i, 0), (i, 0), 0.75, BORDER),
             ]
-        )
-        asset_table = Table(asset_info_data, colWidths=[590], hAlign="LEFT")
+        summary.setStyle(TableStyle(summary_style))
+
+        # Asset details: label/value pairs, two per row
+        details = [
+            (_("Asset Type"), asset.asset_type.name),
+            (_("Asset Type Category"), asset.asset_type.asset_type_category.name),
+            (_("Serial Number"), asset.serial_no),
+            (_("Manufacturing Date"), date(asset.manufacturing_date)),
+            (_("Pass ID"), asset.pass_id),
+            (_("Economic Operator"), asset.economic_operator),
+        ]
+        details = [(label, value) for label, value in details if value]
+        rows = []
+        for i in range(0, len(details), 2):
+            row = []
+            for label, value in details[i : i + 2]:
+                row += [Paragraph(escape(label), SMALL), Paragraph(escape(str(value)), STRONG)]
+            rows.append(row + [""] * (4 - len(row)))
+        label_width, value_width = 95, CONTENT_WIDTH / 2 - 95
+        asset_table = Table(rows, colWidths=[label_width, value_width] * 2)
         asset_table.setStyle(
             TableStyle(
                 [
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LINEBELOW", (0, 0), (-1, -1), 0.5, BORDER),
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                    ("TOPPADDING", (0, 0), (-1, -1), 2),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
                 ]
             )
         )
-        elements.append(asset_table)
-        elements.append(Spacer(1, 0.3 * inch))
 
-        data = [
-            [
-                "#",
-                _("Task Name & \nType"),
-                _("Status"),
-                _("Organization"),
-                _("Role"),
-                _("Full Name"),
-                _("Inspection Date"),
-                _("Valid Until"),
-                _("Documents"),
-            ]
+        # Tasks
+        elements = [
+            summary,
+            Paragraph(escape(_("Asset Details")), SECTION),
+            asset_table,
+            Paragraph(escape(_("Tasks")), SECTION),
         ]
-        for index, task in enumerate(audit.audit_tasks):
-            if task.status == AuditTaskStatus.PASSED:
-                status_para = Paragraph(
-                    f"{_(AuditTaskStatus(task.status).value)}", style=green_bold
+        if tasks:
+            headers = ["#", _("Task"), _("Status"), _("Performed By"), _("Documents")]
+            data = [[Paragraph(escape(h).upper(), TABLE_HEAD) for h in headers]]
+            for index, task in enumerate(tasks, start=1):
+                performer = " · ".join(
+                    escape(part) for part in (task.role_of_org, task.performed_by_org) if part
                 )
-            elif task.status == AuditTaskStatus.CONDITIONAL:
-                status_para = Paragraph(
-                    f"{_(AuditTaskStatus(task.status).value)}", style=orange_bold
+                data.append(
+                    [
+                        Paragraph(str(index), SMALL),
+                        [
+                            Paragraph(escape(task.task_name), STRONG),
+                            Paragraph(type_labels.get(TaskType(task.task_type), ""), SMALL),
+                        ],
+                        _pill(status_labels[AuditTaskStatus(task.status)], task.status),
+                        [
+                            Paragraph(escape(task.get_full_name()), BODY),
+                            Paragraph(performer, SMALL),
+                        ],
+                        _documents(task.documents, self._document_link)
+                        if task.documents
+                        else Paragraph("—", SMALL),
+                    ]
                 )
-            else:
-                status_para = Paragraph(f"{_(AuditTaskStatus(task.status).value)}", style=red_bold)
-
-            if task.documents:
-                bullet_docs = "<br/>".join([f"&bull; {doc.name}" for doc in task.documents])
-            else:
-                bullet_docs = "N/A"
-
-            data.append(
-                [
-                    index + 1,
-                    Paragraph(f"{task.task_name} - {TaskType(task.task_type)}"),
-                    status_para,
-                    task.performed_by_org,
-                    task.role_of_org,
-                    task.get_full_name(),
-                    local_date(audit.inspection_date),
-                    local_date(audit.valid_until),
-                    Paragraph(bullet_docs, style=normal_bigger),
-                ]
+            task_table = Table(data, colWidths=[26, 140, 110, 127, 120], repeatRows=1)
+            task_table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), NEUTRAL),
+                        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, SURFACE]),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.5, BORDER),
+                        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                        ("LEFTPADDING", (0, 0), (0, -1), 4),
+                        ("RIGHTPADDING", (0, 0), (0, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ]
+                )
             )
+            elements.append(task_table)
+        else:
+            elements.append(Paragraph(escape(_("No tasks were recorded for this audit.")), SMALL))
 
-        column_widths = [30, 80, 90, 100, 80, 90, 100, 100, 150]
-        table = Table(data, colWidths=column_widths, repeatRows=1)
+        title = _("Audit Report")
+        subtitle = f"{asset.asset_type.name} · {inspection_date}"
+        footer = f"{_('Generated on')} {generated_on}"
+        page_label = _("Page {page} of {total}")
 
-        table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.floralwhite),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-                    ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-                    ("ALIGN", (0, 1), (0, -1), "CENTER"),
-                    ("ALIGN", (1, 1), (1, -1), "LEFT"),
-                    ("ALIGN", (2, 1), (-1, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 10),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 1), (-1, -1), 6),
-                    ("BACKGROUND", (0, 1), (-1, -1), colors.white),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ]
-            )
+        class ReportCanvas(Canvas):
+            """Draws header and footer once every page is known, so the footer can say 'of N'."""
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._pages = []
+
+            def showPage(self):  # noqa: N802 — ReportLab API name
+                self._pages.append(dict(self.__dict__))
+                self._startPage()
+
+            def save(self):
+                for number, state in enumerate(self._pages, start=1):
+                    self.__dict__.update(state)
+                    self._decorate(number, len(self._pages))
+                    super().showPage()
+                super().save()
+
+            def _decorate(self, number: int, total: int):
+                width, height = PAGE
+                self.setFillColor(BRAND_DARK)
+                self.rect(0, height - HEADER_HEIGHT, width, HEADER_HEIGHT, stroke=0, fill=1)
+                self.setFillColor(BRAND)
+                self.rect(0, height - HEADER_HEIGHT - 4, width, 4, stroke=0, fill=1)
+                self.setFillColor(colors.white)
+                self.setFont("Helvetica-Bold", 18)
+                self.drawString(MARGIN, height - 32, title)
+                self.setFont("Helvetica", 10)
+                self.setFillColor(colors.HexColor("#ABABAB"))
+                self.drawString(MARGIN, height - 49, subtitle)
+
+                self.setStrokeColor(BORDER)
+                self.setLineWidth(0.5)
+                self.line(MARGIN, 30, width - MARGIN, 30)
+                self.setFont("Helvetica", 8)
+                self.setFillColor(MUTED)
+                self.drawString(MARGIN, 18, footer)
+                self.drawRightString(
+                    width - MARGIN, 18, page_label.format(page=number, total=total)
+                )
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=PAGE,
+            title=f"{title} – {subtitle}",
+            topMargin=HEADER_HEIGHT + 24,
+            bottomMargin=48,
+            # The frame pads its content by 6pt; offset it so content lines up with MARGIN.
+            leftMargin=MARGIN - 6,
+            rightMargin=MARGIN - 6,
         )
-        elements.append(table)
-
-        def draw_header(canvas: Canvas, doc):
-            canvas.setFont("Helvetica-Bold", 16)
-            canvas.drawCentredString(
-                letter[0] / 2,
-                letter[1] - 40,
-                f"{_('Audit Report for')} {local_date(audit.inspection_date)}",
-            )
-
-        doc.build(elements, onFirstPage=draw_header, onLaterPages=draw_header)
+        doc.build([KeepTogether(elements[:3]), *elements[3:]], canvasmaker=ReportCanvas)
 
         buffer.seek(0)
-        filename = f"audit_report_{local_date(audit.inspection_date)}.pdf"
+        filename = f"audit_report_{inspection_date}.pdf"
         return StreamingResponse(
             buffer,
             media_type="application/pdf",

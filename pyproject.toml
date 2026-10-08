@@ -55,3 +55,8 @@ select = ["I", "N", "A", "UP", "F", "E", "T20"]
 include = ["t2c_backend*"]
 exclude = ["data*", "images*", "alembic*", "development*", "tests*"]
 
+# Ship the source catalogs so downstream projects can merge them into their own
+# (see t2c_backend/core/i18n/sync.py); compiled .mo files are never committed.
+[tool.setuptools.package-data]
+t2c_backend = ["locales/*/LC_MESSAGES/*.po"]
+

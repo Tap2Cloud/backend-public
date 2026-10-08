@@ -1,0 +1,113 @@
+# German translations for tap2cloud-backend-opensource.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the tap2cloud-backend-opensource project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: tap2cloud-backend-opensource VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-10-01 19:28+0530\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: services/audit/__init__.py
+msgid "Audit Report"
+msgstr "Prüfbericht"
+
+#: services/audit/__init__.py
+msgid "Asset Details"
+msgstr "Anlagedetails"
+
+#: services/audit/__init__.py
+msgid "Asset Type"
+msgstr "Anlagetyp"
+
+#: services/audit/__init__.py
+msgid "Asset Type Category"
+msgstr "Anlagetyp-Kategorie"
+
+#: services/audit/__init__.py
+msgid "Serial Number"
+msgstr "Seriennummer"
+
+#: services/audit/__init__.py
+msgid "Manufacturing Date"
+msgstr "Herstellungsdatum"
+
+#: services/audit/__init__.py
+msgid "Pass ID"
+msgstr "Pass-ID"
+
+#: services/audit/__init__.py
+msgid "Economic Operator"
+msgstr "Wirtschaftsakteur"
+
+#: services/audit/__init__.py
+msgid "Inspection Date"
+msgstr "Inspektionsdatum"
+
+#: services/audit/__init__.py
+msgid "Valid Until"
+msgstr "Gültig bis"
+
+#: services/audit/__init__.py
+msgid "Tasks"
+msgstr "Aufgaben"
+
+#: services/audit/__init__.py
+msgid "Task"
+msgstr "Aufgabe"
+
+#: services/audit/__init__.py
+msgid "Status"
+msgstr "Status"
+
+#: services/audit/__init__.py
+msgid "Performed By"
+msgstr "Durchgeführt von"
+
+#: services/audit/__init__.py
+msgid "Documents"
+msgstr "Dokumente"
+
+#: services/audit/__init__.py
+msgid "Passed"
+msgstr "Bestanden"
+
+#: services/audit/__init__.py
+msgid "Conditional"
+msgstr "Bedingt"
+
+#: services/audit/__init__.py
+msgid "Failed"
+msgstr "Nicht bestanden"
+
+#: services/audit/__init__.py
+msgid "Audit"
+msgstr "Audit"
+
+#: services/audit/__init__.py
+msgid "Inspection"
+msgstr "Inspektion"
+
+#: services/audit/__init__.py
+msgid "No tasks were recorded for this audit."
+msgstr "Für dieses Audit wurden keine Aufgaben erfasst."
+
+#: services/audit/__init__.py
+#, python-brace-format
+msgid "Page {page} of {total}"
+msgstr "Seite {page} von {total}"
+
+#: services/audit/__init__.py
+msgid "Generated on"
+msgstr "Erstellt am"
+

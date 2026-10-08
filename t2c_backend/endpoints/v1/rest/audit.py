@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile
 
 from t2c_backend.core.pagination import CustomPage
@@ -159,3 +161,11 @@ async def audit_report(
         language=accept_language,
         timezone=parse_timezone(timezone),
     )
+
+
+@router.get("/public/audit-document/{documentId}/download")
+async def public_document_download(
+    document_id: uuid.UUID = Path(..., alias="documentId"),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.audit_service.public_document_download(document_id)

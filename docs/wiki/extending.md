@@ -661,6 +661,30 @@ schema, service, and startup client — with zero changes to `backend-public`.
 
 ---
 
+## Translations
+
+The core ships only its source catalogs (`t2c_backend/locales/<lang>/LC_MESSAGES/messages.po`);
+compiled `.mo` files are never committed. Keep your own catalogs in your project, merge the core's
+messages into them, then compile one `messages.mo` per language as part of your build or deploy:
+
+```bash
+# After `pybabel extract` / `pybabel update` for your own sources:
+python -m t2c_backend.core.i18n.sync private_backend/locales
+pybabel compile -d private_backend/locales -D messages
+```
+
+The sync tags every message it copies with a `#. t2c_backend` comment and refreshes those on each run,
+so a core upgrade brings its new and changed translations with it. A message you define yourself
+(without that comment) wins over a core message with the same msgid. Run the sync after
+`pybabel update`, which marks the core messages obsolete because they aren't in your sources.
+
+The core loads catalogs from `<PROJECT_ROOT_PATH>/locales`, where `PROJECT_ROOT_PATH` is set by
+`Config.project_root_path` and defaults to the installed `t2c_backend` package. Override that property
+in your `Config` subclass to point at your package, so your compiled catalogs are the ones loaded. The
+disk storage backend resolves `BUCKET` against the same path.
+
+---
+
 ## The extension API, at a glance
 
 These are the concrete hooks on `CustomFastAPI` (see `t2c_backend/main.py`):
