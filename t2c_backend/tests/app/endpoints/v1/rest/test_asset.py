@@ -146,6 +146,33 @@ def test_create_asset_with_fake_asset_type(
 
 
 @pytest.mark.order(after="test_create_asset_with_fake_asset_type")
+def test_create_asset_with_milliseconds_manufacturing_date(
+    authenticated_client: TestClient,
+    asset,
+    asset_type_category_mapping_container,
+    container,
+):
+    asset = {
+        **asset,
+        "location": container["location"],
+        "assetType": dict(
+            random.choice(
+                random.choice(asset_type_category_mapping_container["asset_type_category"])[
+                    "assetTypes"
+                ]
+            )
+        ),
+        "status": random.choice(list(AssetStatus)),
+        "manufacturingDate": 1791311400000,
+    }
+
+    response = authenticated_client.post("/api/v1/asset", json={**asset})
+
+    assert response.status_code == 422
+    assert "manufacturingDate" in response.text
+
+
+@pytest.mark.order(after="test_create_asset_with_milliseconds_manufacturing_date")
 def test_get_asset_with_unauthenticated_client(client: TestClient):
     response = client.put("/api/v1/asset", json={"categories": None, "status": None})
 
@@ -264,6 +291,18 @@ def test_get_asset_with_iso_manufacturing_date_filter(authenticated_client: Test
 
 
 @pytest.mark.order(after="test_get_asset_with_iso_manufacturing_date_filter")
+def test_get_asset_with_milliseconds_manufacturing_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={"manufacturing_start_date": 0, "manufacturing_end_date": 1791311400000},
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 422
+    assert "manufacturing_end_date" in response.text
+
+
+@pytest.mark.order(after="test_get_asset_with_milliseconds_manufacturing_date_filter")
 def test_get_asset_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):

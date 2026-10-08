@@ -11,6 +11,7 @@ from t2c_backend.models import AuditTaskDocument as AuditTaskDocumentModel
 from t2c_backend.utils.enums import AuditTaskStatus, TaskType
 from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.utils.misc import (
+    EpochSeconds,
     datetime_from_epoch,
     datetime_to_epoch,
 )
@@ -20,7 +21,7 @@ class AuditTaskDocument(BaseModel):
     id: uuid.UUID
     name: str
     content_type: str = Field(..., alias="contentType")
-    created_at: int = Field(..., alias="createdAt")
+    created_at: EpochSeconds = Field(..., alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -124,8 +125,8 @@ class AuditTaskResponse(BaseModel):
 
 
 class CreateAudit(BaseModel):
-    inspection_date: int = Field(..., alias="inspectionDate")
-    valid_until: int = Field(..., alias="validUntil")
+    inspection_date: EpochSeconds = Field(..., alias="inspectionDate")
+    valid_until: EpochSeconds = Field(..., alias="validUntil")
     audit_tasks: list[AuditTaskResponse] = Field(..., alias="auditTasks")
 
     model_config = ConfigDict(from_attributes=True)

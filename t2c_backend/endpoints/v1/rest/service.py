@@ -11,7 +11,7 @@ from t2c_backend.schemas.v1.service import (
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import ServiceTypes, SortBy
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import MAX_EPOCH_SECONDS, MIN_EPOCH_SECONDS, DictContainer
 
 router = APIRouter()
 
@@ -73,10 +73,30 @@ async def delete_service_handler(
 async def list_service(
     q: str = None,
     sort_by: SortBy | None = SortBy.Latest,
-    service_start_date: int | None = Query(None, description="Unix timestamp (seconds)"),
-    service_end_date: int | None = Query(None, description="Unix timestamp (seconds)"),
-    expire_start_date: int | None = Query(None, description="Unix timestamp (seconds)"),
-    expire_end_date: int | None = Query(None, description="Unix timestamp (seconds)"),
+    service_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    service_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    expire_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    expire_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
     service_type: ServiceTypes | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),

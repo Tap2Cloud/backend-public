@@ -163,6 +163,27 @@ def test_create_audit_with_fake_asset_id(
 
 
 @pytest.mark.order(after="test_create_audit_with_fake_asset_id")
+def test_create_audit_with_milliseconds_dates(
+    authenticated_client: TestClient, audit, audit_task_container, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/audit",
+        json={
+            **audit,
+            "inspectionDate": 1791311400000,
+            "validUntil": 1791311400000 + 1,
+            "auditTasks": audit_task_container,
+        },
+    )
+
+    assert response.status_code == 422
+    assert "inspectionDate" in response.text
+    assert "validUntil" in response.text
+
+
+@pytest.mark.order(after="test_create_audit_with_milliseconds_dates")
 def test_get_audit(authenticated_client: TestClient):
     response = authenticated_client.get("/api/v1/audit")
 
@@ -315,6 +336,17 @@ def test_get_audit_with_iso_date_filter(authenticated_client: TestClient):
 
 
 @pytest.mark.order(after="test_get_audit_with_iso_date_filter")
+def test_get_audit_with_milliseconds_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/audit",
+        params={"inspection_start_date": 0, "inspection_end_date": 1791311400000},
+    )
+
+    assert response.status_code == 422
+    assert "inspection_end_date" in response.text
+
+
+@pytest.mark.order(after="test_get_audit_with_milliseconds_date_filter")
 def test_get_audit_with_audit_task_name(authenticated_client: TestClient, audit_container):
     audit_task_name = audit_container[1]["auditTasks"][0]["taskName"]
 

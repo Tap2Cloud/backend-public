@@ -14,7 +14,7 @@ from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import SortBy
 from t2c_backend.utils.errors import NotFoundError
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import MAX_EPOCH_SECONDS, MIN_EPOCH_SECONDS, DictContainer
 
 router = APIRouter()
 
@@ -75,8 +75,18 @@ async def list_asset(
     selective: SelectiveFilters,
     q: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
-    manufacturing_start_date: int | None = None,
-    manufacturing_end_date: int | None = None,
+    manufacturing_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    manufacturing_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_read": True})),

@@ -5,9 +5,11 @@ import unicodedata
 from calendar import timegm
 from datetime import UTC, datetime, tzinfo
 from inspect import isawaitable
+from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
+from pydantic import Field
 
 from t2c_backend.core.db.session import get_session_context
 from t2c_backend.utils.errors import BadRequestError
@@ -40,6 +42,14 @@ async def json_or_text(response):
         pass
 
     return text
+
+
+# Accepted range for Unix timestamps (seconds) coming from clients: 1900-01-01T00:00:00Z to
+# 9998-12-31T23:59:59Z. Anything outside (e.g. milliseconds) is rejected with a 422 instead of
+# overflowing datetime; the upper bound leaves room to shift the value into any timezone.
+MIN_EPOCH_SECONDS = -2208988800
+MAX_EPOCH_SECONDS = 253370764799
+EpochSeconds = Annotated[int, Field(ge=MIN_EPOCH_SECONDS, le=MAX_EPOCH_SECONDS)]
 
 
 def datetime_to_epoch(dt):

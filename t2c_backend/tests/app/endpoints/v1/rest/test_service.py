@@ -57,6 +57,52 @@ def test_create_service_with_invalid_expiry_date(
 
 
 @pytest.mark.order(after="test_create_service_with_invalid_expiry_date")
+def test_create_service_with_milliseconds_dates(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service",
+        json={**asset_service, "serviceDate": 1791311400000, "expireDate": 1791311400000 + 1},
+    )
+
+    assert response.status_code == 422
+    assert "serviceDate" in response.text
+    assert "expireDate" in response.text
+
+
+@pytest.mark.order(after="test_create_service_with_milliseconds_dates")
+def test_create_service_with_numeric_string_expiry_date(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service",
+        json={**asset_service, "expireDate": str(asset_service["expireDate"])},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["expireDate"] == asset_service["expireDate"]
+
+
+@pytest.mark.order(after="test_create_service_with_numeric_string_expiry_date")
+def test_create_service_without_expiry_date(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+    asset_service.pop("expireDate")
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service", json={**asset_service}
+    )
+
+    assert response.status_code == 422
+    assert "expireDate" in response.text
+
+
+@pytest.mark.order(after="test_create_service_without_expiry_date")
 def test_get_service(authenticated_client: TestClient, service_container):
     response = authenticated_client.get("/api/v1/service")
     service_container.append(response.json())
@@ -201,6 +247,17 @@ def test_get_service_with_iso_date_filter(authenticated_client: TestClient):
 
 
 @pytest.mark.order(after="test_get_service_with_iso_date_filter")
+def test_get_service_with_milliseconds_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={"expire_start_date": 0, "expire_end_date": 1791311400000},
+    )
+
+    assert response.status_code == 422
+    assert "expire_end_date" in response.text
+
+
+@pytest.mark.order(after="test_get_service_with_milliseconds_date_filter")
 def test_get_service_with_id(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.get(f"/api/v1/service/{service_id}")
@@ -233,6 +290,39 @@ def test_update_service(authenticated_client: TestClient, service_container, ass
 
 
 @pytest.mark.order(after="test_update_service")
+def test_update_service_with_null_expiry_date(
+    authenticated_client: TestClient, service_container, asset_service
+):
+    service_id = service_container[0]["id"]
+    expire_date = service_container[0]["serviceDate"] + 3600 * 48
+    authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service",
+        json={**asset_service, "expireDate": expire_date},
+    )
+
+    response = authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service", json={**asset_service, "expireDate": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["expireDate"] == expire_date
+
+
+@pytest.mark.order(after="test_update_service_with_null_expiry_date")
+def test_update_service_with_expiry_before_service_date(
+    authenticated_client: TestClient, service_container, asset_service
+):
+    service_id = service_container[0]["id"]
+
+    response = authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service",
+        json={**asset_service, "expireDate": service_container[0]["serviceDate"] - 3600 * 24},
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.order(after="test_update_service_with_expiry_before_service_date")
 def test_update_service_with_unauthenticated(client: TestClient, service_container, asset_service):
     service_id = service_container[0]["id"]
     response = client.put(f"/api/v1/asset/{service_id}/update/service", json={**asset_service})

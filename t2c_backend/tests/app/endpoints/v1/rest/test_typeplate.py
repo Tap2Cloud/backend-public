@@ -142,6 +142,19 @@ def test_list_typeplate_with_iso_typeplate_created_filter(authenticated_client: 
 
 
 @pytest.mark.order(after="test_list_typeplate_with_iso_typeplate_created_filter")
+def test_list_typeplate_with_milliseconds_typeplate_created_filter(
+    authenticated_client: TestClient,
+):
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={"typeplate_created_start_date": 0, "typeplate_created_end_date": 1791311400000},
+    )
+
+    assert response.status_code == 422
+    assert "typeplate_created_end_date" in response.text
+
+
+@pytest.mark.order(after="test_list_typeplate_with_milliseconds_typeplate_created_filter")
 def test_list_typeplate_with_eu_id_filter(authenticated_client: TestClient, typeplate_container):
     eu_id = typeplate_container["typeplate"]["items"][0]["typeplateDetails"]["euId"]
     response = authenticated_client.get(f"/api/v1/typeplate?q={eu_id}")

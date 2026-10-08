@@ -65,7 +65,13 @@ class ServiceService:
             raise BadRequestError("Expired service details can not update")
 
         update_fields = service_data.model_dump()
-        update_fields["expire_date"] = datetime_from_epoch(service_data.expire_date)
+        if service_data.expire_date is None:
+            # A null expiry leaves the current one unchanged.
+            del update_fields["expire_date"]
+        else:
+            update_fields["expire_date"] = datetime_from_epoch(service_data.expire_date)
+            if update_fields["expire_date"] < service.service_date:
+                raise BadRequestError("expire date must be greater than service date")
 
         for key, value in update_fields.items():
             setattr(service, key, value)

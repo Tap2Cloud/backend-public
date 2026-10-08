@@ -11,7 +11,7 @@ from t2c_backend.schemas.v1.location import LocationBaseResponse
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.schemas.v1.service import ServiceResponse
 from t2c_backend.utils.enums import AssetStatus
-from t2c_backend.utils.misc import datetime_to_epoch
+from t2c_backend.utils.misc import EpochSeconds, datetime_to_epoch
 
 
 class CreateAsset(BaseModel):
@@ -20,7 +20,7 @@ class CreateAsset(BaseModel):
     status: str
     serial_no: str | None = Field(..., alias="serialNo")
     economic_operator: str | None = Field(..., alias="economicOperator")
-    manufacturing_date: int = Field(..., alias="manufacturingDate")
+    manufacturing_date: EpochSeconds = Field(..., alias="manufacturingDate")
     asset_type: DisplayAssetType = Field(..., alias="assetType")
 
     model_config = ConfigDict(from_attributes=True)
