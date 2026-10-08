@@ -3,6 +3,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
+from utils.enums import ServiceTypes
 
 
 @pytest.mark.order(after="test_audit.py::test_generate_audit_report")
@@ -56,6 +57,52 @@ def test_create_service_with_invalid_expiry_date(
 
 
 @pytest.mark.order(after="test_create_service_with_invalid_expiry_date")
+def test_create_service_with_milliseconds_dates(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service",
+        json={**asset_service, "serviceDate": 1791311400000, "expireDate": 1791311400000 + 1},
+    )
+
+    assert response.status_code == 422
+    assert "serviceDate" in response.text
+    assert "expireDate" in response.text
+
+
+@pytest.mark.order(after="test_create_service_with_milliseconds_dates")
+def test_create_service_with_numeric_string_expiry_date(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service",
+        json={**asset_service, "expireDate": str(asset_service["expireDate"])},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["expireDate"] == asset_service["expireDate"]
+
+
+@pytest.mark.order(after="test_create_service_with_numeric_string_expiry_date")
+def test_create_service_without_expiry_date(
+    authenticated_client: TestClient, asset_service, asset_container
+):
+    asset_id = random.choice([assets["id"] for assets in asset_container["asset"]["items"]])
+    asset_service.pop("expireDate")
+
+    response = authenticated_client.post(
+        f"/api/v1/asset/{asset_id}/create/service", json={**asset_service}
+    )
+
+    assert response.status_code == 422
+    assert "expireDate" in response.text
+
+
+@pytest.mark.order(after="test_create_service_without_expiry_date")
 def test_get_service(authenticated_client: TestClient, service_container):
     response = authenticated_client.get("/api/v1/service")
     service_container.append(response.json())
@@ -103,6 +150,114 @@ def test_get_service_with_queries(
 
 
 @pytest.mark.order(after="test_get_service_with_queries")
+def test_get_service_with_query_service_name(authenticated_client: TestClient, service_container):
+    service_name = random.choice(
+        [asset for asset in service_container[-1]["items"] if len(asset["services"]) > 0]
+    )["services"][0]["serviceName"]
+    response = authenticated_client.get(f"api/v1/service?q={service_name}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["services"][0]["serviceName"] == service_name
+
+
+@pytest.mark.order(after="test_get_service_with_query_service_name")
+def test_get_service_with_query_service_type(authenticated_client: TestClient, service_container):
+    response = authenticated_client.get(f"api/v1/service?service_type={ServiceTypes.basic}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["services"][0]["serviceType"] == ServiceTypes.basic
+
+
+@pytest.mark.order(after="test_get_service_with_query_service_type")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+    start_date, end_date = service[field] - 3600, service[field] + 3600
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={f"{param}_start_date": start_date, f"{param}_end_date": end_date, "pageSize": 1000},
+    )
+
+    assert response.status_code == 200
+    assert service["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+    assert all(
+        start_date <= service[field] <= end_date
+        for asset in response.json()["items"]
+        for service in asset["services"]
+    )
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter_inclusive_bounds(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={
+            f"{param}_start_date": service[field],
+            f"{param}_end_date": service[field],
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert service["id"] in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter_inclusive_bounds")
+@pytest.mark.parametrize(("param", "field"), [("service", "serviceDate"), ("expire", "expireDate")])
+def test_get_service_with_date_filter_out_of_range(
+    authenticated_client: TestClient, service_container, param: str, field: str
+):
+    service = service_container[0]
+
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={
+            f"{param}_start_date": service[field] + 1,
+            f"{param}_end_date": service[field] + 3600,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert service["id"] not in [
+        item["id"] for asset in response.json()["items"] for item in asset["services"]
+    ]
+
+
+@pytest.mark.order(after="test_get_service_with_date_filter_out_of_range")
+def test_get_service_with_iso_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={"service_start_date": "2026-01-01", "service_end_date": "2026-01-31"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_get_service_with_iso_date_filter")
+def test_get_service_with_milliseconds_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/service",
+        params={"expire_start_date": 0, "expire_end_date": 1791311400000},
+    )
+
+    assert response.status_code == 422
+    assert "expire_end_date" in response.text
+
+
+@pytest.mark.order(after="test_get_service_with_milliseconds_date_filter")
 def test_get_service_with_id(authenticated_client: TestClient, service_container):
     service_id = service_container[0]["id"]
     response = authenticated_client.get(f"/api/v1/service/{service_id}")
@@ -135,6 +290,39 @@ def test_update_service(authenticated_client: TestClient, service_container, ass
 
 
 @pytest.mark.order(after="test_update_service")
+def test_update_service_with_null_expiry_date(
+    authenticated_client: TestClient, service_container, asset_service
+):
+    service_id = service_container[0]["id"]
+    expire_date = service_container[0]["serviceDate"] + 3600 * 48
+    authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service",
+        json={**asset_service, "expireDate": expire_date},
+    )
+
+    response = authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service", json={**asset_service, "expireDate": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["expireDate"] == expire_date
+
+
+@pytest.mark.order(after="test_update_service_with_null_expiry_date")
+def test_update_service_with_expiry_before_service_date(
+    authenticated_client: TestClient, service_container, asset_service
+):
+    service_id = service_container[0]["id"]
+
+    response = authenticated_client.put(
+        f"/api/v1/asset/{service_id}/update/service",
+        json={**asset_service, "expireDate": service_container[0]["serviceDate"] - 3600 * 24},
+    )
+
+    assert response.status_code == 400
+
+
+@pytest.mark.order(after="test_update_service_with_expiry_before_service_date")
 def test_update_service_with_unauthenticated(client: TestClient, service_container, asset_service):
     service_id = service_container[0]["id"]
     response = client.put(f"/api/v1/asset/{service_id}/update/service", json={**asset_service})

@@ -8,6 +8,16 @@ from utils.enums import DocumentFor
 
 
 @pytest.mark.order(
+    after="test_asset_type_category.py::test_asset_type_category_with_invalid_group_id"
+)
+def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images):
+    response = authenticated_client.get("/api/v1/typeplate/images")
+    typeplate_images["typeplate_images"] = response.json()
+
+    assert response.status_code == 200
+
+
+@pytest.mark.order(
     after="test_instruction_manual.py::test_get_list_of_instruction_manual_with_is_document_and_is_video_filter",
 )
 def test_list_typeplate(authenticated_client: TestClient, typeplate_container):
@@ -53,23 +63,130 @@ def test_list_typeplate_with_query_asset_type_category_name(
 
 @pytest.mark.order(after="test_list_typeplate_with_query_asset_type_category_name")
 def test_list_typeplate_with_typeplate_created_filter(
-    authenticated_client: TestClient, fake: Faker
+    authenticated_client: TestClient, typeplate_container
 ):
-    start_date = fake.date_between(start_date="-30d", end_date="-5d")
-    end_date = fake.date_between(start_date=start_date, end_date="today")
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+    start_date, end_date = created_at - 3600, created_at + 3600
 
     response = authenticated_client.get(
         "/api/v1/typeplate",
         params={
-            "typeplate_created_start_date": start_date.isoformat(),
-            "typeplate_created_end_date": end_date.isoformat(),
+            "typeplate_created_start_date": start_date,
+            "typeplate_created_end_date": end_date,
+            "pageSize": 1000,
         },
     )
 
     assert response.status_code == 200
+    assert typeplate["id"] in [item["id"] for item in response.json()["items"]]
+    assert all(
+        start_date <= item["typeplateDetails"]["createdAt"] <= end_date
+        for item in response.json()["items"]
+    )
 
 
 @pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter")
+def test_list_typeplate_with_typeplate_created_filter_inclusive_bounds(
+    authenticated_client: TestClient, typeplate_container
+):
+    # createdAt is truncated to the second while the stored value keeps its microseconds, so
+    # the end bound has to be the next second to include it.
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": created_at,
+            "typeplate_created_end_date": created_at + 1,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert typeplate["id"] in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter_inclusive_bounds")
+def test_list_typeplate_with_typeplate_created_filter_out_of_range(
+    authenticated_client: TestClient, typeplate_container
+):
+    typeplate = typeplate_container["typeplate"]["items"][0]
+    created_at = typeplate["typeplateDetails"]["createdAt"]
+
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": created_at + 1,
+            "typeplate_created_end_date": created_at + 3600,
+            "pageSize": 1000,
+        },
+    )
+
+    assert response.status_code == 200
+    assert typeplate["id"] not in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_created_filter_out_of_range")
+def test_list_typeplate_with_iso_typeplate_created_filter(authenticated_client: TestClient):
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_created_start_date": "2026-01-01",
+            "typeplate_created_end_date": "2026-01-31",
+        },
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_list_typeplate_with_iso_typeplate_created_filter")
+def test_list_typeplate_with_milliseconds_typeplate_created_filter(
+    authenticated_client: TestClient,
+):
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={"typeplate_created_start_date": 0, "typeplate_created_end_date": 1791311400000},
+    )
+
+    assert response.status_code == 422
+    assert "typeplate_created_end_date" in response.text
+
+
+@pytest.mark.order(after="test_list_typeplate_with_milliseconds_typeplate_created_filter")
+def test_list_typeplate_with_eu_id_filter(authenticated_client: TestClient, typeplate_container):
+    eu_id = typeplate_container["typeplate"]["items"][0]["typeplateDetails"]["euId"]
+    response = authenticated_client.get(f"/api/v1/typeplate?q={eu_id}")
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["typeplateDetails"]["euId"] == eu_id
+
+
+@pytest.mark.order(after="test_list_typeplate_with_eu_id_filter")
+def test_list_typeplate_with_typeplate_images_filter(
+    authenticated_client: TestClient, asset_type_container
+):
+    typeplate_image_id = [
+        asset_type["typeplates"]["typeplateImages"][0]["id"]
+        for asset_type in asset_type_container["asset_types"]["items"]
+        if asset_type["typeplates"] and len(asset_type["typeplates"]["typeplateImages"]) > 0
+    ]
+    response = authenticated_client.get(
+        "/api/v1/typeplate",
+        params={
+            "typeplate_images_id": typeplate_image_id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.json()["items"][0]["typeplateDetails"]["typeplateImages"][0]["id"]
+        == typeplate_image_id[0]
+    )
+
+
+@pytest.mark.order(after="test_list_typeplate_with_typeplate_images_filter")
 def test_get_typeplate_by_id(authenticated_client: TestClient, typeplate_container):
     if len(typeplate_container["typeplate"]["items"]) <= 0:
         assert True
@@ -98,14 +215,6 @@ def test_get_typeplate_by_fake_id(
 
 
 @pytest.mark.order(after="test_get_typeplate_by_fake_id")
-def test_typeplate_image_list(authenticated_client: TestClient, typeplate_images):
-    response = authenticated_client.get("/api/v1/typeplate/images")
-    typeplate_images["typeplate_images"] = response.json()
-
-    assert response.status_code == 200
-
-
-@pytest.mark.order(after="test_typeplate_image_list")
 def test_update_typeplate_api_without_eu_file(
     authenticated_client: TestClient,
     typeplate_container,

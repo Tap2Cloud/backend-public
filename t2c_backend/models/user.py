@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
@@ -22,7 +22,7 @@ from t2c_backend.core.db import (
 from t2c_backend.core.db.types import ImageType
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.utils.enums import Status, TokenType
-from t2c_backend.utils.misc import get_full_name
+from t2c_backend.utils.misc import aware_utcnow, get_full_name
 
 from .role import Role
 
@@ -75,7 +75,7 @@ class UserEmailToken(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativ
     user_token: Mapped[str] = mapped_column(Text(), unique=True, index=True)
     time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.now(UTC),
+        default=aware_utcnow,
     )
     type: Mapped[TokenType] = mapped_column(Enum(TokenType), nullable=True)
     is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
@@ -83,7 +83,7 @@ class UserEmailToken(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativ
     user = relationship("User", back_populates="email_tokens", lazy="selectin")
 
 
-class UserInvite(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
+class UserInvite(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     __tablename__ = "user_invites"
 
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id", ondelete="CASCADE"))
@@ -98,10 +98,6 @@ class UserInvite(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBas
         back_populates="invitees",
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-    )
     location = relationship("Location")
 
 
