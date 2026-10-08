@@ -9,6 +9,7 @@ from t2c_backend.models import AssetTypeCategoryFieldOption as AssetTypeCategory
 from t2c_backend.models import AssetTypeCategoryGroup as AssetTypeCategoryGroupModel
 from t2c_backend.schemas.v1.user import DisplayUser
 from t2c_backend.utils.enums import InputType
+from t2c_backend.utils.misc import datetime_to_epoch
 
 
 class AssetTypeCategoryGroupResponse(BaseModel):
@@ -266,7 +267,7 @@ class AssetTypeCategoryResponse(BaseModel):
             hasTypeplates=category.has_typeplates,
             fields=Field.from_list(category.fields),
             user=DisplayUser.convert(category.user) if category.user else None,
-            createdAt=int(category.created_at.timestamp()),
+            createdAt=datetime_to_epoch(category.created_at),
         )
 
 

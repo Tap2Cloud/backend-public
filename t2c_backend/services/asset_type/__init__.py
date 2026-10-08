@@ -7,7 +7,7 @@ from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from sqlalchemy import Text, asc, cast, desc, exists, literal, select
+from sqlalchemy import Text, asc, cast, desc, exists, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -378,8 +378,16 @@ class AssetTypeService:
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            name_filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
+            manufacturer_filters = BaseRepository.parse_filters(
+                model=self._model, manufacturer__ilike=f"%{q}%"
+            )
+            select_query = select_query.filter(
+                or_(
+                    *name_filters,
+                    *manufacturer_filters,
+                )
+            )
 
         if categories:
             select_query = select_query.filter(
@@ -454,8 +462,15 @@ class AssetTypeService:
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            select_query = select_query.filter(
+                or_(
+                    self._model.name.ilike(f"%{q}%"),
+                    exists().where(
+                        AssetTypeDocumentModel.asset_type_id == self._model.id,
+                        AssetTypeDocumentModel.name.ilike(f"%{q}%"),
+                    ),
+                )
+            )
 
         if is_video:
             select_query = select_query.filter(self._model.video_links.isnot(None))
