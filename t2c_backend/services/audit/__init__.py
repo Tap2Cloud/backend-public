@@ -423,12 +423,6 @@ class AuditService:
     async def get_audit_report(
         self, asset_id: int, audit_id: int, language: Language, timezone: tzinfo = UTC
     ):
-        def local_date(value: datetime) -> str:
-            # Stored values are UTC; show the calendar day as the requester sees it.
-            return format_date(
-                value.astimezone(timezone).date(), format="long", locale=Language(language).value
-            )
-
         asset = await self.app.services.asset_service.repository.get_one_or_none(
             id=asset_id,
             options=[
@@ -452,8 +446,9 @@ class AuditService:
 
         locale = Language(language).value
 
-        def date(value) -> str:
-            return format_date(value, format="long", locale=locale)
+        def date(value: datetime) -> str:
+            # Stored values are UTC; show the calendar day as the requester sees it.
+            return format_date(value.astimezone(timezone).date(), format="long", locale=locale)
 
         status_labels = {
             AuditTaskStatus.PASSED: _("Passed"),
@@ -464,8 +459,8 @@ class AuditService:
 
         tasks = audit.audit_tasks
         statuses = [AuditTaskStatus(task.status) for task in tasks]
-        inspection_date = date(audit.inspection_date.date())
-        generated_on = date(datetime.now(UTC).date())
+        inspection_date = date(audit.inspection_date)
+        generated_on = date(datetime.now(UTC))
 
         # Summary cards
         counts = ", ".join(
@@ -509,7 +504,7 @@ class AuditService:
             (_("Asset Type"), asset.asset_type.name),
             (_("Asset Type Category"), asset.asset_type.asset_type_category.name),
             (_("Serial Number"), asset.serial_no),
-            (_("Manufacturing Date"), date(asset.manufacturing_date.date())),
+            (_("Manufacturing Date"), date(asset.manufacturing_date)),
             (_("Pass ID"), asset.pass_id),
             (_("Economic Operator"), asset.economic_operator),
         ]
