@@ -67,7 +67,6 @@ SECTION = ParagraphStyle(
 )
 TABLE_HEAD = ParagraphStyle("AuditTableHead", parent=LABEL, textColor=MUTED)
 LINK = colors.HexColor("#0B5CAD")
-ALLOWED_DOCUMENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/svg+xml"}
 
 
 def _file_icon() -> Drawing:
@@ -135,12 +134,6 @@ class AuditService:
     async def create_audit_task(
         self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
     ):
-        documents = documents or []
-        for document in documents:
-            if document.content_type not in ALLOWED_DOCUMENT_TYPES:
-                raise BadRequestError(
-                    "Only JPEG, PNG, WebP or SVG images are allowed as audit documents."
-                )
 
         audit_task = await self.task_repository.save(
             AuditTask(
