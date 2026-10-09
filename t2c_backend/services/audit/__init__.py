@@ -134,6 +134,14 @@ class AuditService:
     async def create_audit_task(
         self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
     ):
+        seen = set()
+        duplicates = set()
+        for document in documents:
+            if document.filename in seen:
+                duplicates.add(document.filename)
+            seen.add(document.filename)
+        if duplicates:
+            raise BadRequestError(f"Documents uploaded more than once: {','.join(duplicates)}")
 
         audit_task = await self.task_repository.save(
             AuditTask(
