@@ -44,7 +44,7 @@ msgstr "Data di produzione"
 
 #: services/audit/__init__.py
 msgid "Pass ID"
-msgstr "ID passaporto"
+msgstr "ID del pass"
 
 #: services/audit/__init__.py
 msgid "Economic Operator"
@@ -64,7 +64,7 @@ msgstr "Attività"
 
 #: services/audit/__init__.py
 msgid "Task"
-msgstr "Attività"
+msgstr "Compito"
 
 #: services/audit/__init__.py
 msgid "Status"
@@ -80,7 +80,7 @@ msgstr "Documenti"
 
 #: services/audit/__init__.py
 msgid "Passed"
-msgstr "Superato"
+msgstr "Approvato"
 
 #: services/audit/__init__.py
 msgid "Conditional"
@@ -88,11 +88,11 @@ msgstr "Condizionale"
 
 #: services/audit/__init__.py
 msgid "Failed"
-msgstr "Non superato"
+msgstr "Fallito"
 
 #: services/audit/__init__.py
 msgid "Audit"
-msgstr "Audit"
+msgstr "Valutazione"
 
 #: services/audit/__init__.py
 msgid "Inspection"

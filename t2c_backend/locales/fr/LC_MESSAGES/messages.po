@@ -44,7 +44,7 @@ msgstr "Date de fabrication"
 
 #: services/audit/__init__.py
 msgid "Pass ID"
-msgstr "ID du passeport"
+msgstr "Badge d'accès"
 
 #: services/audit/__init__.py
 msgid "Economic Operator"

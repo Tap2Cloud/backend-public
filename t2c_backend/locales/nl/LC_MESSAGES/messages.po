@@ -44,11 +44,11 @@ msgstr "Productiedatum"
 
 #: services/audit/__init__.py
 msgid "Pass ID"
-msgstr "Paspoort-ID"
+msgstr "Toegangspas"
 
 #: services/audit/__init__.py
 msgid "Economic Operator"
-msgstr "Marktdeelnemer"
+msgstr "Economische marktdeelnemer"
 
 #: services/audit/__init__.py
 msgid "Inspection Date"

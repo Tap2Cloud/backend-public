@@ -44,7 +44,7 @@ msgstr "Fecha de fabricación"
 
 #: services/audit/__init__.py
 msgid "Pass ID"
-msgstr "ID de pasaporte"
+msgstr "ID de pase"
 
 #: services/audit/__init__.py
 msgid "Economic Operator"
@@ -88,7 +88,7 @@ msgstr "Condicional"
 
 #: services/audit/__init__.py
 msgid "Failed"
-msgstr "Suspendido"
+msgstr "Fallido"
 
 #: services/audit/__init__.py
 msgid "Audit"
