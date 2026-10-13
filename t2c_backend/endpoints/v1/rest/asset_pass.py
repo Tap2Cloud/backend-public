@@ -13,6 +13,9 @@ from t2c_backend.utils.enums import DocumentFor, SortBy
 from t2c_backend.utils.misc import DictContainer, interpret
 
 router = APIRouter()
+# GS1 Digital Link resolver; mounted only at the app root because its
+# catch-all path would shadow every route registered after it.
+gs1_router = APIRouter()
 
 
 @router.get(
@@ -34,7 +37,7 @@ async def list_asset_pass(
     )
 
 
-@router.get(
+@gs1_router.get(
     "/{gs1Path:path}",
     operation_id="get asset pass",
     response_model=DetailedAssetPassResponse,

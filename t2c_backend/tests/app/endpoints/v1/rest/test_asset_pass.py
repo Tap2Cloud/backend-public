@@ -5,7 +5,9 @@ from utils.enums import DocumentFor
 
 
 @pytest.mark.order(after="test_health.py::test_health")
-def test_list_asset_pass(authenticated_client: TestClient, asset_pass_document_container):
+def test_list_asset_pass(
+    authenticated_client: TestClient, asset_pass_document_container, asset_pass_container
+):
     response = authenticated_client.get("/api/v1/asset-pass")
 
     asset_type_name = asset_pass_document_container["asset_type_name"]
@@ -19,6 +21,7 @@ def test_list_asset_pass(authenticated_client: TestClient, asset_pass_document_c
     asset_pass_document_container[DocumentFor.EuFiles]["id"] = eu_file["id"]
 
     asset_pass_document_container["pass_id"] = asset_pass["assetPass"]["passId"]
+    asset_pass_container.update({"asset_pass": asset_pass})
 
     assert eu_file["name"] == asset_pass_document_container[DocumentFor.EuFiles]["name"]
 
@@ -173,9 +176,9 @@ def test_get_asset_pass_document_with_invalid_document_for(
     assert response.status_code == 422
 
 
-@pytest.mark.order(after="test_health.py::test_health")
+@pytest.mark.order(after="test_get_asset_pass_document_with_invalid_document_for")
 def test_get_asset_pass_by_id(authenticated_client: TestClient, asset_pass_container):
-    asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
+    asset_pass_id = asset_pass_container["asset_pass"]["assetPass"]["passId"]
     response = authenticated_client.get(f"/8004/{asset_pass_id}")
 
     assert response.status_code == 200
@@ -183,8 +186,8 @@ def test_get_asset_pass_by_id(authenticated_client: TestClient, asset_pass_conta
 
 @pytest.mark.order(after="test_get_asset_pass_by_id")
 def test_get_asset_pass_by_gtin_id(authenticated_client: TestClient, asset_pass_container):
-    asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
-    gtin_id = asset_pass_container["asset_pass"]["items"][0]["assetType"]["gtin"]
+    asset_pass_id = asset_pass_container["asset_pass"]["assetPass"]["passId"]
+    gtin_id = asset_pass_container["asset_pass"]["assetType"]["gtin"]
     response = authenticated_client.get(f"/01/{gtin_id}/21/{asset_pass_id}")
 
     assert response.status_code == 200
@@ -192,7 +195,7 @@ def test_get_asset_pass_by_gtin_id(authenticated_client: TestClient, asset_pass_
 
 @pytest.mark.order(after="test_get_asset_pass_by_gtin_id")
 def test_get_asset_pass_by_invalid_id(authenticated_client: TestClient, asset_pass_container):
-    asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
+    asset_pass_id = asset_pass_container["asset_pass"]["assetPass"]["passId"]
     response = authenticated_client.get(f"/8004/{asset_pass_id + '100'}")
 
     assert response.status_code == 404
@@ -200,8 +203,8 @@ def test_get_asset_pass_by_invalid_id(authenticated_client: TestClient, asset_pa
 
 @pytest.mark.order(after="test_get_asset_pass_by_invalid_id")
 def test_get_asset_pass_by_invalid_gtin_id(authenticated_client: TestClient, asset_pass_container):
-    asset_pass_id = asset_pass_container["asset_pass"]["items"][0]["assetPass"]["passId"]
-    gtin_id = asset_pass_container["asset_pass"]["items"][0]["assetType"]["gtin"]
+    asset_pass_id = asset_pass_container["asset_pass"]["assetPass"]["passId"]
+    gtin_id = asset_pass_container["asset_pass"]["assetType"]["gtin"]
 
     response = authenticated_client.get(f"/01/{gtin_id + '100'}/21/{asset_pass_id}")
 
