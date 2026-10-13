@@ -17,7 +17,6 @@ from utils.enums import (
     ServiceTypes,
     TaskType,
 )
-from utils.misc import aware_utcnow
 
 
 @pytest.fixture(scope="session")
@@ -119,6 +118,41 @@ def authenticated_client(database_migration, user_data) -> Generator:
         yield c
 
 
+@pytest.fixture(scope="function")
+def second_user_client(authenticated_client, second_user_data) -> Generator:
+    """Return the session client authenticated as the second user."""
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        response = authenticated_client.post(
+            "/api/v1/login",
+            json=second_user_data["credentials"],
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        authenticated_client.headers["Authorization"] = f"Bearer {token}"
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
+
+
+@pytest.fixture(scope="function")
+def public_client(authenticated_client) -> Generator:
+    """Return a client without an Authorization header, for routes that need no token.
+
+    Entering a TestClient runs the app lifespan, which rebuilds app.database_engine on
+    the entering client's event loop, so only the client that entered last can talk to
+    the database. Public routes are therefore exercised by dropping the header from the
+    authenticated client for the duration of a single test instead of by building a
+    second client.
+    """
+    authorization = authenticated_client.headers["Authorization"]
+    try:
+        del authenticated_client.headers["Authorization"]
+        yield authenticated_client
+    finally:
+        authenticated_client.headers["Authorization"] = authorization
+
+
 @pytest.fixture(scope="session")
 def asset_type_category_group_container():
     return {}
@@ -148,8 +182,8 @@ def asset_type_category_field(fake: Faker) -> dict[str, str | bool | int | Input
         "fieldName": fake.name(),
         "fieldPlaceHolder": fake.name(),
         "fieldDisplayName": fake.name(),
-        "fieldIsRequired": fake.boolean(),
-        "fieldOrder": fake.random_number(),
+        "fieldIsRequired": True,
+        "fieldOrder": fake.random_int(min=1),
         "fieldType": InputType.text,
         "fieldGroupId": fake.random_int(min=1, max=9),
         "options": [],
@@ -163,8 +197,8 @@ def asset_type_category_fields(fake: Faker) -> list[dict]:
             "fieldName": fake.name(),
             "fieldPlaceHolder": fake.name(),
             "fieldDisplayName": fake.name(),
-            "fieldIsRequired": fake.boolean(),
-            "fieldOrder": fake.random_number(),
+            "fieldIsRequired": True,
+            "fieldOrder": fake.random_int(min=1),
             "fieldType": InputType.text,
             "fieldGroupId": fake.random_int(min=1, max=9),
             "options": [],
@@ -174,7 +208,7 @@ def asset_type_category_fields(fake: Faker) -> list[dict]:
             "fieldPlaceHolder": fake.name(),
             "fieldDisplayName": fake.name(),
             "fieldIsRequired": fake.boolean(),
-            "fieldOrder": fake.random_number(),
+            "fieldOrder": fake.random_int(min=1),
             "fieldType": InputType.text,
             "fieldGroupId": fake.random_int(min=1, max=9),
             "options": [],
@@ -243,7 +277,7 @@ def asset(fake: Faker) -> dict[str, int]:
     return {
         "location": fake.random_number(fix_len=True),
         "assetId": f"{fake.random_number(fix_len=True)}",
-        "manufacturingDate": int((fake.date_time()).timestamp()),
+        "manufacturingDate": int(fake.date_time(tzinfo=UTC).timestamp()),
         "status": fake.name(),
         "serialNo": f"{fake.random_number(fix_len=True)}",
         "economicOperator": fake.name(),
@@ -258,7 +292,7 @@ def update_asset(fake: Faker) -> dict:
     return {
         "location": fake.random_number(fix_len=True),
         "assetId": f"{fake.random_number(fix_len=True)}",
-        "manufacturingDate": int((fake.date_time()).timestamp()),
+        "manufacturingDate": int(fake.date_time(tzinfo=UTC).timestamp()),
         "status": random.choice(list(AssetStatus)),
         "serialNo": f"{fake.random_number(fix_len=True)}",
         "economicOperator": fake.name(),
@@ -302,7 +336,9 @@ def asset_container():
 
 @pytest.fixture(scope="function")
 def asset_service(fake: Faker):
-    service_date = int((fake.date_time()).timestamp()) + int(aware_utcnow().timestamp())
+    service_date = int(
+        fake.date_time_between(start_date="+1d", end_date="+365d", tzinfo=UTC).timestamp()
+    )
     return {
         "serviceName": fake.name(),
         "serviceProviderName": fake.name(),
@@ -365,6 +401,11 @@ def audit_container():
 
 @pytest.fixture(scope="session")
 def asset_type_with_documents_container():
+    return {}
+
+
+@pytest.fixture(scope="session")
+def asset_pass_document_container():
     return {}
 
 

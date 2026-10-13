@@ -387,6 +387,11 @@ def setup(app, session, *args, **kwargs):
 `execute`, and the `parse_filters` helper with the `field__op` syntax
 (`serial_no__ilike`, `id__in`, `status__in`, …) — see [Core Infrastructure](core-infrastructure.md).
 
+If your service enforces a uniqueness rule that no unique index backs, guard the check-then-insert with
+`lock_values()` rather than relying on the `exists()` call alone — otherwise two concurrent requests
+both read "not taken" and both commit. See
+[Concurrency guards](core-infrastructure.md#concurrency-guards).
+
 ### Making your service resolvable in endpoints
 
 The core's `t2c_backend.services.get_services` iterates a **fixed** `__services__` list and registers
@@ -653,6 +658,30 @@ python launcher.py
 
 Your service now exposes the entire OSS core API **plus** `/api/warranty`, backed by your own model,
 schema, service, and startup client — with zero changes to `backend-public`.
+
+---
+
+## Translations
+
+The core ships only its source catalogs (`t2c_backend/locales/<lang>/LC_MESSAGES/messages.po`);
+compiled `.mo` files are never committed. Keep your own catalogs in your project, merge the core's
+messages into them, then compile one `messages.mo` per language as part of your build or deploy:
+
+```bash
+# After `pybabel extract` / `pybabel update` for your own sources:
+python -m t2c_backend.core.i18n.sync private_backend/locales
+pybabel compile -d private_backend/locales -D messages
+```
+
+The sync tags every message it copies with a `#. t2c_backend` comment and refreshes those on each run,
+so a core upgrade brings its new and changed translations with it. A message you define yourself
+(without that comment) wins over a core message with the same msgid. Run the sync after
+`pybabel update`, which marks the core messages obsolete because they aren't in your sources.
+
+The core loads catalogs from `<PROJECT_ROOT_PATH>/locales`, where `PROJECT_ROOT_PATH` is set by
+`Config.project_root_path` and defaults to the installed `t2c_backend` package. Override that property
+in your `Config` subclass to point at your package, so your compiled catalogs are the ones loaded. The
+disk storage backend resolves `BUCKET` against the same path.
 
 ---
 

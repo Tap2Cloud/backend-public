@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import mimetypes
 import uuid
@@ -6,9 +7,9 @@ from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from sqlalchemy import asc, desc, exists, select
+from sqlalchemy import Text, asc, cast, desc, exists, literal, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
@@ -24,6 +25,7 @@ from t2c_backend.models import (
     TypeplateDocument,
 )
 from t2c_backend.models.asset_type import AssetTypeDocument as AssetTypeDocumentModel
+from t2c_backend.models.asset_type import normalized_asset_type_name
 from t2c_backend.schemas.v1.asset_type import (
     AssetTypeResponse,
     InstructionManualAssetTypeResponse,
@@ -32,7 +34,7 @@ from t2c_backend.schemas.v1.asset_type import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.schemas.v1.typeplates import TypeplateImageRequest
 from t2c_backend.utils.enums import DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
 
 
 class AssetTypeService:
@@ -46,6 +48,33 @@ class AssetTypeService:
         self.field_options_repository = BaseRepository(app, session, AssetTypeFieldOptions)
         self.asset_types_documents_repository = BaseRepository(app, session, AssetTypeDocumentModel)
         self.typeplate_documents_repository = BaseRepository(app, session, TypeplateDocument)
+
+    async def ensure_name_is_free(
+        self,
+        name: str,
+        asset_type_category_id: int,
+        asset_type_id: int | None = None,
+    ) -> None:
+        """
+        Refuse a name another asset type in the same category already carries.
+        """
+        folded_name = normalized_asset_type_name(cast(literal(name), Text))
+
+        await self.repository.lock_values(
+            asset_type_category_id=asset_type_category_id,
+            name=folded_name,
+        )
+
+        filters = {"asset_type_category_id": asset_type_category_id}
+        if asset_type_id is not None:
+            filters["id__ne"] = asset_type_id
+
+        duplicate = await self.repository.get_one_or_none(
+            where=[normalized_asset_type_name(self._model.name) == folded_name],
+            **filters,
+        )
+        if duplicate:
+            raise AlreadyExistsError("Asset type name already exists in this category")
 
     async def create_asset_type(
         self,
@@ -67,6 +96,11 @@ class AssetTypeService:
         )
         if not asset_type_form:
             raise NotFoundError(msg="Asset type category not found")
+
+        await self.ensure_name_is_free(
+            name=asset_type_data.get("name"),
+            asset_type_category_id=asset_type_form.id,
+        )
 
         typeplate_details = asset_type_data.get("typeplate_details")
         typeplate = None
@@ -112,6 +146,7 @@ class AssetTypeService:
 
         asset_type = await self.repository.save(asset_type)
 
+        documents_to_store = []
         for at in asset_type.fields:
             asset_type_category_field = await self.category_fields_repository.get_one_or_none(
                 id=at.field_id
@@ -124,11 +159,13 @@ class AssetTypeService:
                     (f for f in custom_media_fields if f.filename == at.response_value), None
                 )
                 if file:
-                    await self.app.clients.storage.save_document(
-                        organization_id=organization_id,
-                        document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                        file_id=at.id,
-                        file=file,
+                    documents_to_store.append(
+                        self.app.clients.storage.save_document(
+                            organization_id=organization_id,
+                            document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+                            file_id=at.id,
+                            file=file,
+                        )
                     )
 
         for typeplate_image in typeplate_images if typeplate_images else []:
@@ -155,11 +192,13 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.EuFiles,
-                file_id=eu_file_data.id,
-                file=eu_file,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.EuFiles,
+                    file_id=eu_file_data.id,
+                    file=eu_file,
+                )
             )
 
         asset_type_documents = None
@@ -173,13 +212,16 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.InstructionManualDocuments,
-                file_id=asset_type_documents.id,
-                file=doc,
+            documents_to_store.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.InstructionManualDocuments,
+                    file_id=asset_type_documents.id,
+                    file=doc,
+                )
             )
 
+        await asyncio.gather(*documents_to_store)
         return {
             "created_asset_type": asset_type,
             "instruction_manuals": asset_type_documents,
@@ -194,13 +236,20 @@ class AssetTypeService:
     ):
         db_asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.typeplate),
                 joinedload(self._model.asset_type_category),
             ],
         )
-        if not db_asset_type or db_asset_type.location_id != location_id:
+        if not db_asset_type:
             raise NotFoundError("Asset type not found")
+
+        await self.ensure_name_is_free(
+            name=asset_type_details.name,
+            asset_type_category_id=db_asset_type.asset_type_category_id,
+            asset_type_id=db_asset_type.id,
+        )
 
         db_asset_type.name = asset_type_details.name
         db_asset_type.video_links = asset_type_details.video_links
@@ -244,19 +293,23 @@ class AssetTypeService:
     async def delete_asset_type(self, asset_type_id: int, location_id: int) -> None:
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.location),
                 joinedload(self._model.typeplate),
                 joinedload(self._model.typeplate).joinedload(Typeplate.documents),
                 joinedload(self._model.documents),
                 joinedload(self._model.fields),
+                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
-        if asset_type is None or asset_type.location_id != location_id:
+        if asset_type is None:
             raise NotFoundError("Asset type not found")
 
         organization_id = asset_type.location.organization_id
+
+        await self.repository.delete(id=asset_type_id)
 
         if asset_type.documents:
             for instruction_manual in asset_type.documents:
@@ -276,14 +329,19 @@ class AssetTypeService:
                 )
 
         for asset_type_field in asset_type.fields:
+            category_field = asset_type_field.asset_type_category_field
+            if not category_field or category_field.field_type not in (
+                InputType.image,
+                InputType.file,
+            ):
+                continue
+
             await self.app.clients.storage.delete_document(
                 organization_id=organization_id,
                 document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
                 file_id=asset_type_field.id,
                 filename=asset_type_field.response_value,
             )
-
-        await self.repository.delete(id=asset_type_id)
 
     async def list_asset_types(
         self,
@@ -301,26 +359,37 @@ class AssetTypeService:
         select_query = (
             select(self._model)
             .options(
-                joinedload(self._model.documents),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.asset_type_category_group),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.typeplate),
-                joinedload(self._model.typeplate).joinedload(Typeplate.documents),
-                joinedload(self._model.typeplate).joinedload(Typeplate.typeplate_images),
+                selectinload(self._model.documents),
+                selectinload(self._model.fields).options(
+                    selectinload(AssetTypeField.asset_type_field_options),
+                    joinedload(AssetTypeField.asset_type_category_field),
+                ),
+                joinedload(self._model.asset_type_category).options(
+                    selectinload(AssetTypeCategory.fields).options(
+                        selectinload(AssetTypeCategoryField.options),
+                        joinedload(AssetTypeCategoryField.asset_type_category_group),
+                    ),
+                ),
+                joinedload(self._model.typeplate).options(
+                    selectinload(Typeplate.documents),
+                    selectinload(Typeplate.typeplate_images),
+                ),
             )
             .where(self._model.location_id == location_id)
             .order_by(sort_order[sort_by])
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            name_filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
+            manufacturer_filters = BaseRepository.parse_filters(
+                model=self._model, manufacturer__ilike=f"%{q}%"
+            )
+            select_query = select_query.filter(
+                or_(
+                    *name_filters,
+                    *manufacturer_filters,
+                )
+            )
 
         if categories:
             select_query = select_query.filter(
@@ -347,23 +416,27 @@ class AssetTypeService:
     async def get_asset_type_by_id(self, asset_type_id: int, location_id: int):
         asset_type_details = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
-                joinedload(self._model.documents),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.options),
-                joinedload(self._model.asset_type_category)
-                .joinedload(AssetTypeCategory.fields)
-                .joinedload(AssetTypeCategoryField.asset_type_category_group),
-                joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_category_field),
-                joinedload(self._model.typeplate),
-                joinedload(self._model.typeplate).joinedload(Typeplate.documents),
-                joinedload(self._model.typeplate).joinedload(Typeplate.typeplate_images),
+                selectinload(self._model.documents),
+                selectinload(self._model.fields).options(
+                    selectinload(AssetTypeField.asset_type_field_options),
+                    joinedload(AssetTypeField.asset_type_category_field),
+                ),
+                joinedload(self._model.asset_type_category).options(
+                    selectinload(AssetTypeCategory.fields).options(
+                        selectinload(AssetTypeCategoryField.options),
+                        joinedload(AssetTypeCategoryField.asset_type_category_group),
+                    ),
+                ),
+                joinedload(self._model.typeplate).options(
+                    selectinload(Typeplate.documents),
+                    selectinload(Typeplate.typeplate_images),
+                ),
                 joinedload(self._model.user),
             ],
         )
-        if not asset_type_details or asset_type_details.location_id != location_id:
+        if not asset_type_details:
             raise NotFoundError("Asset type not found")
         return asset_type_details
 
@@ -391,8 +464,15 @@ class AssetTypeService:
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            select_query = select_query.filter(
+                or_(
+                    self._model.name.ilike(f"%{q}%"),
+                    exists().where(
+                        AssetTypeDocumentModel.asset_type_id == self._model.id,
+                        AssetTypeDocumentModel.name.ilike(f"%{q}%"),
+                    ),
+                )
+            )
 
         if is_video:
             select_query = select_query.filter(self._model.video_links.isnot(None))
@@ -422,6 +502,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -439,10 +520,11 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         new_db_documents = []
+        new_documents = []
         for doc in documents or []:
             new_document = await self.asset_types_documents_repository.save(
                 AssetTypeDocumentModel(
@@ -453,17 +535,21 @@ class AssetTypeService:
                     location_id=location_id,
                 )
             )
-            await self.app.clients.storage.save_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.InstructionManualDocuments,
-                file_id=new_document.id,
-                file=doc,
+            new_documents.append(
+                self.app.clients.storage.save_document(
+                    organization_id=organization_id,
+                    document_for=DocumentFor.InstructionManualDocuments,
+                    file_id=new_document.id,
+                    file=doc,
+                )
             )
             new_db_documents.append(new_document)
 
         asset_type.documents.extend(new_db_documents)
 
-        return await self.repository.save(asset_type)
+        asset_type = await self.repository.save(asset_type)
+        await asyncio.gather(*new_documents)
+        return asset_type
 
     async def save_asset_type_custom_field_document(
         self,
@@ -475,6 +561,7 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.documents),
                 joinedload(self._model.fields).joinedload(AssetTypeField.asset_type_field_options),
@@ -492,18 +579,15 @@ class AssetTypeService:
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
+
+        replaced_filename = None
 
         for asset_type_field in asset_type.fields:
             if custom_field_id != asset_type_field.field_id:
                 continue
-            await self.app.clients.storage.delete_document(
-                organization_id=organization_id,
-                document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
-                file_id=asset_type_field.id,
-                filename=asset_type_field.response_value,
-            )
+            replaced_filename = asset_type_field.response_value
             custom_field_value_id = asset_type_field.id
             asset_type_field.response_value = documents.filename
             break
@@ -520,6 +604,16 @@ class AssetTypeService:
                 raise NotFoundError("Custom Field not found")
             custom_field_value_id = custom_field_value_id.id
 
+        updated_asset_type = await self.repository.save(asset_type)
+
+        if replaced_filename:
+            await self.app.clients.storage.delete_document(
+                organization_id=organization_id,
+                document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
+                file_id=custom_field_value_id,
+                filename=replaced_filename,
+            )
+
         await self.app.clients.storage.save_document(
             organization_id=organization_id,
             document_for=DocumentFor.AssetTypeFieldSpecificDocuments,
@@ -527,7 +621,7 @@ class AssetTypeService:
             file=documents,
         )
 
-        return await self.repository.save(asset_type)
+        return updated_asset_type
 
     async def delete_asset_type_document(
         self, asset_type_id: int, document_id: uuid.UUID, location_id: int
@@ -535,10 +629,11 @@ class AssetTypeService:
         document = await self.asset_types_documents_repository.get_one_or_none(
             id=document_id,
             asset_type_id=asset_type_id,
+            location_id=location_id,
             options=[joinedload(AssetTypeDocumentModel.location)],
         )
 
-        if not document or document.location_id != location_id:
+        if not document:
             raise NotFoundError("Asset type document not found")
 
         await self.app.clients.storage.delete_document(
@@ -555,16 +650,22 @@ class AssetTypeService:
     ):
         document = await self.field_repository.get_one_or_none(
             id=document_id,
+            asset_type_id=asset_type_id,
+            join=[AssetTypeField.asset_type],
+            where=[AssetType.location_id == location_id],
             options=[
                 joinedload(AssetTypeField.asset_type),
                 joinedload(AssetTypeField.asset_type).joinedload(AssetType.location),
+                joinedload(AssetTypeField.asset_type_category_field),
             ],
         )
 
         if (
             not document
-            or document.asset_type_id != asset_type_id
-            or document.asset_type.location_id != location_id
+            or not document.response_value
+            or not document.asset_type_category_field
+            or document.asset_type_category_field.field_type
+            not in (InputType.image, InputType.file)
         ):
             raise NotFoundError("Asset type field's document not found")
 
@@ -587,12 +688,13 @@ class AssetTypeService:
     ):
         asset_type = await self.repository.get_one_or_none(
             id=asset_type_id,
+            location_id=location_id,
             options=[
                 joinedload(self._model.location),
             ],
         )
 
-        if not asset_type or asset_type.location_id != location_id:
+        if not asset_type:
             raise NotFoundError("Asset type not found")
 
         mime_type, encoding = mimetypes.guess_type(document_name)

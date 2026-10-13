@@ -3,7 +3,7 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import AssetStatus
+from utils.enums import AssetStatus, DocumentFor
 
 
 @pytest.mark.order(after="test_asset_type.py::test_delete_asset_type_field_document")
@@ -11,19 +11,37 @@ def test_create_asset(
     authenticated_client: TestClient,
     fake: Faker,
     asset,
-    asset_type_category_mapping_container,
+    asset_type_container,
     container,
+    asset_pass_document_container,
 ):
+    asset_type = next(
+        assettype
+        for assettype in asset_type_container["asset_types"]["items"]
+        if assettype["name"] == asset_pass_document_container["asset_type_name"]
+    )
+
+    asset_pass_document_container[DocumentFor.InstructionManualDocuments]["id"] = next(
+        document["id"]
+        for document in asset_type["instructionManuals"]
+        if document["name"]
+        == asset_pass_document_container[DocumentFor.InstructionManualDocuments]["name"]
+    )
+    asset_pass_document_container[DocumentFor.AssetTypeFieldSpecificDocuments]["id"] = asset_type[
+        "form"
+    ][0]["values"]["id"]
+    asset_pass_document_container["typeplate_id"] = asset_type["typeplates"]["id"]
+
     response = authenticated_client.post(
         "/api/v1/asset",
         json={
             **asset,
             "location": container["location"],
-            "assetType": random.choice(
-                random.choice(asset_type_category_mapping_container["asset_type_category"])[
-                    "assetTypes"
-                ]
-            ),
+            "assetType": {
+                "id": asset_type["id"],
+                "name": asset_type["name"],
+                "description": asset_type["description"],
+            },
             "deviceId": f"{fake.uuid4()}",
             "status": random.choice(list(AssetStatus)),
         },
@@ -34,15 +52,13 @@ def test_create_asset(
 
 @pytest.mark.order(after="test_create_asset")
 def test_create_asset_for_second_user(
-    authenticated_client: TestClient,
+    second_user_client: TestClient,
     fake: Faker,
-    second_user_data,
     asset,
     asset_type_category_mapping_container,
     container,
 ):
-    response = authenticated_client.post("/api/v1/login", json=second_user_data["credentials"])
-    response = authenticated_client.post(
+    response = second_user_client.post(
         "/api/v1/asset",
         json={
             **asset,
@@ -54,7 +70,6 @@ def test_create_asset_for_second_user(
             ),
             "status": random.choice(list(AssetStatus)),
         },
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
     )
 
     assert response.status_code == 201
@@ -131,6 +146,33 @@ def test_create_asset_with_fake_asset_type(
 
 
 @pytest.mark.order(after="test_create_asset_with_fake_asset_type")
+def test_create_asset_with_milliseconds_manufacturing_date(
+    authenticated_client: TestClient,
+    asset,
+    asset_type_category_mapping_container,
+    container,
+):
+    asset = {
+        **asset,
+        "location": container["location"],
+        "assetType": dict(
+            random.choice(
+                random.choice(asset_type_category_mapping_container["asset_type_category"])[
+                    "assetTypes"
+                ]
+            )
+        ),
+        "status": random.choice(list(AssetStatus)),
+        "manufacturingDate": 1791311400000,
+    }
+
+    response = authenticated_client.post("/api/v1/asset", json={**asset})
+
+    assert response.status_code == 422
+    assert "manufacturingDate" in response.text
+
+
+@pytest.mark.order(after="test_create_asset_with_milliseconds_manufacturing_date")
 def test_get_asset_with_unauthenticated_client(client: TestClient):
     response = client.put("/api/v1/asset", json={"categories": None, "status": None})
 
@@ -169,6 +211,98 @@ def test_get_asset_with_filter_category(authenticated_client: TestClient, asset_
 
 
 @pytest.mark.order(after="test_get_asset_with_filter_category")
+def test_get_asset_with_manufacturing_date_filter(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+    start_date = asset["manufacturingDate"] - 3600
+    end_date = asset["manufacturingDate"] + 3600
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": start_date,
+            "manufacturing_end_date": end_date,
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] in [item["id"] for item in response.json()["items"]]
+    assert all(
+        start_date <= item["manufacturingDate"] <= end_date for item in response.json()["items"]
+    )
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter")
+def test_get_asset_with_manufacturing_date_filter_inclusive_bounds(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": asset["manufacturingDate"],
+            "manufacturing_end_date": asset["manufacturingDate"],
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter_inclusive_bounds")
+def test_get_asset_with_manufacturing_date_filter_out_of_range(
+    authenticated_client: TestClient, asset_container
+):
+    asset = asset_container["asset"]["items"][0]
+
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": asset["manufacturingDate"] + 1,
+            "manufacturing_end_date": asset["manufacturingDate"] + 3600,
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 200
+    assert asset["id"] not in [item["id"] for item in response.json()["items"]]
+
+
+@pytest.mark.order(after="test_get_asset_with_manufacturing_date_filter_out_of_range")
+def test_get_asset_with_iso_manufacturing_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={
+            "manufacturing_start_date": "2026-01-01",
+            "manufacturing_end_date": "2026-01-31",
+            "pageSize": 1000,
+        },
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.order(after="test_get_asset_with_iso_manufacturing_date_filter")
+def test_get_asset_with_milliseconds_manufacturing_date_filter(authenticated_client: TestClient):
+    response = authenticated_client.put(
+        "/api/v1/asset",
+        params={"manufacturing_start_date": 0, "manufacturing_end_date": 1791311400000},
+        json={"categories": None, "status": None},
+    )
+
+    assert response.status_code == 422
+    assert "manufacturing_end_date" in response.text
+
+
+@pytest.mark.order(after="test_get_asset_with_milliseconds_manufacturing_date_filter")
 def test_get_asset_with_query_asset_type_name(
     authenticated_client: TestClient, asset_type_container
 ):
@@ -209,6 +343,17 @@ def test_get_asset_with_query_serial_no_and_asset_type_name(
 
 
 @pytest.mark.order(after="test_get_asset_with_query_serial_no_and_asset_type_name")
+def test_get_asset_with_query_device_id(authenticated_client: TestClient, asset_container):
+    device_id = random.choice([assets["deviceId"] for assets in asset_container["asset"]["items"]])
+    response = authenticated_client.put(
+        f"/api/v1/asset/?q={device_id}", json={"categories": None, "status": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"][0]["deviceId"] == device_id
+
+
+@pytest.mark.order(after="test_get_asset_with_query_device_id")
 def test_get_asset_by_id(authenticated_client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = authenticated_client.get(f"/api/v1/asset/{asset_id}")
@@ -225,6 +370,38 @@ def test_get_asset_by_invalid_id(authenticated_client: TestClient, asset_contain
 
 
 @pytest.mark.order(after="test_get_asset_by_invalid_id")
+def test_get_asset_for_second_user(second_user_client: TestClient, asset_container):
+    response = second_user_client.put("/api/v1/asset", json={"categories": None, "status": None})
+    asset_container["second_user_asset"] = response.json()
+
+    assert response.status_code == 200
+    assert response.json()["items"]
+
+
+@pytest.mark.order(after="test_get_asset_for_second_user")
+def test_get_second_user_asset_by_id_with_first_authenticated_client(
+    authenticated_client: TestClient, asset_container
+):
+    asset_id = asset_container["second_user_asset"]["items"][0]["id"]
+
+    response = authenticated_client.get(f"/api/v1/asset/{asset_id}")
+
+    assert asset_id not in [assets["id"] for assets in asset_container["asset"]["items"]]
+    assert response.status_code == 404
+
+
+@pytest.mark.order(after="test_get_second_user_asset_by_id_with_first_authenticated_client")
+def test_get_first_user_asset_by_id_with_second_user_client(
+    second_user_client: TestClient, asset_container
+):
+    asset_id = asset_container["asset"]["items"][0]["id"]
+
+    response = second_user_client.get(f"/api/v1/asset/{asset_id}")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.order(after="test_get_first_user_asset_by_id_with_second_user_client")
 def test_get_asset_by_unauthenticated_client(client: TestClient, asset_container):
     asset_id = asset_container["asset"]["items"][0]["id"]
     response = client.get(f"/api/v1/asset/{asset_id}")

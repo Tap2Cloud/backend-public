@@ -39,7 +39,8 @@ class DiskStorage(StorageInterface):
         file: UploadFile,
     ) -> UploadFile:
         root_path = os.path.join(str(self.app.config.project_root_path), self.config.BUCKET)
-        final_file_path = os.path.join(root_path, save_path, file.filename)
+        filename = self.ensure_safe_filename(file.filename)
+        final_file_path = os.path.join(root_path, save_path, filename)
 
         if os.path.exists(final_file_path):
             file.filename = self.add_unique_postfix(file.filename)
@@ -59,7 +60,7 @@ class DiskStorage(StorageInterface):
         filename: str,
     ) -> bool:
         root_path = os.path.join(str(self.app.config.project_root_path), self.config.BUCKET)
-        final_file_path = os.path.join(root_path, file_path, filename)
+        final_file_path = os.path.join(root_path, file_path, self.ensure_safe_filename(filename))
 
         if not os.path.exists(final_file_path):
             return False
@@ -108,7 +109,7 @@ class DiskStorage(StorageInterface):
                 str(organization_id),
                 str(document_for),
                 str(file_id),
-                file_name,
+                self.ensure_safe_filename(file_name),
             ),
             chunk_size,
         ):

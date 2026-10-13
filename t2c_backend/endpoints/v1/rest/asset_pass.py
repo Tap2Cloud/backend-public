@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
+from fastapi.responses import StreamingResponse
 from waygate.fastapi import rate_limit
 
-from t2c_backend.schemas.v1.asset import DetailedAssetPassResponse
+from t2c_backend.core.pagination import CustomPage
+from t2c_backend.core.security import JWTAPIAccessTokenBearer
+from t2c_backend.schemas.v1.asset import (
+    DetailedAssetPassResponse,
+)
+from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
+from t2c_backend.utils.enums import DocumentFor, SortBy
 from t2c_backend.utils.misc import DictContainer, interpret
 
 router = APIRouter()
@@ -22,4 +29,38 @@ async def get_asset_pass_by_pass_id(
     ref = interpret(gs1_path)
     return DetailedAssetPassResponse.from_model(
         await services.asset_service.get_asset_pass_by_pass_id(pass_id=ref.token, gtin=ref.gtin)
+    )
+
+
+@router.get(
+    "/asset-pass/{passId}/document/{documentFor}/{documentId}",
+    operation_id="get asset pass document",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "File was downloaded successfully.",
+            "content": {
+                "application/octet-stream": {
+                    "schema": {
+                        "type": "string",
+                        "format": "binary",
+                    }
+                }
+            },
+        }
+    },
+    status_code=200,
+)
+async def get_asset_pass_document(
+    pass_id: str = Path(..., alias="passId"),
+    document_for: DocumentFor = Path(..., alias="documentFor"),
+    document_id: str = Path(..., alias="documentId"),
+    download: bool = Query(False),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.asset_service.get_asset_pass_document(
+        pass_id=pass_id,
+        document_for=document_for,
+        document_id=document_id,
+        as_attachment=download,
     )

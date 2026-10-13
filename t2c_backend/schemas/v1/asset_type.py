@@ -13,7 +13,7 @@ from t2c_backend.schemas.v1.typeplates import (
     TypeplateRequest,
     TypeplateResponse,
 )
-from t2c_backend.utils.misc import is_valid_gtin
+from t2c_backend.utils.misc import datetime_to_epoch, is_valid_gtin
 
 
 class BaseFieldOptions(BaseModel):
@@ -149,7 +149,7 @@ class AssetTypeDocument(BaseModel):
             id=asset_type_document.id,
             name=asset_type_document.name,
             contentType=asset_type_document.content_type,
-            createdAt=int(asset_type_document.created_at.timestamp()),
+            createdAt=datetime_to_epoch(asset_type_document.created_at),
         )
 
 

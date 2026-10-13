@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.mark.order(after="test_asset.py::test_list_asset_pass_with_unauthenticated_client")
+@pytest.mark.order(after="test_asset.py::test_update_asset_with_unauthenticated_client")
 def test_get_list_of_instruction_manual(
     authenticated_client: TestClient,
 ):

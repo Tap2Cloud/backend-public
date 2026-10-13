@@ -1,13 +1,15 @@
 import uuid
-from datetime import UTC, datetime
 
 from sqlalchemy import (
-    DateTime,
+    ColumnElement,
     ForeignKey,
+    Index,
     Numeric,
     Text,
     UniqueConstraint,
     func,
+    literal_column,
+    text,
 )
 from sqlalchemy.orm import (
     Mapped,
@@ -30,19 +32,40 @@ from .asset_type_category import (
 from .location import Location
 from .user import User
 
+# Spelled as literal_column rather than as bound parameters so that the expression renders the
+# same characters in an index definition as it does in a query. A bound backslash is escaped
+# differently depending on what the server reports for standard_conforming_strings, and an index
+# whose expression differs by one character from the query's is an index the query cannot use.
+_WHITESPACE_RUN = literal_column(r"'\s+'")
+_SINGLE_SPACE = literal_column("' '")
+_GLOBAL = literal_column("'g'")
+
+ASSET_TYPE_NAME_UNIQUE_INDEX = "uq_asset_type_name_per_category"
+
+
+def normalized_asset_type_name(name: ColumnElement[str]) -> ColumnElement[str]:
+    return func.lower(
+        func.btrim(func.regexp_replace(name, _WHITESPACE_RUN, _SINGLE_SPACE, _GLOBAL))
+    )
+
 
 class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     __tablename__ = "asset_types"
+
+    __table_args__ = (
+        Index(
+            ASSET_TYPE_NAME_UNIQUE_INDEX,
+            "asset_type_category_id",
+            normalized_asset_type_name(text("name")),
+            unique=True,
+        ),
+    )
 
     name: Mapped[str] = mapped_column(Text(), nullable=False)
     video_links: Mapped[str] = mapped_column(Text(), nullable=True)
     video_title: Mapped[str] = mapped_column(Text(), nullable=True)
     web_link: Mapped[str] = mapped_column(Text(), nullable=True)
     web_link_title: Mapped[str] = mapped_column(Text(), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(UTC),
-    )
     description: Mapped[str] = mapped_column(Text(), nullable=False)
     weight: Mapped[float] = mapped_column(Numeric(), default=0, nullable=True)
     manufacturer: Mapped[str] = mapped_column(Text(), nullable=True)

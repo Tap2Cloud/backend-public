@@ -1,16 +1,20 @@
 import functools
 import json
 import re
+import unicodedata
 from calendar import timegm
-from datetime import UTC, datetime
+from datetime import UTC, datetime, tzinfo
 from inspect import isawaitable
+from typing import Annotated
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
+from pydantic import Field
 
 from t2c_backend.core.db.session import get_session_context
+from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.schemas.v1.asset_pass import ResolvedRef
 from t2c_backend.utils.enums import Gs1Standards, Scheme
-from t2c_backend.utils.errors import BadRequestError
 
 
 async def maybe_coroutine(func, *args, **kwargs):
@@ -42,6 +46,14 @@ async def json_or_text(response):
     return text
 
 
+# Accepted range for Unix timestamps (seconds) coming from clients: 1900-01-01T00:00:00Z to
+# 9998-12-31T23:59:59Z. Anything outside (e.g. milliseconds) is rejected with a 422 instead of
+# overflowing datetime; the upper bound leaves room to shift the value into any timezone.
+MIN_EPOCH_SECONDS = -2208988800
+MAX_EPOCH_SECONDS = 253370764799
+EpochSeconds = Annotated[int, Field(ge=MIN_EPOCH_SECONDS, le=MAX_EPOCH_SECONDS)]
+
+
 def datetime_to_epoch(dt):
     return timegm(dt.utctimetuple())
 
@@ -54,8 +66,52 @@ def datetime_from_epoch(ts):
     return datetime.fromtimestamp(ts, tz=UTC)
 
 
+def parse_timezone(name: str | None) -> tzinfo:
+    """Resolve an IANA timezone name (e.g. ``Asia/Kolkata``); ``None`` means UTC."""
+    if not name:
+        return UTC
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise BadRequestError(f"Invalid timezone '{name}'.") from None
+
+
 def get_name_from_email(email: str) -> str | None:
     return (match := re.match(r"^[a-zA-Z]+", email.split("@")[0])) and match.group()
+
+
+# Characters that render as nothing and would otherwise make two identical names look different:
+INVISIBLE_CHARACTERS = (
+    r"[\u00ad\u034f\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufeff\ufff9-\ufffb]"
+)
+_INVISIBLE_CHARACTERS_RE = re.compile(INVISIBLE_CHARACTERS)
+_WHITESPACE_RE = re.compile(r"\s+")
+_LIKE_WILDCARDS_RE = re.compile(r"([\\%_])")
+
+
+def normalize_name(name: str) -> str:
+    """
+    Canonical form of a user supplied name.
+
+    Applies NFKC (so fullwidth/compatibility characters and decomposed accents collapse onto
+    their canonical form), drops zero-width characters, squashes every whitespace run into a
+    single space and trims the ends. The result is what gets stored and what duplicate checks
+    are compared on.
+    """
+    name = unicodedata.normalize("NFKC", name)
+    name = _INVISIBLE_CHARACTERS_RE.sub("", name)
+    return _WHITESPACE_RE.sub(" ", name).strip()
+
+
+def escape_like(value: str) -> str:
+    """
+    Escape the LIKE/ILIKE pattern metacharacters in a value that should match exactly.
+
+    `%` and `_` are wildcards, so an unescaped "Acme_Corp" would also match "Acme Corp".
+    Postgres treats a backslash as the default escape character, which is what callers rely
+    on since the repository's `__ilike` filter cannot pass an explicit ESCAPE clause.
+    """
+    return _LIKE_WILDCARDS_RE.sub(r"\\\1", value)
 
 
 def r_getattr(obj, attr, *args):
