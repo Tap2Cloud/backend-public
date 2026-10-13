@@ -346,7 +346,7 @@ def test_get_asset_with_query_serial_no_and_asset_type_name(
 def test_get_asset_with_query_device_id(authenticated_client: TestClient, asset_container):
     device_id = random.choice([assets["deviceId"] for assets in asset_container["asset"]["items"]])
     response = authenticated_client.put(
-        f"/api/v1/asset/?q={device_id}", json={"categories": None, "status": None}
+        f"/api/v1/asset?q={device_id}", json={"categories": None, "status": None}
     )
 
     assert response.status_code == 200
