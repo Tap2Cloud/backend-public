@@ -12,9 +12,9 @@ import tomlkit
 from pydantic import Field
 
 from t2c_backend.core.db.session import get_session_context
-from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.schemas.v1.asset_pass import ResolvedRef
 from t2c_backend.utils.enums import Gs1Standards, Scheme
+from t2c_backend.utils.errors import BadRequestError
 
 
 async def maybe_coroutine(func, *args, **kwargs):

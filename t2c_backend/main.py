@@ -23,11 +23,11 @@ from t2c_backend.core.event_handlers import lifespan
 from t2c_backend.core.middlewares.language import LanguageMiddleware
 from t2c_backend.core.middlewares.sqlalchemy import SQLAlchemyMiddleware
 from t2c_backend.core.middlewares.upload_limit import UploadLimitMiddleware
+from t2c_backend.endpoints import open_router as asset_pass_router
 from t2c_backend.endpoints.router import api_router
 from t2c_backend.utils.enums import ENVIRONMENT
 from t2c_backend.utils.errors import ApplicationError
 from t2c_backend.utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
-from t2c_backend.endpoints import open_router as asset_pass_router
 
 initial_clients = [
     "t2c_backend.clients.token_backend",

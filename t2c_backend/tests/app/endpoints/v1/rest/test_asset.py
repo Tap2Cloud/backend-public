@@ -455,18 +455,3 @@ def test_update_asset_with_unauthenticated_client(
         },
     )
     assert response.status_code == 401
-
-
-@pytest.mark.order(after="test_update_asset_with_unauthenticated_client")
-def test_list_asset_pass(authenticated_client: TestClient, asset_pass_container):
-    response = authenticated_client.get("/api/v1/asset-pass")
-
-    asset_pass_container.update({"asset_pass": response.json()})
-    assert response.status_code == 200
-
-
-@pytest.mark.order(after="test_list_asset_pass")
-def test_list_asset_pass_with_unauthenticated_client(client: TestClient):
-    response = client.get("/api/v1/asset-pass")
-
-    assert response.status_code == 401

@@ -118,22 +118,3 @@ async def get_asset(
     return AssetResponse.convert(
         await services.asset_service.get_asset_by_organization_id(asset_id, token.organization_id)
     )
-
-
-@router.get(
-    "/asset-pass",
-    operation_id="list asset pass",
-    response_model=CustomPage[DetailedAssetPassResponse],
-    status_code=200,
-)
-async def list_asset_pass(
-    q: str | None = None,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    sort_by: SortBy | None = SortBy.Latest,
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"list_asset_pass": True})),
-    services: DictContainer = Depends(get_services),
-):
-    return await services.asset_service.list_asset_pass(
-        q=q, page=page, page_size=page_size, organization_id=token.organization_id, sort_by=sort_by
-    )
