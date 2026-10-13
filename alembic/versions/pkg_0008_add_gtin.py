@@ -1,7 +1,7 @@
 """add_gtin
 
-Revision ID: pkg_0006
-Revises: pkg_0005
+Revision ID: pkg_0008
+Revises: pkg_0007
 Create Date: 2026-07-08 17:41:02.286301
 
 """
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "pkg_0006"
-down_revision: str | Sequence[str] | None = "pkg_0005"
+revision: str = "pkg_0008"
+down_revision: str | Sequence[str] | None = "pkg_0007"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
