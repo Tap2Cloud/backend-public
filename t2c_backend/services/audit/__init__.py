@@ -33,7 +33,7 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
-from t2c_backend.utils.misc import datetime_from_epoch
+from t2c_backend.utils.misc import datetime_from_epoch, normalize_name
 
 PAGE = A4
 MARGIN = 36
@@ -135,6 +135,19 @@ class AuditService:
     async def create_audit_task(
         self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
     ):
+        text_fields = {
+            "task_name": "Task name",
+            "performed_by_org": "Performed by organization",
+            "role_of_org": "Role of organization",
+            "first_name": "First name",
+            "last_name": "Last name",
+        }
+        values = {}
+        for field, label in text_fields.items():
+            values[field] = normalize_name(getattr(task, field))
+            if not values[field]:
+                raise BadRequestError(f"{label} is required.")
+
         documents = documents or []
         for document in documents:
             if document.content_type not in ALLOWED_DOCUMENT_TYPES:
@@ -144,13 +157,9 @@ class AuditService:
 
         audit_task = await self.task_repository.save(
             AuditTask(
-                task_name=task.task_name,
                 task_type=TaskType(task.task_type),
                 status=AuditTaskStatus(task.status),
-                performed_by_org=task.performed_by_org,
-                role_of_org=task.role_of_org,
-                first_name=task.first_name,
-                last_name=task.last_name,
+                **values,
             )
         )
 
@@ -207,6 +216,14 @@ class AuditService:
 
             if audit_task.documents:
                 for document in audit_task.documents:
+                    # name and content type locate the stored file, so they must match the row
+                    if not await self.task_document_repository.exists(
+                        id=document.id,
+                        audit_task_id=audit_task.id,
+                        name=document.name,
+                        content_type=document.content_type,
+                    ):
+                        raise BadRequestError(f"Document {document.name} not found.")
                     document = AuditTaskDocumentSchema.to_orm(document)
                     await self.task_repository.session.merge(document)
                     documents.append(document)
