@@ -144,7 +144,7 @@ class AssetTypeService:
             weight=asset_type_data.get("weight"),
             manufacturer=asset_type_data.get("manufacturer"),
             gtin=gtin,
-            gtin_timestamp=aware_utcnow() if gtin else None,
+            gtin_updated_at=aware_utcnow() if gtin else None,
             asset_type_category_id=asset_type_form.id,
             typeplate=typeplate,
         )
@@ -287,7 +287,7 @@ class AssetTypeService:
                     asset_type_id=db_asset_type.id,
                 )
                 db_asset_type.gtin = asset_type_details.gtin
-                db_asset_type.gtin_timestamp = aware_utcnow()
+                db_asset_type.gtin_updated_at = aware_utcnow()
         elif asset_type_details.gtin != db_asset_type.gtin:
             raise BadRequestError("GTIN cannot be changed once set")
 
