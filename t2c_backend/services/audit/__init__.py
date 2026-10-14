@@ -33,7 +33,7 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
-from t2c_backend.utils.misc import datetime_from_epoch
+from t2c_backend.utils.misc import datetime_from_epoch, normalize_name
 
 PAGE = A4
 MARGIN = 36
@@ -132,8 +132,21 @@ class AuditService:
         self.task_document_repository = BaseRepository(app, session, AuditTaskDocument)
 
     async def create_audit_task(
-        self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile] = None
+        self, organization_id: int, task: CreateAuditTask, documents: list[UploadFile]
     ):
+        text_fields = {
+            "task_name": "Task name",
+            "performed_by_org": "Performed by organization",
+            "role_of_org": "Role of organization",
+            "first_name": "First name",
+            "last_name": "Last name",
+        }
+        values = {}
+        for field, label in text_fields.items():
+            values[field] = normalize_name(getattr(task, field))
+            if not values[field]:
+                raise BadRequestError(f"{label} is required.")
+
         seen = set()
         duplicates = set()
         for document in documents:
@@ -145,13 +158,9 @@ class AuditService:
 
         audit_task = await self.task_repository.save(
             AuditTask(
-                task_name=task.task_name,
                 task_type=TaskType(task.task_type),
                 status=AuditTaskStatus(task.status),
-                performed_by_org=task.performed_by_org,
-                role_of_org=task.role_of_org,
-                first_name=task.first_name,
-                last_name=task.last_name,
+                **values,
             )
         )
 
@@ -200,19 +209,23 @@ class AuditService:
         )
 
         audit_tasks = []
-        for audit_task in audit_task_data:
-            if not await self.task_repository.exists(id=audit_task.id):
-                raise BadRequestError(f"Audit task {audit_task.task_name} not found.")
+        for task_data in audit_task_data:
+            audit_task = await self.task_repository.get_one_or_none(
+                id=task_data.id, options=[joinedload(AuditTask.documents)]
+            )
+            if not audit_task:
+                raise BadRequestError(f"Audit task {task_data.task_name} not found.")
+
+            for document in task_data.documents:
+                if not await self.task_document_repository.exists(
+                    id=document.id,
+                    audit_task_id=audit_task.id,
+                    name=document.name,
+                    content_type=document.content_type,
+                ):
+                    raise BadRequestError(f"Document {document.name} not found.")
+
             audit_task.audit_id = audit.id
-            documents = []
-
-            if audit_task.documents:
-                for document in audit_task.documents:
-                    document = AuditTaskDocumentSchema.to_orm(document)
-                    await self.task_repository.session.merge(document)
-                    documents.append(document)
-
-            await self.repository.session.merge(audit_task)
             audit_tasks.append(audit_task)
 
         return audit, audit_tasks

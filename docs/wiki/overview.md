@@ -69,7 +69,7 @@ inputs cannot slip past the comparison. See
 
 - **Language:** Python ≥ 3.12
 - **Web framework:** FastAPI (with `fastapi-pagination`), served by Gunicorn + Uvicorn workers
-- **Database:** PostgreSQL via SQLAlchemy 2.0 (async, `asyncpg`), Alembic migrations
+- **Database:** PostgreSQL via SQLAlchemy 2.1 (async, `asyncpg`), Alembic migrations
 - **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing; role-based bitmask permissions enforced per route
 - **Config:** `pydantic-settings` (environment-driven)
 - **Files/PDF:** `aiofiles` disk storage (S3 backend stubbed in OSS), ReportLab for audit reports

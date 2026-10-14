@@ -42,7 +42,6 @@ def test_create_audit_task1_with_document(
 @pytest.mark.order(after="test_create_audit_task1_with_document")
 def test_create_audit_task2_without_document(
     audit_task,
-    audit_task_container,
     authenticated_client: TestClient,
     fake: Faker,
 ):
@@ -51,9 +50,7 @@ def test_create_audit_task2_without_document(
         data={"task": json.dumps(audit_task)},
     )
 
-    audit_task_container.append(response.json())
-
-    assert response.status_code == 201
+    assert response.status_code == 422
 
 
 @pytest.mark.order(after="test_create_audit_task2_without_document")
