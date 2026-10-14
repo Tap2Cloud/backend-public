@@ -75,8 +75,8 @@ class CreateAuditTask(BaseModel):
 class AuditTaskResponse(BaseModel):
     id: int
     task_name: str = Field(..., alias="taskName")
-    task_type: str = Field(..., alias="taskType")
-    status: str
+    task_type: TaskType = Field(..., alias="taskType")
+    status: AuditTaskStatus
     performed_by_org: str = Field(..., alias="performedByOrg")
     role_of_org: str = Field(..., alias="roleOfOrg")
     first_name: str = Field(..., alias="firstName")
