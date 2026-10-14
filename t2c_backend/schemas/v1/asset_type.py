@@ -164,6 +164,7 @@ class AssetTypeResponse(BaseModel):
     weight: float | None
     manufacturer: str | None
     gtin: str | None
+    gtin_timestamp: int | None = PydanticField(None, alias="gtinTimestamp")
     form: conlist(FormData, min_length=1)
     instruction_manuals: list[AssetTypeDocument] = PydanticField(None, alias="instructionManuals")
     asset_type_category: DisplayAssetTypeCategory = PydanticField(alias="assetTypeCategory")
@@ -187,6 +188,9 @@ class AssetTypeResponse(BaseModel):
             weight=asset_type.weight,
             manufacturer=asset_type.manufacturer,
             gtin=asset_type.gtin,
+            gtinTimestamp=datetime_to_epoch(asset_type.gtin_timestamp)
+            if asset_type.gtin_timestamp
+            else None,
             form=[FormData.from_model(atf) for atf in asset_type.fields],
             instructionManuals=[
                 AssetTypeDocument.from_model(doc) for doc in instruction_manuals_data
