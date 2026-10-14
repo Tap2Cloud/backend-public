@@ -1,9 +1,7 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
     ColumnElement,
-    DateTime,
     ForeignKey,
     Index,
     Numeric,
@@ -72,7 +70,6 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
     weight: Mapped[float] = mapped_column(Numeric(), default=0, nullable=True)
     manufacturer: Mapped[str] = mapped_column(Text(), nullable=True)
     gtin: Mapped[str] = mapped_column(Text(), nullable=True)
-    gtin_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     asset_type_category_id: Mapped[int] = mapped_column(
         ForeignKey("asset_type_categories.id", ondelete="CASCADE"),
     )

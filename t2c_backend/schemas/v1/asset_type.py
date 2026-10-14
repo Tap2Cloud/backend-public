@@ -76,15 +76,7 @@ class UpdateAssetTypeRequest(BaseModel):
     description: str
     weight: float | None
     manufacturer: str | None
-    gtin: str | None
     fields: conlist(BaseField, min_length=1)
-
-    @model_validator(mode="after")
-    @classmethod
-    def validate_json(cls, value):
-        if value.gtin and not is_valid_gtin(value.gtin):
-            raise ValueError("Invalid GTIN format")
-        return value
 
 
 class AssetTypeFieldOptions(BaseFieldOptions):
@@ -164,7 +156,6 @@ class AssetTypeResponse(BaseModel):
     weight: float | None
     manufacturer: str | None
     gtin: str | None
-    gtin_updated_at: int | None = PydanticField(None, alias="gtinUpdatedAt")
     form: conlist(FormData, min_length=1)
     instruction_manuals: list[AssetTypeDocument] = PydanticField(None, alias="instructionManuals")
     asset_type_category: DisplayAssetTypeCategory = PydanticField(alias="assetTypeCategory")
@@ -188,9 +179,6 @@ class AssetTypeResponse(BaseModel):
             weight=asset_type.weight,
             manufacturer=asset_type.manufacturer,
             gtin=asset_type.gtin,
-            gtinUpdatedAt=datetime_to_epoch(asset_type.gtin_updated_at)
-            if asset_type.gtin_updated_at
-            else None,
             form=[FormData.from_model(atf) for atf in asset_type.fields],
             instructionManuals=[
                 AssetTypeDocument.from_model(doc) for doc in instruction_manuals_data

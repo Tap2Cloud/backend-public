@@ -34,8 +34,7 @@ from t2c_backend.schemas.v1.asset_type import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.schemas.v1.typeplates import TypeplateImageRequest
 from t2c_backend.utils.enums import DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
-from t2c_backend.utils.misc import aware_utcnow
+from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
 
 
 class AssetTypeService:
@@ -77,15 +76,9 @@ class AssetTypeService:
         if duplicate:
             raise AlreadyExistsError("Asset type name already exists in this category")
 
-    async def ensure_gtin_is_free(
-        self,
-        gtin: str,
-        asset_type_id: int | None = None,
-    ) -> None:
+    async def ensure_gtin_is_free(self, gtin: str) -> None:
         await self.repository.lock_values(gtin=gtin)
         query = select(self._model.id).where(self._model.gtin == gtin)
-        if asset_type_id is not None:
-            query = query.where(self._model.id != asset_type_id)
 
         duplicate = await self.repository.execute(select(exists(query)))
         if duplicate.scalar():
@@ -144,7 +137,6 @@ class AssetTypeService:
             weight=asset_type_data.get("weight"),
             manufacturer=asset_type_data.get("manufacturer"),
             gtin=gtin,
-            gtin_updated_at=aware_utcnow() if gtin else None,
             asset_type_category_id=asset_type_form.id,
             typeplate=typeplate,
         )
@@ -279,17 +271,6 @@ class AssetTypeService:
         db_asset_type.description = asset_type_details.description
         db_asset_type.weight = asset_type_details.weight
         db_asset_type.manufacturer = asset_type_details.manufacturer
-
-        if db_asset_type.gtin is None:
-            if asset_type_details.gtin:
-                await self.ensure_gtin_is_free(
-                    gtin=asset_type_details.gtin,
-                    asset_type_id=db_asset_type.id,
-                )
-                db_asset_type.gtin = asset_type_details.gtin
-                db_asset_type.gtin_updated_at = aware_utcnow()
-        elif asset_type_details.gtin != db_asset_type.gtin:
-            raise BadRequestError("GTIN cannot be changed once set")
 
         excluded_types = [InputType.image, InputType.file]
         db_asset_type.fields = [

@@ -8,20 +8,28 @@ import alembic.config
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from main import CustomFastAPI
-from tests.utils.misc import Pagination
-from utils.enums import (
+
+from t2c_backend.main import CustomFastAPI
+from t2c_backend.tests.utils.misc import Pagination
+from t2c_backend.utils.enums import (
     AssetStatus,
     AuditTaskStatus,
     InputType,
     ServiceTypes,
     TaskType,
 )
+from t2c_backend.utils.misc import gtin_check_digit
 
 
 @pytest.fixture(scope="session")
 def fake() -> Faker:
     return Faker(locale="fr_FR")
+
+
+@pytest.fixture(scope="function")
+def gtin() -> str:
+    first13 = "".join(random.choices("0123456789", k=13))
+    return f"{first13}{gtin_check_digit(first13)}"
 
 
 @pytest.fixture(scope="session")

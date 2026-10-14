@@ -4,7 +4,8 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import DocumentFor
+
+from t2c_backend.utils.enums import DocumentFor
 
 
 @pytest.mark.order(
@@ -17,6 +18,7 @@ def test_create_asset_type_string(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     fake_file = fake.file_name()
     document_content = fake.text().encode("utf-8")
@@ -27,6 +29,7 @@ def test_create_asset_type_string(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -60,6 +63,7 @@ def test_create_second_asset_type_string(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     fake_file = fake.file_name()
     document_content = fake.text().encode("utf-8")
@@ -77,7 +81,7 @@ def test_create_second_asset_type_string(
         "description": updated_asset_type["description"],
         "weight": updated_asset_type["weight"],
         "manufacturer": updated_asset_type["manufacturer"],
-        "gtin": updated_asset_type["gtin"],
+        "gtin": gtin,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -109,6 +113,7 @@ def test_create_asset_type_string_for_second_user(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type_field["responseValue"] = fake.name()
     for field in container["second_string_asset_type_category"]["fields"]:
@@ -116,6 +121,7 @@ def test_create_asset_type_string_for_second_user(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["second_string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -190,6 +196,7 @@ def test_create_asset_type_integer(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.random_int()}"
@@ -198,6 +205,7 @@ def test_create_asset_type_integer(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["integer_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -223,6 +231,7 @@ def test_create_asset_type_time(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.time()}"
@@ -231,6 +240,7 @@ def test_create_asset_type_time(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["time_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -256,6 +266,7 @@ def test_create_asset_type_url(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.url()}"
@@ -264,6 +275,7 @@ def test_create_asset_type_url(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["url_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -289,6 +301,7 @@ def test_create_asset_type_password(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.password()}"
@@ -297,6 +310,7 @@ def test_create_asset_type_password(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["password_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -324,6 +338,7 @@ def test_create_asset_type_image(
     typeplate_details,
     typeplate_images,
     asset_pass_document_container,
+    gtin: str,
 ):
     fake_file = f"image-custom-field-{fake.random_int()}.png"
     document_content = fake.text().encode("utf-8")
@@ -340,6 +355,7 @@ def test_create_asset_type_image(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["image_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -387,6 +403,7 @@ def test_create_asset_type_file(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     fake_file = fake.file_name()
     document_content = fake.text().encode("utf-8")
@@ -398,6 +415,7 @@ def test_create_asset_type_file(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["file_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -424,6 +442,7 @@ def test_create_asset_type_email(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.email()}"
@@ -432,6 +451,7 @@ def test_create_asset_type_email(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["email_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -457,6 +477,7 @@ def test_create_asset_type_date(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.date()}"
@@ -465,6 +486,7 @@ def test_create_asset_type_date(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["date_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -490,6 +512,7 @@ def test_create_asset_type_datetime(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.date_time()}"
@@ -498,6 +521,7 @@ def test_create_asset_type_datetime(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["datetime_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -524,6 +548,7 @@ def test_create_asset_type_radio(
     asset_type_field_options,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = ""
@@ -538,6 +563,7 @@ def test_create_asset_type_radio(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["radio_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -564,6 +590,7 @@ def test_create_asset_type_multiselect(
     asset_type_field_options,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = fake.name()
@@ -577,6 +604,7 @@ def test_create_asset_type_multiselect(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["multiselect_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -603,6 +631,7 @@ def test_create_asset_type_checkbox(
     asset_type_field_options,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = fake.name()
@@ -616,6 +645,7 @@ def test_create_asset_type_checkbox(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["checkbox_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -642,6 +672,7 @@ def test_create_asset_type_select(
     asset_type_field_options,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = fake.name()
@@ -655,6 +686,7 @@ def test_create_asset_type_select(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["select_type_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -680,6 +712,7 @@ def test_create_asset_type_with_unauthenticated_client(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type["name"] = fake.name()
     asset_type_field["responseValue"] = f"{fake.random_int()}"
@@ -688,6 +721,7 @@ def test_create_asset_type_with_unauthenticated_client(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplateDetails": typeplate_details,
@@ -713,6 +747,7 @@ def test_create_asset_type_with_false_typeplate_image(
     asset_type_field,
     container,
     typeplate_details,
+    gtin: str,
 ):
     asset_type_field["responseValue"] = fake.name()
     for field in container["string_asset_type_category"]["fields"]:
@@ -720,6 +755,7 @@ def test_create_asset_type_with_false_typeplate_image(
 
     asset_type_data = {
         **asset_type,
+        "gtin": gtin,
         "assetTypeCategoryId": container["string_asset_type_category"]["id"],
         "fields": [asset_type_field],
         "typeplate_images": [{"id": "598f366d-5f24-4a08-ba30-afb411fb4c5e"}],
