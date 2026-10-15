@@ -28,6 +28,9 @@ from t2c_backend.schemas.v1.audit import (
     CreateAudit,
     CreateAuditTask,
 )
+from t2c_backend.schemas.v1.audit import (
+    AuditTaskDocument as AuditTaskDocumentSchema,
+)
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
 from t2c_backend.utils.misc import datetime_from_epoch, normalize_name
@@ -64,7 +67,6 @@ SECTION = ParagraphStyle(
 )
 TABLE_HEAD = ParagraphStyle("AuditTableHead", parent=LABEL, textColor=MUTED)
 LINK = colors.HexColor("#0B5CAD")
-ALLOWED_DOCUMENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/svg+xml"}
 
 
 def _file_icon() -> Drawing:
@@ -145,11 +147,14 @@ class AuditService:
             if not values[field]:
                 raise BadRequestError(f"{label} is required.")
 
+        seen = set()
+        duplicates = set()
         for document in documents:
-            if document.content_type not in ALLOWED_DOCUMENT_TYPES:
-                raise BadRequestError(
-                    "Only JPEG, PNG, WebP or SVG images are allowed as audit documents."
-                )
+            if document.filename in seen:
+                duplicates.add(document.filename)
+            seen.add(document.filename)
+        if duplicates:
+            raise BadRequestError(f"Documents uploaded more than once: {','.join(duplicates)}")
 
         audit_task = await self.task_repository.save(
             AuditTask(
