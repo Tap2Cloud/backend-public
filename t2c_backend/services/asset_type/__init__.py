@@ -533,12 +533,10 @@ class AssetTypeService:
             raise NotFoundError("Asset type not found")
 
         await self.unique_document_names(documents)
-        existing_documents = await self.asset_types_documents_repository.list(
-            asset_type_id=asset_type.id,
-            name__in=[doc.filename for doc in documents or []],
-        )
-        if existing_documents:
-            names = ", ".join(f"'{document.name}'" for document in existing_documents)
+        new_names = {doc.filename for doc in documents or []}
+        existing = [d.name for d in asset_type.documents if d.name in new_names]
+        if existing:
+            names = ", ".join(f"'{name}'" for name in existing)
             raise AlreadyExistsError(f"Document {names} already exists for this asset type")
 
         new_db_documents = []
