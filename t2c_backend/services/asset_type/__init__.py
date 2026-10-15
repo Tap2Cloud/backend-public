@@ -76,20 +76,15 @@ class AssetTypeService:
         if duplicate:
             raise AlreadyExistsError("Asset type name already exists in this category")
 
-    async def unique_document_names(
-        self,
-        documents: list[UploadFile],
-        existing_names: set[str] | None = None,
-    ) -> None:
-        seen: set[str] = set()
-        for doc in documents or []:
-            if doc.filename in seen:
-                raise BadRequestError(f"Document '{doc.filename}' was uploaded more than once")
-            if existing_names and doc.filename in existing_names:
-                raise AlreadyExistsError(
-                    f"Document '{doc.filename}' already exists for this asset type"
-                )
-            seen.add(doc.filename)
+    async def unique_document_names(self, documents: list[UploadFile]) -> None:
+        seen = set()
+        duplicates = set()
+        for document in documents or []:
+            if document.filename in seen:
+                duplicates.add(document.filename)
+            seen.add(document.filename)
+        if duplicates:
+            raise BadRequestError(f"Documents uploaded more than once: {','.join(duplicates)}")
 
     async def create_asset_type(
         self,
@@ -537,9 +532,14 @@ class AssetTypeService:
         if not asset_type:
             raise NotFoundError("Asset type not found")
 
-        await self.unique_document_names(
-            documents, existing_names={document.name for document in asset_type.documents}
+        await self.unique_document_names(documents)
+        existing_documents = await self.asset_types_documents_repository.list(
+            asset_type_id=asset_type.id,
+            name__in=[doc.filename for doc in documents or []],
         )
+        if existing_documents:
+            names = ", ".join(f"'{document.name}'" for document in existing_documents)
+            raise AlreadyExistsError(f"Document {names} already exists for this asset type")
 
         new_db_documents = []
         new_documents = []
