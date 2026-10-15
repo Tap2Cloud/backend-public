@@ -28,9 +28,6 @@ from t2c_backend.schemas.v1.audit import (
     CreateAudit,
     CreateAuditTask,
 )
-from t2c_backend.schemas.v1.audit import (
-    AuditTaskDocument as AuditTaskDocumentSchema,
-)
 from t2c_backend.utils.enums import AuditTaskStatus, DocumentFor, Language, SortBy, TaskType
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
 from t2c_backend.utils.misc import datetime_from_epoch, normalize_name
