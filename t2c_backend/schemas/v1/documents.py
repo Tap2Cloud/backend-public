@@ -3,6 +3,7 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 from t2c_backend.models import Document
+from t2c_backend.utils.misc import datetime_to_epoch
 
 
 class DocumentResponse(BaseModel):
@@ -21,5 +22,5 @@ class DocumentResponse(BaseModel):
             name=fields.name,
             type=fields.type,
             status=fields.status,
-            createdAt=int(fields.created_at.timestamp()),
+            createdAt=datetime_to_epoch(fields.created_at),
         )

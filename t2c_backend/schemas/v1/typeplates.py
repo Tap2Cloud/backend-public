@@ -5,6 +5,7 @@ from fastapi import UploadFile
 from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
 
 from t2c_backend.models import TypeplateImage as TypeplateImageModel
+from t2c_backend.utils.misc import datetime_to_epoch
 
 
 class TypeplateImageRequest(BaseModel):
@@ -85,7 +86,7 @@ class TypeplateDocument(BaseModel):
             id=typeplate_document.id,
             name=typeplate_document.name,
             contentType=typeplate_document.content_type,
-            createdAt=int(typeplate_document.created_at.timestamp()),
+            createdAt=datetime_to_epoch(typeplate_document.created_at),
         )
 
 
@@ -109,7 +110,7 @@ class TypeplateResponse(BaseModel):
             carbonFootprintLabel=fields.carbon_footprint_label,
             typeplateImages=[TypeplateImage.from_model(img) for img in typeplate_images],
             euFile=TypeplateDocument.from_model(eu_file_data[0]) if len(eu_file_data) > 0 else None,
-            createdAt=int(fields.created_at.timestamp()),
+            createdAt=datetime_to_epoch(fields.created_at),
         )
 
 

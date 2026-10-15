@@ -115,9 +115,12 @@ class AssetTypeCategoryService:
         await self.repository.save(db_asset_type_details)
 
         for category_field in updated_asset_type_category_data.fields:
-            if not await self.asset_type_category_groups_repository.get_one_or_none(
-                id=category_field.asset_type_category_group_id
-            ):
+            asset_type_category_group = (
+                await self.asset_type_category_groups_repository.get_one_or_none(
+                    id=category_field.asset_type_category_group_id
+                )
+            )
+            if not asset_type_category_group:
                 raise NotFoundError("Asset type category group not found")
             if category_field.id is None:
                 new_field = AssetTypeCategoryField(
@@ -156,6 +159,7 @@ class AssetTypeCategoryService:
                         setattr(asset_type_category_field, key, -value)
                     else:
                         setattr(asset_type_category_field, key, value)
+                asset_type_category_field.asset_type_category_group = asset_type_category_group
 
                 incoming_option_ids = {
                     option.id for option in category_field.options if option.id is not None
@@ -287,7 +291,7 @@ class AssetTypeCategoryService:
         )
 
     async def get_asset_type_category(self, location_id: int, asset_type_category_id: int):
-        return await self.repository.get_one_or_none(
+        asset_type_category = await self.repository.get_one_or_none(
             options=[
                 joinedload(self._model.user),
                 joinedload(self._model.fields),
@@ -299,6 +303,9 @@ class AssetTypeCategoryService:
             id=asset_type_category_id,
             location_id=location_id,
         )
+        if asset_type_category:
+            return asset_type_category
+        raise NotFoundError(msg="Asset type category not found")
 
     async def get_asset_type_categories(self, location_id: int):
         stmt = (

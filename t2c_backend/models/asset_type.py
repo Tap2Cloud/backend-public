@@ -1,9 +1,7 @@
 import uuid
-from datetime import UTC, datetime
 
 from sqlalchemy import (
     ColumnElement,
-    DateTime,
     ForeignKey,
     Index,
     Numeric,
@@ -68,10 +66,6 @@ class AssetType(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase
     video_title: Mapped[str] = mapped_column(Text(), nullable=True)
     web_link: Mapped[str] = mapped_column(Text(), nullable=True)
     web_link_title: Mapped[str] = mapped_column(Text(), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(UTC),
-    )
     description: Mapped[str] = mapped_column(Text(), nullable=False)
     weight: Mapped[float] = mapped_column(Numeric(), default=0, nullable=True)
     manufacturer: Mapped[str] = mapped_column(Text(), nullable=True)

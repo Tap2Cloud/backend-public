@@ -1,4 +1,3 @@
-import datetime
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile
@@ -15,7 +14,7 @@ from t2c_backend.schemas.v1.typeplates import (
 )
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import SortBy
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import MAX_EPOCH_SECONDS, MIN_EPOCH_SECONDS, DictContainer
 
 router = APIRouter()
 
@@ -47,8 +46,19 @@ async def list_typeplate_details(
     sort_by: SortBy | None = SortBy.Latest,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
-    typeplate_created_start_date: datetime.date = None,
-    typeplate_created_end_date: datetime.date = None,
+    typeplate_created_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    typeplate_created_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    typeplate_images_id: list[uuid.UUID] | None = Query(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_read": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -59,6 +69,7 @@ async def list_typeplate_details(
         page_size=page_size,
         typeplate_created_start_date=typeplate_created_start_date,
         typeplate_created_end_date=typeplate_created_end_date,
+        typeplate_images_id=typeplate_images_id,
         location_id=token.location_id,
     )
 

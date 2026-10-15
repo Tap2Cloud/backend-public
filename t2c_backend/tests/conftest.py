@@ -16,7 +16,6 @@ from utils.enums import (
     ServiceTypes,
     TaskType,
 )
-from utils.misc import aware_utcnow
 
 
 @pytest.fixture(scope="session")
@@ -261,7 +260,7 @@ def asset(fake: Faker) -> dict[str, int]:
     return {
         "location": fake.random_number(fix_len=True),
         "assetId": f"{fake.random_number(fix_len=True)}",
-        "manufacturingDate": int((fake.date_time()).timestamp()),
+        "manufacturingDate": int(fake.date_time(tzinfo=UTC).timestamp()),
         "status": fake.name(),
         "serialNo": f"{fake.random_number(fix_len=True)}",
         "economicOperator": fake.name(),
@@ -276,7 +275,7 @@ def update_asset(fake: Faker) -> dict:
     return {
         "location": fake.random_number(fix_len=True),
         "assetId": f"{fake.random_number(fix_len=True)}",
-        "manufacturingDate": int((fake.date_time()).timestamp()),
+        "manufacturingDate": int(fake.date_time(tzinfo=UTC).timestamp()),
         "status": random.choice(list(AssetStatus)),
         "serialNo": f"{fake.random_number(fix_len=True)}",
         "economicOperator": fake.name(),
@@ -320,7 +319,9 @@ def asset_container():
 
 @pytest.fixture(scope="function")
 def asset_service(fake: Faker):
-    service_date = int((fake.date_time()).timestamp()) + int(aware_utcnow().timestamp())
+    service_date = int(
+        fake.date_time_between(start_date="+1d", end_date="+365d", tzinfo=UTC).timestamp()
+    )
     return {
         "serviceName": fake.name(),
         "serviceProviderName": fake.name(),

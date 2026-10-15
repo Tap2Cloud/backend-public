@@ -17,6 +17,9 @@ class Config(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = field(default_factory=lambda: ["*"])
     REQUEST_ID_HEADER_NAME: str = "X-Request-Id"
 
+    # Combined size of all files in a single upload request, across every endpoint.
+    MAX_UPLOAD_SIZE_MB: int = 100
+
     # noinspection PyNestedDecorators
     @field_validator("BACKEND_CORS_ORIGINS")
     @classmethod
@@ -42,6 +45,7 @@ class Config(BaseSettings):
     GUNICORN_WORKERS: int
 
     FRONTEND_URL: AnyHttpUrl
+    BACKEND_URL: AnyHttpUrl
 
     @property
     def project_root_path(self):

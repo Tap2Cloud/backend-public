@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import (
     DateTime,
@@ -23,6 +23,7 @@ from t2c_backend.core.db import (
 from t2c_backend.models.audit import Audit
 from t2c_backend.models.service import Service
 from t2c_backend.utils.enums import AssetStatus
+from t2c_backend.utils.misc import aware_utcnow
 
 
 class Asset(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
@@ -39,7 +40,7 @@ class Asset(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Au
     device_id: Mapped[str] = mapped_column(Text())
     manufacturing_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.now(UTC),
+        default=aware_utcnow,
     )
     status: Mapped[AssetStatus] = mapped_column(Enum(AssetStatus), nullable=False)
     serial_no: Mapped[str] = mapped_column(Text(), nullable=True)

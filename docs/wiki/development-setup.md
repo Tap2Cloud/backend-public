@@ -42,13 +42,13 @@ Relevant `pyproject.toml` groups:
 ```toml
 [dependency-groups]
 dev = [
-    "ruff>=0.16.4",
+    "ruff>=0.17.0",
 ]
 test = [
-    "faker>=40.37.0",
+    "faker>=40.43.0",
     "pillow>=12.3.0",
     "pytest>=9.1.1",
-    "pytest-mock>=3.15.1",
+    "pytest-mock>=3.16.0",
     "pytest-order>=1.5.0",
 ]
 ```
@@ -122,9 +122,15 @@ docker compose -f development/docker-compose.yml up -d
 # 3. Create the schema and seed static data (see Database Migrations)
 uv run --env-file .env/.env.development alembic upgrade head
 
-# 4. Run the app
+# 4. Compile the translations (.mo files are build output and are not committed)
+uv run pybabel compile -d t2c_backend/locales -D messages
+
+# 5. Run the app
 uv run --env-file .env/.env.development python launcher.py
 ```
+
+Re-run step 4 whenever a `t2c_backend/locales/*/LC_MESSAGES/messages.po` file changes. Without
+compiled catalogs the app still starts, but every message falls back to English.
 
 FastAPI then serves the OpenAPI docs under the app's `/api` prefix.
 

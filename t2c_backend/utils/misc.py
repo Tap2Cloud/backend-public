@@ -3,12 +3,16 @@ import json
 import re
 import unicodedata
 from calendar import timegm
-from datetime import UTC, datetime
+from datetime import UTC, datetime, tzinfo
 from inspect import isawaitable
+from typing import Annotated
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
+from pydantic import Field
 
 from t2c_backend.core.db.session import get_session_context
+from t2c_backend.utils.errors import BadRequestError
 
 
 async def maybe_coroutine(func, *args, **kwargs):
@@ -40,6 +44,14 @@ async def json_or_text(response):
     return text
 
 
+# Accepted range for Unix timestamps (seconds) coming from clients: 1900-01-01T00:00:00Z to
+# 9998-12-31T23:59:59Z. Anything outside (e.g. milliseconds) is rejected with a 422 instead of
+# overflowing datetime; the upper bound leaves room to shift the value into any timezone.
+MIN_EPOCH_SECONDS = -2208988800
+MAX_EPOCH_SECONDS = 253370764799
+EpochSeconds = Annotated[int, Field(ge=MIN_EPOCH_SECONDS, le=MAX_EPOCH_SECONDS)]
+
+
 def datetime_to_epoch(dt):
     return timegm(dt.utctimetuple())
 
@@ -50,6 +62,16 @@ def aware_utcnow():
 
 def datetime_from_epoch(ts):
     return datetime.fromtimestamp(ts, tz=UTC)
+
+
+def parse_timezone(name: str | None) -> tzinfo:
+    """Resolve an IANA timezone name (e.g. ``Asia/Kolkata``); ``None`` means UTC."""
+    if not name:
+        return UTC
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise BadRequestError(f"Invalid timezone '{name}'.") from None
 
 
 def get_name_from_email(email: str) -> str | None:
