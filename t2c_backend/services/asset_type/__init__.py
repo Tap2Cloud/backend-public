@@ -49,18 +49,6 @@ class AssetTypeService:
         self.asset_types_documents_repository = BaseRepository(app, session, AssetTypeDocumentModel)
         self.typeplate_documents_repository = BaseRepository(app, session, TypeplateDocument)
 
-    async def ensure_name_is_free(
-        self,
-        name: str,
-        asset_type_category_id: int,
-        asset_type_id: int | None = None,
-    ) -> None:
-        """
-        Refuse a name another asset type in the same category already carries.
-        """
-        if await self.is_name_taken(name, asset_type_category_id, asset_type_id):
-            raise AlreadyExistsError("Asset type name already exists in this category")
-
     async def is_name_taken(
         self,
         name: str,
@@ -271,11 +259,12 @@ class AssetTypeService:
         if not db_asset_type:
             raise NotFoundError("Asset type not found")
 
-        await self.ensure_name_is_free(
+        if await self.is_name_taken(
             name=asset_type_details.name,
             asset_type_category_id=db_asset_type.asset_type_category_id,
             asset_type_id=db_asset_type.id,
-        )
+        ):
+            raise AlreadyExistsError("Asset type name already exists in this category")
 
         db_asset_type.name = asset_type_details.name
         db_asset_type.video_links = asset_type_details.video_links
