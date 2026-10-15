@@ -85,6 +85,10 @@ class Role(enum.StrEnum):
 class Language(enum.StrEnum):
     en = "en"
     de = "de"
+    es = "es"
+    fr = "fr"
+    it = "it"
+    nl = "nl"
 
     @classmethod
     def from_value(cls, value) -> "Language":
