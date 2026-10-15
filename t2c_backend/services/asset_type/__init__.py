@@ -58,6 +58,15 @@ class AssetTypeService:
         """
         Refuse a name another asset type in the same category already carries.
         """
+        if await self.is_name_taken(name, asset_type_category_id, asset_type_id):
+            raise AlreadyExistsError("Asset type name already exists in this category")
+
+    async def is_name_taken(
+        self,
+        name: str,
+        asset_type_category_id: int,
+        asset_type_id: int | None = None,
+    ) -> bool:
         folded_name = normalized_asset_type_name(cast(literal(name), Text))
 
         await self.repository.lock_values(
@@ -73,16 +82,14 @@ class AssetTypeService:
             where=[normalized_asset_type_name(self._model.name) == folded_name],
             **filters,
         )
-        if duplicate:
-            raise AlreadyExistsError("Asset type name already exists in this category")
+        return duplicate is not None
 
-    async def ensure_gtin_is_free(self, gtin: str) -> None:
+    async def is_gtin_taken(self, gtin: str) -> bool:
         await self.repository.lock_values(gtin=gtin)
         query = select(self._model.id).where(self._model.gtin == gtin)
 
         duplicate = await self.repository.execute(select(exists(query)))
-        if duplicate.scalar():
-            raise AlreadyExistsError("GTIN already exists")
+        return bool(duplicate.scalar())
 
     async def create_asset_type(
         self,
@@ -105,14 +112,21 @@ class AssetTypeService:
         if not asset_type_form:
             raise NotFoundError(msg="Asset type category not found")
 
-        await self.ensure_name_is_free(
+        errors = []
+        if await self.is_name_taken(
             name=asset_type_data.get("name"),
             asset_type_category_id=asset_type_form.id,
-        )
+        ):
+            errors.append(
+                {"field": "name", "msg": "Asset type name already exists in this category"}
+            )
 
         gtin = asset_type_data.get("gtin")
-        if gtin:
-            await self.ensure_gtin_is_free(gtin=gtin)
+        if gtin and await self.is_gtin_taken(gtin=gtin):
+            errors.append({"field": "gtin", "msg": "GTIN already exists"})
+
+        if errors:
+            raise AlreadyExistsError("; ".join(e["msg"] for e in errors), errors=errors)
 
         typeplate_details = asset_type_data.get("typeplate_details")
         typeplate = None
