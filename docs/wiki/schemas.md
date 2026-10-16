@@ -32,11 +32,15 @@ added server-side after decoding, so permissions can never be forged or go stale
 
 Each domain has request and response schemas. Highlights:
 
-- **Asset** — `CreateAsset`/`UpdateAsset`, `AssetResponse`, lightweight `DisplayAsset`, and the digital-passport views `AssetPassResponse` / `DetailedAssetPassResponse` (aggregating asset type, category, audits, product pass type). `SelectiveFilters` is the filter body for list endpoints.
+- **Asset** — `CreateAsset`/`UpdateAsset` (`status` is typed as the `AssetStatus` enum, so unknown values are rejected at validation; `CreateAsset.manufacturingDate` is `EpochSeconds` and an `after` validator rejects values `<= 0`), `AssetResponse`, lightweight `DisplayAsset`, and the digital-passport views `AssetPassResponse` / `DetailedAssetPassResponse` (aggregating asset type, category, audits, product pass type). `SelectiveFilters` is the filter body for list endpoints.
 - **Asset Type** — `CreateAssetTypeRequest`/`UpdateAssetTypeRequest` (multipart, `fields: conlist(BaseField, min_length=1)`), `AssetTypeResponse` (with `form`, instruction manuals, optional `TypeplateResponse`), plus nested `FormData`/`AssetTypeField`.
-- **Asset Type Category** — `CreateAssetTypeCategoryRequest`/`UpdateAssetTypeCategoryRequest` with validators enforcing per-`InputType` option rules and rejecting duplicate field orders/names; `Field`/`FieldOption`, `AssetTypeCategoryResponse`, `DisplayAssetTypeCategory`. `AssetTypeCategoryResponse.user` is `DisplayUser | None`: the creator is now a nullable "created by" reference (`ON DELETE SET NULL`), so the response must tolerate a deleted creator — `user=DisplayUser.convert(category.user) if category.user else None`. See [Data Models](data-models.md).
-- **Audit** — `CreateAuditTask`, `CreateAudit` (validates `inspection_date <= valid_until`), `AuditResponse`, `AssetAuditResponse`.
-- **Service** — `CreateService` (validates `expireDate >= serviceDate`), `UpdateService`, `ServiceResponse`, `AssetServiceResponse`.
+- **Asset Type Category** — `CreateAssetTypeCategoryRequest`/`UpdateAssetTypeCategoryRequest` with `before` validators that enforce:
+  - **Option rules per field type** — `radio`, `checkbox`, `multiselect` and `select` need more than one option, with unique `optionId`s; every other type must have no options.
+  - **Field-list rules** — no duplicate `fieldOrder` or `fieldName`, `fieldOrder > 0`, and **at least one field with `fieldIsRequired: true`**. The update request also rejects duplicate field `id`s (and duplicate option `id`s).
+
+  The update DTOs (`UpdateBaseFields`, `UpdateBaseFieldOption`) describe the **complete desired field list**: `id` is nullable (`None` = new field/option, otherwise the existing row to keep/update), and `fieldName`, `fieldDisplayName`, `fieldOrder`, `fieldGroupId`, `fieldType`, `fieldIsRequired`, `optionId` and `optionLabel` are all required. `fieldPlaceHolder` is optional (defaults to `None`) on both request `BaseField` and response `Field`. Also `Field`/`FieldOption`, `AssetTypeCategoryResponse`, `DisplayAssetTypeCategory`. `AssetTypeCategoryResponse.user` is `DisplayUser | None`: the creator is now a nullable "created by" reference (`ON DELETE SET NULL`), so the response must tolerate a deleted creator — `user=DisplayUser.convert(category.user) if category.user else None`. See [Data Models](data-models.md).
+- **Audit** — `CreateAuditTask`, `CreateAudit` (validates `inspection_date <= valid_until`; both are `EpochSeconds`), `AuditResponse`, `AssetAuditResponse`. `AuditTaskResponse.taskType`/`status` are typed as the `TaskType`/`AuditTaskStatus` enums. `validUntil` is now emitted straight from the timezone-aware column via `datetime_to_epoch` (no more `date` → midnight combination).
+- **Service** — `CreateService` (`EpochSeconds` dates; an `after` validator raises `BadRequestError` unless `expireDate >= serviceDate`), `UpdateService`, `ServiceResponse`, `AssetServiceResponse`.
 - **Organization / Location / ProductPassType** — layered inheritance; `DisplayOrganization` is the common base with two branches off it: `Organization` (adds `productPassType`) and `DetailedOrganization → OrganizationDetails` (adds `locationCount`/`userCount`/`roleCount`). `LocationCreateRequest → LocationBaseResponse → Location`; `ProductPassType` is dual-use. `LocationBaseResponse.organization` is typed as `Organization` (not `DisplayOrganization`), so location responses carry the nested `productPassType` — which means the service must eager-load `Organization.product_pass_type`.
 - **User** — `UserLogin`/`UserLoginResponse` (reuses `TokenResponse`), `UserRegisterRequest`, `ChangePasswordRequest`, `DisplayUser`/`UserResponse`/`OrganizationUser`, and `OrganizationUsersCustomPage` (a `CustomPage` subclass adding `extra: UserCount`).
 - **Dashboard / Documents / Health** — `DashboardResponse` is a flat counter DTO (`assetType`, `typeplate`, `asset`, `service`, `instructionManual`, `inspection`, plus `timeRecording`/`iot` hard-coded to `0`); the former `shop` counter has been dropped. Also `DocumentResponse` and `Health` (the only schema without `from_attributes`).
@@ -53,7 +57,8 @@ A shared serialization helper (not a request/response DTO): async `from_file(Upl
 - **Naming** — requests are `Create*`/`Update*` (update variants usually all-optional); responses are `*Response` (full) and `Display*` (lightweight nested summaries).
 - **Config** — `ConfigDict(from_attributes=True)` almost everywhere; `populate_by_name=True` on multipart schemas.
 - **Aliasing** — snake_case Python attributes exposed as camelCase JSON via `Field(alias=...)`. Where a domain `Field` model exists, Pydantic's `Field` is imported as `PydanticField`.
-- **Mappers** — static `convert()`/`from_model()`/`from_list()`/`to_orm()` do explicit field-by-field ORM↔schema mapping (including datetime→epoch conversion).
+- **Mappers** — static `convert()`/`from_model()`/`from_list()`/`to_orm()` do explicit field-by-field ORM↔schema mapping.
+- **Timestamps** — all datetimes travel as integer epoch seconds. Outgoing values go through `datetime_to_epoch(dt)` (`calendar.timegm(dt.utctimetuple())`) and incoming ones through `datetime_from_epoch(ts)` (a UTC-aware `datetime`), both in `utils.misc`; the old `int(dt.timestamp())` / naive `datetime.fromtimestamp()` calls are gone. Epoch inputs are typed `EpochSeconds` — an `int` bounded to `MIN_EPOCH_SECONDS`/`MAX_EPOCH_SECONDS` (1900-01-01 through 9998-12-31 UTC), so out-of-range values fail validation instead of overflowing on conversion.
 - **Validators** — a recurring `@model_validator(mode="before")` `validate_to_json` accepts either a raw JSON string or an uploaded file body (multipart pattern); business-rule validators raise `BadRequestError`. `conlist(..., min_length=1)` enforces non-empty nested lists.
 - **Pagination** — represented via the generic `CustomPage[T]` from [Core Infrastructure](core-infrastructure.md), parameterized per response type (or subclassed to add an `extra` payload).
 
@@ -63,7 +68,7 @@ A shared serialization helper (not a request/response DTO): async `from_file(Upl
 graph LR
   Schemas --> CorePagination[Core: CustomPage]
   Schemas --> Clients[Clients: token_backend]
-  Schemas --> Utils[Utilities: enums, errors, datetime]
+  Schemas --> Utils[Utilities: enums, errors, epoch helpers]
   Endpoints --> Schemas
 ```
 

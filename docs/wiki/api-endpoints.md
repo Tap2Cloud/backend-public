@@ -25,7 +25,7 @@ graph TD
 
 `endpoints/router.py` builds `api_router` and includes the `v1` rest router; `CustomFastAPI` mounts it under `API_STR` (`/api`). The parent router lives in **`endpoints/v1/rest/__init__.py`** — an `APIRouter(prefix="/v1")` that includes each sub-router with a central `tags=[...]`. (`endpoints/v1/__init__.py` itself is empty.) Each sub-router file declares a bare `router = APIRouter()` with full paths on each decorator.
 
-`operation_id` is set on most but not all routes — 52 of 66 today. The uncovered ones are every route in `audit.py`, plus `POST /login`, `POST /register`, `GET /health`, `GET /token/refresh`, `GET /product-pass-type`, `GET /instruction-manual` and `GET /filter/location`; those fall back to FastAPI's generated ids, which makes their client-SDK method names less stable across refactors.
+`operation_id` is set on most but not all routes — 52 of 67 today. The uncovered ones are every route in `audit.py` (including the public audit-document download), plus `POST /login`, `POST /register`, `GET /health`, `GET /token/refresh`, `GET /product-pass-type`, `GET /instruction-manual` and `GET /filter/location`; those fall back to FastAPI's generated ids, which makes their client-SDK method names less stable across refactors.
 
 ## Endpoint Groups
 
@@ -37,10 +37,10 @@ graph TD
 
 ### Assets & passports
 
-- `asset` — create/update/delete, `PUT /asset` (filtered paginated list via `SelectiveFilters` body), `GET /asset/{id}`.
+- `asset` — create/update/delete, `PUT /asset` (filtered paginated list via `SelectiveFilters` body, plus optional `manufacturing_start_date`/`manufacturing_end_date` epoch query params), `GET /asset/{id}`.
 - `asset-pass` — the digital product passport surface, in its own router (`asset_pass.py`, tag `asset-pass`). See below.
 - `asset-type` — CRUD, filtered list, and document sub-routes (custom-field docs, instruction-manual downloads via streaming); create/update are multipart.
-- `asset-type-category` — CRUD, category groups, and filter/mapping endpoints backing dropdowns.
+- `asset-type-category` — CRUD (update is `PUT /asset-type-category/{assetTypeCategoryId}`, a full replacement of the field list), category groups, and filter/mapping endpoints backing dropdowns.
 
 #### The `asset-pass` router
 
@@ -80,9 +80,15 @@ async def get_asset_pass_document(
 
 ### Operations
 
-- `audit` — create tasks/audits (multipart with document uploads), list (date-range filters), deletes, task-document download, and a localized PDF `audit-report`.
-- `service` — CRUD and paginated list of asset service/maintenance records.
-- `typeplate` — list images, list/get/update typeplates (multipart EU file), delete document, and EU-file streaming download.
+- `audit` — create tasks (multipart; `documents` is **required** and may not repeat a filename), create audits, list, deletes, task-document download, a localized PDF `audit-report`, and a **public** document download. `GET /audit` filters on `inspection_*`/`valid_until_*` date ranges plus `task_type` and a repeatable `task_status`. `audit-report` reads an optional `X-Timezone` header (IANA name, default UTC) used to render dates as the requester's calendar day.
+- `service` — CRUD and paginated list of asset service/maintenance records; the list filters on `service_*`/`expire_*` date ranges and `service_type`.
+- `typeplate` — list images, list/get/update typeplates (multipart EU file), delete document, and EU-file streaming download. The typeplate list filters on `typeplate_created_*` dates and a repeatable `typeplate_images_id`.
+
+**Date filters are Unix epoch seconds.** Every date-range query param on the asset, audit, service and typeplate lists is `int | None`, bounded by `MIN_EPOCH_SECONDS`/`MAX_EPOCH_SECONDS` from `utils.misc` (out-of-range values are rejected with 422), and is only applied when **both** ends of the range are supplied. The services convert them with `datetime_from_epoch()` (UTC-aware).
+
+#### Public audit-document download
+
+`GET /public/audit-document/{documentId}/download` streams one audit-task document as an attachment, given only its UUID. It exists so the links embedded in the audit-report PDF work outside an authenticated session: `AuditService._document_link()` builds them from `BACKEND_URL` + `API_STR`. The organization used for the storage lookup is resolved from the document itself (`document → audit_task → audit → asset → location`); a document whose task is not yet attached to an audit returns 404.
 - `instruction-manual` — list/upload/delete instruction-manual documents (backed by `asset_type_service`).
 
 ### Organization & users
@@ -116,10 +122,10 @@ sequenceDiagram
 ```
 
 - **Authentication + authorization** — `token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_delete": True}))`. Almost every protected route declares the permission flag it requires **on the bearer itself**; the bearer re-hydrates the token's org/location/roles from the DB on each request and rejects the call with **403 `Insufficient permissions.`** when the caller's roles don't grant the flag. The full route→flag matrix lives in [Permissions Reference](permissions-reference.md).
-- **Row scoping is separate** — the flag says *what kind of* operation is allowed; **which rows** are reachable is enforced inside the services from `token.location_id` / `token.organization_id` (raising `NotFoundError` on a mismatch, or `UnAuthorizedError` in the org role routes when the token has no org).
+- **Row scoping is separate** — the flag says *what kind of* operation is allowed; **which rows** are reachable is enforced inside the services from `token.location_id` / `token.organization_id` (raising `NotFoundError` when no row matches, or `UnAuthorizedError` in the org role routes when the token has no org).
 - **Compound operations** — a few handlers add a second check when a request parameter widens the blast radius: both user-delete routes additionally require `organization_delete` when `cascadeOrg` is true, via `JWTAPIAccessTokenBearer.user_permissions(token)`.
 - **Services** — `services: DictContainer = Depends(get_services)`, where `get_services` nests `Depends(get_db_session)` and wires every registered service onto the request-scoped session, accessed as `services.<name>_service`.
-- **Public routes** — `/login`, `/register`, `/health`, `/asset-pass/{passId}`, and `/asset-pass/{passId}/document/{documentFor}/{documentId}`. The two passport routes are unauthenticated by design: the `pass_id` is the capability, so anyone holding it can read that passport and stream its documents.
+- **Public routes** — `/login`, `/register`, `/health`, `/asset-pass/{passId}`, `/asset-pass/{passId}/document/{documentFor}/{documentId}`, and `/public/audit-document/{documentId}/download`. These are unauthenticated by design: the `pass_id` (or the audit document's UUID) is the capability, so anyone holding it can read that passport or stream that document.
 - **Authenticated but unguarded routes** — `POST /organization` (bootstrap: the caller has just registered and holds no org roles yet), `GET /user/profile` (own profile), `GET /product-pass-type` and `GET /asset-type-category-group` (static reference data), and `GET /dashboard/summary`. `GET /token/refresh` requires a valid refresh token but declares no permission — the refresh bearer skips the DB round-trip, so its token has no roles to check.
 - **Conventions** — complex/filtered list endpoints use `PUT` with a body (`SelectiveFilters`) rather than `GET`; pagination params are `page`/`pageSize` (1–1000); file endpoints return `StreamingResponse`; multipart is used for create/update of asset types, typeplates, organizations, user profile, and audits.
 

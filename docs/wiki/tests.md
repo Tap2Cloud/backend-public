@@ -32,7 +32,7 @@ t2c_backend/tests/
         └── test_instruction_manual.py
 ```
 
-The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 203 test functions across 15 REST modules — the largest are `test_asset_type.py` (41), `test_asset_type_category.py` (30), and `test_asset.py` (21).
+The test directory mirrors the production endpoint tree (`app/endpoints/v1/rest`), so each router has a co-located test module. There are 274 test functions across 15 REST modules — the largest are `test_asset_type_category.py` (60), `test_asset_type.py` (46), and `test_service.py` / `test_audit.py` (30 each).
 
 ## Architecture
 
@@ -175,6 +175,12 @@ route while the surrounding ordered scenario keeps its logged-in state. The publ
 - **`session`-scoped fixtures** (e.g. `user_data`, `asset`, `asset_type`, `audit`) — produced once and reused, so the same identity/entity is referenced consistently across the ordered scenario.
 - **`function`-scoped fixtures** (e.g. `location`, `organization`, `asset_type_category`, `update_asset`) — regenerated per test, used where each test needs fresh input or a distinct update payload.
 
+Where randomness would make a payload flaky against server-side validation, the fixtures pin it down:
+
+- Asset type category field fixtures use `fieldOrder: fake.random_int(min=1)` (always a positive order) and, for the fields the tests rely on, `fieldIsRequired: True` rather than a random boolean.
+- Timestamps are generated timezone-aware — `fake.date_time(tzinfo=UTC)` for `manufacturingDate` in `asset` / `update_asset` — so the epoch value does not shift with the host's local timezone.
+- `asset_service` draws its service date from `fake.date_time_between(start_date="+1d", end_date="+365d", tzinfo=UTC)`, so it is always a future date between one day and one year ahead.
+
 A `user_data_factory` builds nested credential/basics dicts, and `user_data` / `second_user_data` use it to model two independent users (the suite verifies multi-tenant isolation by creating parallel data for a second user). `second_user_data` is consumed directly by `test_register.py` and, for every authenticated call, through the `second_user_client` fixture described above.
 
 ### Container fixtures — the data pipeline
@@ -231,7 +237,7 @@ names anchored to a single cross-file mark (`after="test_health.py::test_health"
 as one block and kept their position at the tail of the suite.
 
 Numeric marks (`@pytest.mark.order(3)`) are supported by the plugin but are **not** used here — the only
-one in the tree is commented out at `test_asset_type.py:1124`. Tests with no mark at all (mostly negative
+one in the tree is commented out (`# @pytest.mark.order(104)` at `test_asset_type.py:1315`). Tests with no mark at all (mostly negative
 cases like "without password" or "unauthenticated client") are order-independent.
 
 ### Faking external clients
