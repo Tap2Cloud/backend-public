@@ -2,7 +2,7 @@
 
 ## Module Overview
 
-The `core` package provides the framework-level plumbing every request relies on: an async SQLAlchemy engine with read/writer routing, a context-scoped session that ties DB sessions to a request ID, a generic filtering/query repository base, custom pagination, request middleware (session lifecycle, i18n), and the internationalization layer. These pieces are consumed by the [services](services.md) and [endpoints](api-endpoints.md) layers rather than used directly by clients.
+The `core` package provides the framework-level plumbing every request relies on: an async SQLAlchemy engine with read/writer routing, a context-scoped session that ties DB sessions to a request ID, a generic filtering/query repository base, custom pagination, request middleware (session lifecycle, i18n, upload size limit), and the internationalization layer (runtime translation plus a catalog-sync tool for downstream projects). These pieces are consumed by the [services](services.md) and [endpoints](api-endpoints.md) layers rather than used directly by clients.
 
 ## Architecture Diagram
 
@@ -10,6 +10,7 @@ The `core` package provides the framework-level plumbing every request relies on
 graph TD
   Req[Request] --> SAMW[SQLAlchemyMiddleware]
   Req --> LangMW[LanguageMiddleware]
+  Req --> ULMW[UploadLimitMiddleware]
   SAMW --> Ctx[session_context ContextVar]
   Ctx --> ScopedSession[async_scoped_session]
   Engine[Engine] --> Writer[(writer engine)]
@@ -52,13 +53,25 @@ Key methods:
 | Method | Purpose |
 | --- | --- |
 | `save` / `save_all` | Add + flush (marks session as writer), optional refresh |
-| `get_one_or_none` | Filtered single-row fetch with optional `join`/`options` |
+| `get_one_or_none` | Filtered single-row fetch with optional `join`/`options`, plus `where` for conditions on joined models |
 | `list` | Filtered multi-row fetch with `joins`, `options`, `orders` |
 | `get` | Primary-key lookup |
 | `exists` | `SELECT EXISTS(...)` for filters |
 | `lock_values` | Advisory lock on one combination of column values |
 | `lock_table` | Whole-table lock in a chosen `TableLockMode` |
 | `execute` / `merge` / `delete` | Thin wrappers over the session |
+
+`parse_filters()` only resolves kwargs against the repository's own model. To filter on a column of a
+*joined* model, pass the join and the condition explicitly:
+
+```python
+# Scope a user to an organization, which lives on Location rather than User
+user = await user_repo.get_one_or_none(
+    id=user_id,
+    join=[User.location],
+    where=[Location.organization_id == organization_id],
+)
+```
 
 #### Concurrency guards
 
@@ -104,10 +117,24 @@ Built on `fastapi-pagination`. `CustomParams` exposes `page` (≥1) and `page_si
 
 - **`SQLAlchemyMiddleware`** — pure-ASGI middleware that, for HTTP requests, sets the session context from the request-id header, runs the app, then in `finally` removes the scoped session, evicts the request's services from the session-scoped container, and resets the context var. This is what makes per-request session + service scoping work.
 - **`LanguageMiddleware`** — a `BaseHTTPMiddleware` that reads `Accept-Language` and calls `set_locale()` before handling the request.
+- **`UploadLimitMiddleware`** (`upload_limit.py`) — pure-ASGI middleware that caps the *combined* size of all files in a single `multipart/form-data` request (content type matched case-insensitively) at `max_bytes` (wired from `Config.MAX_UPLOAD_SIZE_MB`). It applies to every route, including those inherited by downstream projects, with no opt-in. It rejects up front when `Content-Length` already exceeds the limit, and also counts body bytes as they stream so chunked uploads can't bypass it. Because FastAPI converts form-parsing errors into a generic 400, the middleware swallows the app's response once the limit is crossed and sends its own **413** `{"msg": "Total size of uploaded documents must not exceed N MB.", "errorCode": "BAD_REQUEST"}` with `Connection: close`. Non-multipart and non-HTTP traffic passes straight through.
 
 ### Internationalization (`core/i18n/__init__.py`)
 
-`TranslationWrapper` is a singleton wrapping `gettext` translations loaded from the `locales/` directory (default language `en`, fallback enabled). `set_locale(language)` swaps the active translation catalog; `_(message)` is the translation shorthand used across enums and error messages.
+`TranslationWrapper` is a singleton wrapping `gettext` translations loaded from `<PROJECT_ROOT_PATH>/locales` (default language `en`, fallback enabled). `set_locale(language)` swaps the active translation catalog; `_(message)` is the translation shorthand used across enums and error messages.
+
+The core ships source catalogs for `en`, `de`, `es`, `fr`, `it`, and `nl` under `t2c_backend/locales/<lang>/LC_MESSAGES/messages.po` (matching the `Language` enum).
+
+### Catalog sync (`core/i18n/sync.py`)
+
+A CLI (`python -m t2c_backend.core.i18n.sync <locales_dir>`) that merges the core's `.po` catalogs into a downstream project's catalogs, so the downstream can compile a single `messages.mo` per language. `sync_catalogs(target_dir)`:
+
+1. For each core `<lang>/LC_MESSAGES/messages.po`, reads the matching downstream catalog (creating a non-fuzzy one if absent).
+2. Deletes entries previously copied from the core (tagged with the `CORE_MARKER` auto comment, `t2c_backend`) and un-obsoletes core messages that `pybabel update` marked obsolete.
+3. Re-adds every core message tagged with `CORE_MARKER`, **skipping** any msgid the downstream defines itself — downstream entries take precedence.
+4. Writes the catalog and returns the list of written paths.
+
+See [Extending Tap2Cloud](extending.md#translations) for the workflow.
 
 ## Dependencies
 

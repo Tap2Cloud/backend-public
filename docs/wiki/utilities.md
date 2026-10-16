@@ -15,6 +15,7 @@ graph TD
   Enums --> Models[Models]
   Enums --> Schemas[Schemas]
   Misc --> App[CustomFastAPI]
+  Misc --> Errors
 ```
 
 ## Components
@@ -25,7 +26,7 @@ All enums are `StrEnum`/`IntEnum` and are used pervasively across models, schema
 
 - **`ENVIRONMENT`** — `test` / `development` / `staging` / `production`; governs debug mode, SQL echo, and log level.
 - **`Role`** — `Member` / `Admin` / `Owner` / `Super Admin`, with helpers `organization_roles()` (excludes super admin), `from_value()`, and a name-based `__str__`.
-- **`Permissions`-adjacent enums** — `InputType` (dynamic form field types), `AssetStatus` (14 lifecycle states), `DocumentStatus`, `DocumentType`, `DocumentFor` (storage sub-path selector), `ServiceTypes`, `TaskType`, `AuditTaskStatus` (translated via `_()`), `Status`, `UserStatus`, `SortBy`, `Language` (`en`/`de`), `TokenType` (email-verification vs forgot-password), and `ErrorMessageCodes`.
+- **`Permissions`-adjacent enums** — `InputType` (dynamic form field types), `AssetStatus` (14 lifecycle states), `DocumentStatus`, `DocumentType`, `DocumentFor` (storage sub-path selector), `ServiceTypes`, `TaskType`, `AuditTaskStatus` (translated via `_()`), `Status`, `UserStatus`, `SortBy`, `Language` (`en`/`de`/`es`/`fr`/`it`/`nl` — one per shipped locale catalog), `TokenType` (email-verification vs forgot-password), and `ErrorMessageCodes`.
 
 ### Errors (`utils/errors.py`)
 
@@ -46,6 +47,9 @@ All enums are `StrEnum`/`IntEnum` and are used pervasively across models, schema
 - **`DictContainer(dict)`** — the backbone of the app's registries. Provides attribute-style access and an optional `session_based` mode: when session-based, packages are stored keyed by session id and `__getattr__` resolves the current request's session via `get_session_context()`. This is how `app.services.user_service` returns the instance bound to the active request. `add_package`, `remove_session` manage lifecycle.
 - **Async helpers** — `maybe_coroutine(func, ...)` awaits a result only if it's awaitable; used by the extension loader.
 - **Datetime/JWT helpers** — `aware_utcnow()`, `datetime_to_epoch()`, `datetime_from_epoch()` (used by the token classes), plus `datetime` utilities.
+- **Client timestamp & timezone validation:**
+  - `EpochSeconds` — an `Annotated[int, Field(ge=MIN_EPOCH_SECONDS, le=MAX_EPOCH_SECONDS)]` type for Unix-second timestamps coming from clients. The range is 1900-01-01 to 9998-12-31 UTC, so out-of-range values (e.g. milliseconds sent by mistake) fail with a 422 instead of overflowing `datetime`. Used by asset, service, and audit request schemas (`manufacturingDate`, `expireDate`, `inspectionDate`, `validUntil`, …).
+  - `parse_timezone(name)` — resolves an IANA zone name (e.g. `Asia/Kolkata`) to a `ZoneInfo`; `None`/empty means UTC; an unknown name raises `BadRequestError`. Used by the audit report endpoint to interpret its `X-Timezone` header.
 - **String helpers** — `underscore("DeviceType") → "device_type"` (used to derive service registry keys), `get_full_name()`, `get_name_from_email()`.
 - **Name normalization & LIKE escaping** — the pair that makes duplicate-name checks trustworthy:
   - `normalize_name(name)` applies NFKC (collapsing fullwidth/compatibility characters and decomposed
@@ -81,6 +85,8 @@ Role.organization_roles()  # roles excluding Super Admin
 normalize_name("  Acme\u200b   Corp ")  # "Acme Corp"  -> zero-width space and
 # the whitespace run both collapse
 escape_like("Acme_Corp")  # "Acme\\_Corp" → matches literally, not as a wildcard
+
+parse_timezone("Europe/Berlin")  # ZoneInfo("Europe/Berlin"); parse_timezone(None) → UTC
 ```
 
 ## Cross-references

@@ -36,22 +36,25 @@ operation is allowed at all, and **location-based ownership** decides which rows
 The digital product passport is the deliberate exception. `GET /asset-pass/{passId}` and its document
 sub-route carry no token at all: the `pass_id` — a cryptographically derived, unguessable string — *is*
 the capability, so that a scanned passport resolves for anyone holding the code. Those routes stay
-read-only and are bounded to the single asset the `pass_id` resolves to. See
-[API Endpoints](api-endpoints.md).
+read-only and are bounded to the single asset the `pass_id` resolves to. Audit documents follow the same
+model: `GET /public/audit-document/{documentId}/download` serves a single document by its id, which is the
+link embedded in generated audit-report PDFs. See [API Endpoints](api-endpoints.md).
 
 Uniqueness rules that no database constraint backs — organization names, which are unique per product
 pass type — are enforced in the service layer instead. Because a bare "check then insert" pair lets two
 concurrent requests both pass the check, those services take a transaction-scoped advisory lock on the
 contended values first (`BaseRepository.lock_values`), and normalize the name so that visually identical
 inputs cannot slip past the comparison. See
-[Concurrency guards](core-infrastructure.md#concurrency-guards).
+[Concurrency guards](core-infrastructure.md#concurrency-guards). Asset type names, unique per category
+(ignoring case and surrounding whitespace), get the same lock-and-check guard and are additionally backed by
+a unique index (migration `pkg_0006`); see [Data Models](data-models.md).
 
 ## Module Index
 
 | Module | Description |
 | --- | --- |
 | [Application Bootstrap](application-bootstrap.md) | `CustomFastAPI` app assembly, config, lifespan, extension loader, and the Gunicorn/Uvicorn launcher |
-| [Core Infrastructure](core-infrastructure.md) | Async engine with read/write routing, context-scoped sessions, `BaseRepository` (filters + concurrency guards), pagination, middleware, i18n |
+| [Core Infrastructure](core-infrastructure.md) | Async engine with read/write routing, context-scoped sessions, `BaseRepository` (filters + concurrency guards), pagination, middleware (incl. upload size limit), i18n and catalog sync |
 | [Data Models](data-models.md) | SQLAlchemy ORM entities for the DPP domain (organizations, assets, asset types, typeplates, audits, users) |
 | [Schemas](schemas.md) | Pydantic request/response DTOs and the JWT token classes |
 | [API Endpoints](api-endpoints.md) | REST routers under `/api/v1` and their auth/DI conventions |
@@ -60,7 +63,7 @@ inputs cannot slip past the comparison. See
 | [Permissions Reference](permissions-reference.md) | All 42 permission flags with bit values, the route → permission matrix, and the default role grant |
 | [Clients](clients.md) | Pluggable startup clients: token backend, cryptography, storage (disk/S3) |
 | [Utilities](utilities.md) | Enums, the `ApplicationError` hierarchy, and misc helpers (`DictContainer`, datetime/string) |
-| [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema |
+| [Database Migrations](database-migrations.md) | Alembic async migration environment and versioned schema (`pkg_0001` – `pkg_0007`) |
 | [Tests](tests.md) | End-to-end integration test suite: ordered, stateful `TestClient` scenarios over a migrated database, with Faker fixtures, shared container pipelines, and cross-tenant isolation checks |
 | [Development Setup](development-setup.md) | Running the project locally: `uv` environment/dependency management and the `development/docker-compose.yml` Postgres for a zero-config local database |
 | [Extending Tap2Cloud](extending.md) | How to install the core as a library and add your own models, schemas, services, clients, and endpoints in a private repo |
@@ -73,7 +76,7 @@ inputs cannot slip past the comparison. See
 - **Auth:** PyJWT (HS256 by default); PBKDF2-HMAC-SHA256 password hashing; role-based bitmask permissions enforced per route
 - **Config:** `pydantic-settings` (environment-driven)
 - **Files/PDF:** `aiofiles` disk storage (S3 backend stubbed in OSS), ReportLab for audit reports
-- **i18n:** gettext + Babel (`en`/`de`)
+- **i18n:** gettext + Babel (`en`/`de`/`es`/`fr`/`it`/`nl`); downstream projects merge catalogs with `python -m t2c_backend.core.i18n.sync`
 - **Logging:** Loguru (JSON-capable) with stdlib/Gunicorn/Uvicorn interception
 - **Tooling:** Ruff (lint/format), pytest (+ pytest-order, pytest-mock, Faker)
 
@@ -82,7 +85,7 @@ inputs cannot slip past the comparison. See
 The fastest path to a running local instance uses `uv` for the Python environment and the bundled Docker Compose file for the database — no external database to configure. See [Development Setup](development-setup.md) for the full walkthrough.
 
 1. **Environment** — install dependencies with `uv sync --all-groups` (uses `.python-version` and `uv.lock` to build the `.venv`).
-2. **Configuration** — the app is driven by environment variables read into `Config` (`t2c_backend/config.py`): DB connection, `APP_HOST`/`APP_PORT`, `ENVIRONMENT`, `PROJECT_NAME`, `FRONTEND_URL`, CORS origins, plus client settings (`SECRET_KEY`, `CRYPTOGRAPHY_KEY`, `STORAGE_TYPE`, `BUCKET`). A ready-to-use `.env/.env.development` is provided.
+2. **Configuration** — the app is driven by environment variables read into `Config` (`t2c_backend/config.py`): DB connection, `APP_HOST`/`APP_PORT`, `ENVIRONMENT`, `PROJECT_NAME`, `FRONTEND_URL`, CORS origins, `BACKEND_URL`, `MAX_UPLOAD_SIZE_MB`, plus client settings (`SECRET_KEY`, `CRYPTOGRAPHY_KEY`, `STORAGE_TYPE`, `BUCKET`). A ready-to-use `.env/.env.development` is provided.
 3. **Database** — start a local Postgres with `docker compose -f development/docker-compose.yml up -d` (its defaults match the sample env), then run `uv run --env-file .env/.env.development alembic upgrade head` to create the schema and seed static data. See [Development Setup](development-setup.md) and [Database Migrations](database-migrations.md).
 4. **Run** — `uv run --env-file .env/.env.development python launcher.py` starts Gunicorn with Uvicorn workers; the OpenAPI docs are served by FastAPI under the app's `/api` prefix.
 5. **Orientation** — start with [Application Bootstrap](application-bootstrap.md) to understand how the app is assembled and how clients/services are registered, then read [Core Infrastructure](core-infrastructure.md) (sessions, repository) and [API Endpoints](api-endpoints.md) (request flow). The [Data Models](data-models.md) ER structure is the best map of the domain.

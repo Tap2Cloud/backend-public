@@ -250,12 +250,21 @@ sequenceDiagram
 
 Permissions answer *"may this caller perform this kind of operation?"* — they say nothing about *which
 rows*. Row scoping is a separate, **location-based** mechanism: handlers pass `token.location_id` (or
-`token.organization_id`) into the service, which filters and validates ownership, raising
-`NotFoundError` on a mismatch:
+`token.organization_id`) into the service, which puts the owner **in the lookup query** — directly,
+or through a join when the owner lives on a parent row — so a row outside the caller's scope is simply
+not found and raises `NotFoundError`:
 
 ```python
-if not db_asset_type_category or db_asset_type_category.location_id != location_id:
+db_asset_type_category = await self.repository.get_one_or_none(
+    id=asset_type_category_id, location_id=location_id
+)
+if not db_asset_type_category:
     raise NotFoundError(...)
+
+# Owner reached through a parent row:
+service = await self.repository.get_one_or_none(
+    id=service_id, join=[self._model.asset], where=[Asset.location_id == location_id]
+)
 ```
 
 Asset types, asset type categories, documents, typeplate documents, and audits are all owned by a

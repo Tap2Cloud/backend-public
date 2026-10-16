@@ -36,7 +36,7 @@ subtracted. See [Security & Permissions](security-and-permissions.md) for the un
 | Flag | Bit | Value | Required by |
 | --- | --- | --- | --- |
 | `asset_type_category_create` | 0 | `1` | `POST /asset-type-category` |
-| `asset_type_category_update` | 1 | `2` | `PATCH /asset-type-category/{assetTypeCategoryId}` |
+| `asset_type_category_update` | 1 | `2` | `PUT /asset-type-category/{assetTypeCategoryId}` |
 | `asset_type_category_read` | 2 | `4` | `GET /asset-type-category`<br>`GET /filter/asset-type-category`<br>`GET /asset-type-category/{assetTypeCategoryId}`<br>`GET /filter/asset-type-category/mapping` |
 | `asset_type_category_delete` | 3 | `8` | `DELETE /asset-type-category/{assetTypeCategoryId}` |
 | `asset_type_create` | 4 | `16` | `POST /asset-type` |
@@ -101,6 +101,7 @@ Every route in `t2c_backend/endpoints/v1/rest`, with the permission it requires.
 | `GET` | `/health` | liveness/version |
 | `GET` | `/asset-pass/{passId}` | the public Digital Product Passport view |
 | `GET` | `/asset-pass/{passId}/document/{documentFor}/{documentId}` | streams one document belonging to that passport; bounded to the asset the `passId` resolves to |
+| `GET` | `/public/audit-document/{documentId}/download` | streams one audit-task document by UUID; the target of the links in the audit-report PDF |
 
 `GET /token/refresh` sits between the two groups: it requires a valid **refresh** token via
 `JWTAPIRefreshTokenBearer` but declares no permission. It could not enforce one anyway — the refresh
@@ -137,7 +138,7 @@ bearer skips the DB round-trip, so its token carries no `roles` claim to check a
 | `GET` | `/asset-type/{assetTypeId}/get/custom-field/document/{documentId}/{documentName}` | `asset_type_read` |
 | `POST` | `/asset-type-category` | `asset_type_category_create` |
 | `GET` | `/asset-type-category` | `asset_type_category_read` |
-| `PATCH` | `/asset-type-category/{assetTypeCategoryId}` | `asset_type_category_update` |
+| `PUT` | `/asset-type-category/{assetTypeCategoryId}` | `asset_type_category_update` |
 | `DELETE` | `/asset-type-category/{assetTypeCategoryId}` | `asset_type_category_delete` |
 | `GET` | `/asset-type-category/{assetTypeCategoryId}` | `asset_type_category_read` |
 | `GET` | `/filter/asset-type-category` | `asset_type_category_read` |

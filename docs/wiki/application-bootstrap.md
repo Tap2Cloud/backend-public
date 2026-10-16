@@ -12,6 +12,7 @@ graph TD
   App --> CFA[CustomFastAPI]
   CFA --> Cfg[Config]
   CFA --> MW[get_middleware_stack]
+  MW --> ULM[UploadLimitMiddleware]
   CFA --> Router[api_router]
   CFA --> EH[application_exception_handler]
   CFA --> Life[lifespan]
@@ -31,7 +32,7 @@ A `FastAPI` subclass that encapsulates all application setup. Instantiating it b
 Key responsibilities:
 
 - **Configuration** — reads a `Config` instance (overridable via the `config_class` attribute so subclasses can supply their own settings), and derives `title`, `version` (from `project_meta`), and `debug` (on unless `ENVIRONMENT == PRODUCTION`).
-- **Middleware & routers** — installs the middleware stack from `get_middleware_stack()` and includes `api_router` under the configured `API_STR` prefix (default `/api`). `get_api_router()` is a hook subclasses can override to swap the route table.
+- **Middleware & routers** — installs the middleware stack from `get_middleware_stack()` (see below) and includes `api_router` under the configured `API_STR` prefix (default `/api`). `get_api_router()` is a hook subclasses can override to swap the route table.
 - **Exception handling** — registers `application_exception_handler` for all `ApplicationError` subclasses.
 - **Extension system** — a lightweight plugin loader (`load_extension`, `_load_from_module_spec`, `_call_module_finalizers`). Each extension module exposes a `setup(app)` (and optional `teardown(app)`) coroutine/function. `setup_hook()` loads the `initial_clients`: `token_backend`, `cryptography`, and `storage`.
 - **Registries** — `self.clients` (a `DictContainer`) holds singleton clients via `add_client()`; `self.services` (a session-scoped `DictContainer`) holds per-request service instances via `add_service()`.
@@ -58,9 +59,24 @@ A `pydantic_settings.BaseSettings` model that reads configuration from the envir
 - Database: `DATABASE_HOST`, `DATABASE_PORT` (default 5432), `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`
 - Server: `APP_HOST`, `APP_PORT`, `GUNICORN_WORKERS`, `JSON_LOGS`
 - `BACKEND_CORS_ORIGINS` (with an `assemble_cors_origins` validator that accepts a comma-separated string or list), `REQUEST_ID_HEADER_NAME` (default `X-Request-Id`)
-- `FRONTEND_URL`
+- `FRONTEND_URL`, `BACKEND_URL` — public base URLs; `BACKEND_URL` is used to build absolute links back to the API (e.g. public audit-document download links)
+- `MAX_UPLOAD_SIZE_MB` (default 100) — the combined size cap for all files in one multipart request, enforced by `UploadLimitMiddleware`
 
 Properties `project_root_path` (also exported to the `PROJECT_ROOT_PATH` env var) and `project_meta` (parsed from `pyproject.toml`) support file storage and version reporting.
+
+### Middleware stack (`get_middleware_stack` in `t2c_backend/main.py`)
+
+`get_middleware_stack(app_config)` returns the ordered list of Starlette `Middleware` entries:
+
+| Order | Middleware | Purpose |
+| --- | --- | --- |
+| 1 | `CORSMiddleware` | CORS using `BACKEND_CORS_ORIGINS` |
+| 2 | `CorrelationIdMiddleware` | Request ID in `REQUEST_ID_HEADER_NAME` (uuid4 hex, validated) |
+| 3 | `SQLAlchemyMiddleware` | Per-request DB session + service scoping |
+| 4 | `LanguageMiddleware` | Sets the gettext locale from `Accept-Language` |
+| 5 | `UploadLimitMiddleware` | Rejects multipart uploads over `MAX_UPLOAD_SIZE_MB` with a 413 |
+
+`UploadLimitMiddleware` is deliberately placed after `LanguageMiddleware` so its rejection message is translated. See [Core Infrastructure](core-infrastructure.md) for each middleware's behaviour.
 
 ### `lifespan` / event handlers (`t2c_backend/core/event_handlers.py`)
 
