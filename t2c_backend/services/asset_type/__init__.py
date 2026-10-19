@@ -76,7 +76,7 @@ class AssetTypeService:
         if duplicate:
             raise AlreadyExistsError("Asset type name already exists in this category")
 
-    async def unique_document_names(self, documents: list[UploadFile]) -> None:
+    async def unique_document_names(self, documents: list[UploadFile], field: str) -> None:
         seen = set()
         duplicates = set()
         for document in documents or []:
@@ -84,7 +84,11 @@ class AssetTypeService:
                 duplicates.add(document.filename)
             seen.add(document.filename)
         if duplicates:
-            raise BadRequestError(f"Documents uploaded more than once: {','.join(duplicates)}")
+            duplicates = sorted(duplicates)
+            raise BadRequestError(
+                f"Documents uploaded more than once: {', '.join(duplicates)}",
+                errors=[{"field": field, "documents": duplicates}],
+            )
 
     async def create_asset_type(
         self,
@@ -107,7 +111,7 @@ class AssetTypeService:
         if not asset_type_form:
             raise NotFoundError(msg="Asset type category not found")
 
-        await self.unique_document_names(instruction_manuals)
+        await self.unique_document_names(instruction_manuals, "instruction_manuals")
         await self.ensure_name_is_free(
             name=asset_type_data.get("name"),
             asset_type_category_id=asset_type_form.id,
@@ -532,12 +536,17 @@ class AssetTypeService:
         if not asset_type:
             raise NotFoundError("Asset type not found")
 
-        await self.unique_document_names(documents)
+        await self.unique_document_names(documents, "documents")
         new_names = {doc.filename for doc in documents or []}
         existing = [d.name for d in asset_type.documents if d.name in new_names]
         if existing:
             names = ", ".join(f"'{name}'" for name in existing)
-            raise AlreadyExistsError(f"Document {names} already exists for this asset type")
+            raise AlreadyExistsError(
+                f"Documents {names} already exist for this asset type"
+                if len(existing) > 1
+                else f"Document {names} already exists for this asset type",
+                errors=[{"field": "documents", "documents": existing}],
+            )
 
         new_db_documents = []
         new_documents = []

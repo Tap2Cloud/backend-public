@@ -36,6 +36,9 @@ PAGE = A4
 MARGIN = 36
 HEADER_HEIGHT = 64
 CONTENT_WIDTH = PAGE[0] - 2 * MARGIN
+SUBTITLE_FONT = ("Helvetica", 10)
+SUBTITLE_LEADING = 13
+SUBTITLE_MAX_LINES = 2
 
 # Matches the frontend theme (frontend/src/theme-config.ts and its grey scale).
 INK = colors.HexColor("#1C252E")
@@ -82,7 +85,7 @@ def _document_name(name: str, url: str) -> Paragraph:
 
 def _documents(documents, link) -> Table:
     rows = [[_file_icon(), _document_name(doc.name, link(doc))] for doc in documents]
-    table = Table(rows, colWidths=[14, None], hAlign="LEFT")
+    table = Table(rows, colWidths=[14, None], hAlign="LEFT", splitInRow=40)
     table.setStyle(
         TableStyle(
             [
@@ -96,6 +99,33 @@ def _documents(documents, link) -> Table:
         )
     )
     return table
+
+
+def _subtitle_lines(name: str, date: str) -> list[str]:
+    """Wraps 'name · date' onto at most SUBTITLE_MAX_LINES, cutting the name with '…' so the
+    date stays visible."""
+
+    def fits(text: str) -> bool:
+        return stringWidth(text, *SUBTITLE_FONT) <= CONTENT_WIDTH
+
+    tail = f" · {date}"
+    text, lines = f"{name}{tail}", []
+    while not fits(text) and len(lines) < SUBTITLE_MAX_LINES - 1:
+        end = len(text)
+        while not fits(text[:end]):
+            end -= 1
+        # Break at the last space that fits; a single over-long word is broken mid-word.
+        space = text.rfind(" ", 0, end + 1)
+        if space > 0:
+            end = space
+        lines.append(text[:end].rstrip())
+        text = text[end:].lstrip()
+    if not fits(text):
+        rest = text.removesuffix(tail)
+        while rest and not fits(f"{rest}…{tail}"):
+            rest = rest[:-1]
+        text = f"{rest.rstrip()}…{tail}"
+    return [*lines, text]
 
 
 def _pill(text: str, status: AuditTaskStatus) -> Table:
@@ -151,7 +181,11 @@ class AuditService:
                 duplicates.add(document.filename)
             seen.add(document.filename)
         if duplicates:
-            raise BadRequestError(f"Documents uploaded more than once: {','.join(duplicates)}")
+            duplicates = sorted(duplicates)
+            raise BadRequestError(
+                f"Documents uploaded more than once: {', '.join(duplicates)}",
+                errors=[{"field": "documents", "documents": duplicates}],
+            )
 
         audit_task = await self.task_repository.save(
             AuditTask(
@@ -527,11 +561,11 @@ class AuditService:
                 row += [Paragraph(escape(label), SMALL), Paragraph(escape(str(value)), STRONG)]
             rows.append(row + [""] * (4 - len(row)))
         label_width, value_width = 95, CONTENT_WIDTH / 2 - 95
-        asset_table = Table(rows, colWidths=[label_width, value_width] * 2)
+        asset_table = Table(rows, colWidths=[label_width, value_width] * 2, splitInRow=1)
         asset_table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("LINEBELOW", (0, 0), (-1, -1), 0.5, BORDER),
                     ("LEFTPADDING", (0, 0), (-1, -1), 0),
                     ("TOPPADDING", (0, 0), (-1, -1), 7),
@@ -571,7 +605,9 @@ class AuditService:
                         else Paragraph("—", SMALL),
                     ]
                 )
-            task_table = Table(data, colWidths=[26, 140, 110, 127, 120], repeatRows=1)
+            task_table = Table(
+                data, colWidths=[26, 140, 110, 127, 120], repeatRows=1, splitInRow=40, splitByRow=0
+            )
             task_table.setStyle(
                 TableStyle(
                     [
@@ -595,6 +631,8 @@ class AuditService:
 
         title = _("Audit Report")
         subtitle = f"{asset.asset_type.name} · {inspection_date}"
+        subtitle_lines = _subtitle_lines(asset.asset_type.name, inspection_date)
+        header_height = HEADER_HEIGHT + SUBTITLE_LEADING * (len(subtitle_lines) - 1)
         footer = f"{_('Generated on')} {generated_on}"
         page_label = _("Page {page} of {total}")
 
@@ -619,15 +657,16 @@ class AuditService:
             def _decorate(self, number: int, total: int):
                 width, height = PAGE
                 self.setFillColor(BRAND_DARK)
-                self.rect(0, height - HEADER_HEIGHT, width, HEADER_HEIGHT, stroke=0, fill=1)
+                self.rect(0, height - header_height, width, header_height, stroke=0, fill=1)
                 self.setFillColor(BRAND)
-                self.rect(0, height - HEADER_HEIGHT - 4, width, 4, stroke=0, fill=1)
+                self.rect(0, height - header_height - 4, width, 4, stroke=0, fill=1)
                 self.setFillColor(colors.white)
                 self.setFont("Helvetica-Bold", 18)
                 self.drawString(MARGIN, height - 32, title)
-                self.setFont("Helvetica", 10)
+                self.setFont(*SUBTITLE_FONT)
                 self.setFillColor(colors.HexColor("#ABABAB"))
-                self.drawString(MARGIN, height - 49, subtitle)
+                for i, line in enumerate(subtitle_lines):
+                    self.drawString(MARGIN, height - 49 - i * SUBTITLE_LEADING, line)
 
                 self.setStrokeColor(BORDER)
                 self.setLineWidth(0.5)
@@ -644,7 +683,7 @@ class AuditService:
             buffer,
             pagesize=PAGE,
             title=f"{title} – {subtitle}",
-            topMargin=HEADER_HEIGHT + 24,
+            topMargin=header_height + 24,
             bottomMargin=48,
             # The frame pads its content by 6pt; offset it so content lines up with MARGIN.
             leftMargin=MARGIN - 6,
@@ -653,7 +692,7 @@ class AuditService:
         doc.build([KeepTogether(elements[:3]), *elements[3:]], canvasmaker=ReportCanvas)
 
         buffer.seek(0)
-        filename = f"audit_report_{inspection_date}.pdf"
+        filename = f"audit-report-{audit_id}.pdf"
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
