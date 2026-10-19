@@ -538,7 +538,7 @@ class AssetTypeService:
 
         await self.unique_document_names(documents, "documents")
         new_names = {doc.filename for doc in documents or []}
-        existing = [d.name for d in asset_type.documents if d.name in new_names]
+        existing = sorted({d.name for d in asset_type.documents if d.name in new_names})
         if existing:
             names = ", ".join(f"'{name}'" for name in existing)
             raise AlreadyExistsError(

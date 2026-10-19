@@ -13,6 +13,7 @@ from reportlab.graphics.shapes import Drawing, Polygon, PolyLine
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.utils import simpleSplit
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
@@ -101,31 +102,31 @@ def _documents(documents, link) -> Table:
     return table
 
 
-def _subtitle_lines(name: str, date: str) -> list[str]:
-    """Wraps 'name · date' onto at most SUBTITLE_MAX_LINES, cutting the name with '…' so the
-    date stays visible."""
+def _shorten(text: str, max_width: float) -> str:
+    """The longest prefix of text that fits max_width with a trailing '…'."""
+    lo, hi = 0, len(text)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if stringWidth(f"{text[:mid].rstrip()}…", *SUBTITLE_FONT) <= max_width:
+            lo = mid
+        else:
+            hi = mid - 1
+    return f"{text[:lo].rstrip()}…"
 
-    def fits(text: str) -> bool:
-        return stringWidth(text, *SUBTITLE_FONT) <= CONTENT_WIDTH
 
-    tail = f" · {date}"
-    text, lines = f"{name}{tail}", []
-    while not fits(text) and len(lines) < SUBTITLE_MAX_LINES - 1:
-        end = len(text)
-        while not fits(text[:end]):
-            end -= 1
-        # Break at the last space that fits; a single over-long word is broken mid-word.
-        space = text.rfind(" ", 0, end + 1)
-        if space > 0:
-            end = space
-        lines.append(text[:end].rstrip())
-        text = text[end:].lstrip()
-    if not fits(text):
-        rest = text.removesuffix(tail)
-        while rest and not fits(f"{rest}…{tail}"):
-            rest = rest[:-1]
-        text = f"{rest.rstrip()}…{tail}"
-    return [*lines, text]
+def _subtitle_lines(name: str, tail: str) -> list[str]:
+    def width(text: str) -> float:
+        return stringWidth(text, *SUBTITLE_FONT)
+
+    last_width = CONTENT_WIDTH - width(tail)
+    lines = simpleSplit(name, *SUBTITLE_FONT, CONTENT_WIDTH) or [""]
+    lines[-1:] = simpleSplit(lines[-1], *SUBTITLE_FONT, last_width) or [""]
+    too_wide = next((i for i, line in enumerate(lines) if width(line) > CONTENT_WIDTH), len(lines))
+    keep = min(too_wide, SUBTITLE_MAX_LINES - 1, len(lines) - 1)
+    last = " ".join(lines[keep:])
+    if keep < len(lines) - 1 or width(last) > last_width:
+        last = _shorten(last, last_width)
+    return [*lines[:keep], f"{last}{tail}".lstrip()]
 
 
 def _pill(text: str, status: AuditTaskStatus) -> Table:
@@ -174,18 +175,7 @@ class AuditService:
             if not values[field]:
                 raise BadRequestError(f"{label} is required.")
 
-        seen = set()
-        duplicates = set()
-        for document in documents:
-            if document.filename in seen:
-                duplicates.add(document.filename)
-            seen.add(document.filename)
-        if duplicates:
-            duplicates = sorted(duplicates)
-            raise BadRequestError(
-                f"Documents uploaded more than once: {', '.join(duplicates)}",
-                errors=[{"field": "documents", "documents": duplicates}],
-            )
+        await self.app.services.asset_type_service.unique_document_names(documents, "documents")
 
         audit_task = await self.task_repository.save(
             AuditTask(
@@ -630,8 +620,10 @@ class AuditService:
             elements.append(Paragraph(escape(_("No tasks were recorded for this audit.")), SMALL))
 
         title = _("Audit Report")
-        subtitle = f"{asset.asset_type.name} · {inspection_date}"
-        subtitle_lines = _subtitle_lines(asset.asset_type.name, inspection_date)
+        asset_type_name = " ".join(asset.asset_type.name.split())
+        date_tail = f" · {inspection_date}"
+        subtitle = f"{asset_type_name}{date_tail}"
+        subtitle_lines = _subtitle_lines(asset_type_name, date_tail)
         header_height = HEADER_HEIGHT + SUBTITLE_LEADING * (len(subtitle_lines) - 1)
         footer = f"{_('Generated on')} {generated_on}"
         page_label = _("Page {page} of {total}")
