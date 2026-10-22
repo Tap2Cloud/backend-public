@@ -105,6 +105,7 @@ class DocumentStatus(enum.StrEnum):
     released = "released"
     pending = "pending"
     rejected = "rejected"
+    approved = "approved"
 
 
 class DocumentType(enum.StrEnum):
@@ -112,6 +113,7 @@ class DocumentType(enum.StrEnum):
     inspection = "inspection"
     typeplate = "typeplate"
     declaration_file = "declaration_file"
+    declaration_of_conformity = "declaration_of_conformity"
 
 
 class Status(enum.StrEnum):
