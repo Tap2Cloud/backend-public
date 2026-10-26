@@ -14,7 +14,12 @@ from t2c_backend.schemas.v1.typeplates import (
 )
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import SortBy
-from t2c_backend.utils.misc import MAX_EPOCH_SECONDS, MIN_EPOCH_SECONDS, DictContainer
+from t2c_backend.utils.misc import (
+    MAX_EPOCH_SECONDS,
+    MIN_EPOCH_SECONDS,
+    DictContainer,
+    parse_form_model,
+)
 
 router = APIRouter()
 
@@ -77,11 +82,12 @@ async def list_typeplate_details(
 @router.put("/typeplate/{typeplateId}", operation_id="update typeplate", status_code=200)
 async def update_typeplate(
     typeplate_id: int = Path(..., alias="typeplateId"),
-    typeplate_data: UpdateTypeplateRequest = Form(...),
+    typeplate_data: str | UploadFile = Form(...),
     eu_file: UploadFile | None = File(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_update": True})),
     services: DictContainer = Depends(get_services),
 ):
+    typeplate_data = parse_form_model(UpdateTypeplateRequest, typeplate_data, "typeplate_data")
     await services.typeplate_service.update_typeplate(
         typeplate_id=typeplate_id,
         typeplate_data=typeplate_data,

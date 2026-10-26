@@ -9,7 +9,9 @@ from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
-from pydantic import Field
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, Field, ValidationError
+from starlette.datastructures import UploadFile
 
 from t2c_backend.core.db.session import get_session_context
 from t2c_backend.utils.errors import BadRequestError
@@ -182,3 +184,14 @@ def underscore(word: str) -> str:
 
 def get_full_name(first_name, last_name):
     return f"{first_name} {last_name}".strip()
+
+
+def parse_form_model[T: BaseModel](model: type[T], value: str | UploadFile, field: str) -> T:
+    if isinstance(value, UploadFile):
+        value = value.file.read().decode()
+    try:
+        return model.model_validate(value)
+    except ValidationError as e:
+        raise RequestValidationError(
+            [{**error, "loc": ("body", field, *error["loc"])} for error in e.errors()]
+        ) from e
