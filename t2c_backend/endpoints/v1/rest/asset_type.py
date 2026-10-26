@@ -13,7 +13,7 @@ from t2c_backend.schemas.v1.asset_type import (
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import DocumentFor, SortBy
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import DictContainer, form_json, parse_form_model
 
 router = APIRouter()
 
@@ -24,13 +24,14 @@ router = APIRouter()
     status_code=204,
 )
 async def create_asset_type(
-    asset_type_data: CreateAssetTypeRequest = Form(...),
+    asset_type_data: str | UploadFile = form_json(CreateAssetTypeRequest),
     eu_file: UploadFile | str | None = File(None),
     instruction_manuals: list[UploadFile] = File(None),
     custom_media_fields: list[UploadFile] = File(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"asset_type_create": True})),
     services: DictContainer = Depends(get_services),
 ):
+    asset_type_data = parse_form_model(CreateAssetTypeRequest, asset_type_data, "asset_type_data")
     await services.asset_type_service.create_asset_type(
         user_id=token.user_id,
         location_id=token.location_id,

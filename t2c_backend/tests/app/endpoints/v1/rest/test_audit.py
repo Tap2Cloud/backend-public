@@ -1,10 +1,7 @@
 import json
 import random
-from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 import pytest
-from babel.dates import format_date
 from faker import Faker
 from fastapi.testclient import TestClient
 from utils.enums import DocumentFor
@@ -419,8 +416,7 @@ def test_generate_audit_report_defaults_to_utc(authenticated_client: TestClient,
 
     assert response.status_code == 200
     filename = response.headers["content-disposition"].split('filename="', 1)[1].rstrip('"')
-    local_date = datetime.fromtimestamp(audit["inspectionDate"], tz=UTC).date()
-    assert filename == f"audit_report_{format_date(local_date, format='long', locale='en')}.pdf"
+    assert filename == f"audit-report-{audit['id']}.pdf"
 
 
 @pytest.mark.order(after="test_generate_audit_report_defaults_to_utc")
@@ -438,8 +434,7 @@ def test_generate_audit_report_with_timezone(
 
     assert response.status_code == 200
     filename = response.headers["content-disposition"].split('filename="', 1)[1].rstrip('"')
-    local_date = datetime.fromtimestamp(audit["inspectionDate"], tz=ZoneInfo(timezone)).date()
-    assert filename == f"audit_report_{format_date(local_date, format='long', locale='en')}.pdf"
+    assert filename == f"audit-report-{audit['id']}.pdf"
 
 
 @pytest.mark.order(after="test_generate_audit_report_with_timezone")

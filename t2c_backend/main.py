@@ -13,6 +13,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from pydantic.json_schema import models_json_schema
 
 from t2c_backend.config import Config
 from t2c_backend.core.error_handlers import application_exception_handler
@@ -23,7 +24,13 @@ from t2c_backend.core.middlewares.upload_limit import UploadLimitMiddleware
 from t2c_backend.endpoints.router import api_router
 from t2c_backend.utils.enums import ENVIRONMENT
 from t2c_backend.utils.errors import ApplicationError
-from t2c_backend.utils.misc import DictContainer, _is_submodule, maybe_coroutine, underscore
+from t2c_backend.utils.misc import (
+    FORM_JSON_MODELS,
+    DictContainer,
+    _is_submodule,
+    maybe_coroutine,
+    underscore,
+)
 
 initial_clients = [
     "t2c_backend.clients.token_backend",
@@ -45,6 +52,22 @@ def _fix_binary(node):
     elif isinstance(node, list):
         for v in node:
             _fix_binary(v)
+
+
+def _fix_form_json(schema):
+    _, definitions = models_json_schema(
+        [(model, "validation") for model in FORM_JSON_MODELS.values()],
+        ref_template="#/components/schemas/{model}",
+    )
+    components = schema.setdefault("components", {}).setdefault("schemas", {})
+    for name, definition in definitions.get("$defs", {}).items():
+        components.setdefault(name, definition)
+    for component in components.values():
+        for name, prop in component.get("properties", {}).items():
+            if "x-form-json" in prop:
+                component["properties"][name] = {
+                    "$ref": f"#/components/schemas/{prop['x-form-json']}"
+                }
 
 
 def get_middleware_stack(app_config):
@@ -203,6 +226,7 @@ class CustomFastAPI(FastAPI):
             routes=self.routes,
         )
         _fix_binary(schema)
+        _fix_form_json(schema)
         self.openapi_schema = schema
         return schema
 

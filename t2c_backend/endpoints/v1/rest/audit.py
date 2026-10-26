@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Header, Path, Query, UploadFile
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
@@ -19,6 +19,8 @@ from t2c_backend.utils.misc import (
     MAX_EPOCH_SECONDS,
     MIN_EPOCH_SECONDS,
     DictContainer,
+    form_json,
+    parse_form_model,
     parse_timezone,
 )
 
@@ -27,11 +29,12 @@ router = APIRouter()
 
 @router.post("/audit/task", response_model=AuditTaskResponse, status_code=201)
 async def create_audit_task(
-    task: CreateAuditTask = Form(...),
+    task: str | UploadFile = form_json(CreateAuditTask),
     documents: list[UploadFile] = File(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_create": True})),
     services: DictContainer = Depends(get_services),
 ):
+    task = parse_form_model(CreateAuditTask, task, "task")
     audit_task, saved_documents = await services.audit_service.create_audit_task(
         organization_id=token.organization_id,
         task=task,
