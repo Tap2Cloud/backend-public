@@ -9,6 +9,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
+from fastapi import Form
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, ValidationError
 from starlette.datastructures import UploadFile
@@ -186,6 +187,14 @@ def get_full_name(first_name, last_name):
     return f"{first_name} {last_name}".strip()
 
 
+FORM_JSON_MODELS: dict[str, type[BaseModel]] = {}
+
+
+def form_json(model: type[BaseModel], **kwargs):
+    FORM_JSON_MODELS[model.__name__] = model
+    return Form(..., json_schema_extra={"x-form-json": model.__name__}, **kwargs)
+
+
 def parse_form_model[T: BaseModel](model: type[T], value: str | UploadFile, field: str) -> T:
     if isinstance(value, UploadFile):
         value = value.file.read().decode()
@@ -193,5 +202,8 @@ def parse_form_model[T: BaseModel](model: type[T], value: str | UploadFile, fiel
         return model.model_validate(value)
     except ValidationError as e:
         raise RequestValidationError(
-            [{**error, "loc": ("body", field, *error["loc"])} for error in e.errors()]
+            [
+                {**error, "loc": ("body", field, *error["loc"])}
+                for error in e.errors(include_url=False, include_input=False)
+            ]
         ) from e

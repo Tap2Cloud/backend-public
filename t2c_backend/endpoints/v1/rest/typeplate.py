@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, Path, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Path, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
 
 from t2c_backend.core.pagination import CustomPage
@@ -18,6 +18,7 @@ from t2c_backend.utils.misc import (
     MAX_EPOCH_SECONDS,
     MIN_EPOCH_SECONDS,
     DictContainer,
+    form_json,
     parse_form_model,
 )
 
@@ -82,7 +83,7 @@ async def list_typeplate_details(
 @router.put("/typeplate/{typeplateId}", operation_id="update typeplate", status_code=200)
 async def update_typeplate(
     typeplate_id: int = Path(..., alias="typeplateId"),
-    typeplate_data: str | UploadFile = Form(...),
+    typeplate_data: str | UploadFile = form_json(UpdateTypeplateRequest),
     eu_file: UploadFile | None = File(None),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"typeplate_update": True})),
     services: DictContainer = Depends(get_services),
