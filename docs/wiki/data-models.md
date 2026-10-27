@@ -2,7 +2,7 @@
 
 ## Module Overview
 
-The `models` package defines the SQLAlchemy ORM entities backing the Digital Product Passport domain. The schema cleanly separates a **definition layer** (categories, fields, asset types, typeplates) from a **runtime/instance layer** (assets, services, audits), threaded together by **tenancy** (Organization → Location → User). All models build on `AdvancedDeclarativeBase` and most mix in `BigIntPrimaryKey` and `CommonTableAttributes` from [Core Infrastructure](core-infrastructure.md); document tables typically use UUID primary keys instead. `AuditColumns` (the `created_at`/`updated_at` pair) is **not** universal — it is mixed into `Organization`, `User`, `AssetType`, `AssetTypeDocument`, `AssetTypeCategory`, `Typeplate`, `TypeplateDocument`, `TypeplateImage`, `TypelateImageMapping`, `Document` and `AuditTaskDocument` only. Notably `Location`, `Role`, `Service`, `ProductPassType`, `Audit`/`AuditTask` and the association tables carry no timestamps.
+The `models` package defines the SQLAlchemy ORM entities backing the Digital Product Passport domain. The schema cleanly separates a **definition layer** (categories, fields, asset types, typeplates) from a **runtime/instance layer** (assets, services, audits), threaded together by **tenancy** (Organization → Location → User). All models build on `AdvancedDeclarativeBase` and most mix in `BigIntPrimaryKey` and `CommonTableAttributes` from [Core Infrastructure](core-infrastructure.md); document tables typically use UUID primary keys instead. `AuditColumns` (the `created_at`/`updated_at` pair) is **not** universal — it is mixed into `Organization`, `User`, `AssetType`, `AssetTypeDocument`, `AssetTypeCategory`, `Typeplate`, `TypeplateDocument`, `TypeplateImage`, `TypelateImageMapping`, `Document`, `AuditTaskDocument` and `UserInvite` only. Notably `Location`, `Role`, `Service`, `ProductPassType`, `Audit`/`AuditTask` and the association tables carry no timestamps.
 
 ## Entity-Relationship Diagram
 
@@ -39,15 +39,15 @@ graph TD
 - **`Role`** (`roles`) — org-scoped permission set. `permissions` is a `Numeric` bitmask column (default `0`) holding the bitwise OR of the granted `Permissions` flags; it is the *only* place authorization data lives, and it is read on every request. `organization_id` is nullable with `ON DELETE CASCADE`. Linked to users via `user_roles` and to invitees via `user_invite_roles`. New organizations are seeded with `member`/`admin`/`owner`, all three carrying the full bitmask — see [Permissions Reference](permissions-reference.md).
 - **`UserRole`** (`user_roles`) — user↔role association table (composite PK, both FKs `ON DELETE CASCADE`). A user may hold several roles; the effective permission set is the **union** of their bitmasks.
 - **`UserEmailToken`** (`user_email_verification`) — email verification / password token (`user_token`, `type` = `TokenType`, `is_used`).
-- **`UserInvite`** / **`UserInviteRole`** — pending invitations with assigned roles (defined in `user.py`; referenced by `Role` relationships though not re-exported by `models/__init__.py`).
+- **`UserInvite`** / **`UserInviteRole`** — pending invitations with assigned roles (defined in `user.py`; referenced by `Role` relationships though not re-exported by `models/__init__.py`). `UserInvite` now mixes in `AuditColumns` instead of declaring its own `created_at`, which added `updated_at` to `user_invites` (migration `pkg_0007`).
 
 ### Asset definition (schema) layer
 
-- **`AssetTypeCategory`** (`asset_type_categories`) — a **location-owned** template defining the schema for asset types; has `has_typeplates`, ordered `fields`. Unique on `(name, location_id)`.
+- **`AssetTypeCategory`** (`asset_type_categories`) — a **location-owned** template defining the schema for asset types; has `has_typeplates`, ordered `fields`. Unique on `(name, location_id)`. The `fields` relationship (and each field's `options`) uses `cascade="all, delete-orphan"`, so removing a field or option from the collection deletes its row — this is what lets a category update replace its field list in place.
 - **`AssetTypeCategoryGroup`** (`asset_type_category_group`) — logical grouping/section for organizing category fields (`name`, `order`).
 - **`AssetTypeCategoryField`** (`asset_type_category_fields`) — a field definition within a category (`field_type` = `InputType`, name/placeholder/display/required/order), with `options`.
 - **`AssetTypeCategoryFieldOption`** (`asset_type_category_field_options`) — a selectable option (`option_id`, `option_label`) for a category field.
-- **`AssetType`** (`asset_types`) — a **location-owned** model/template belonging to a category; carries media links, `weight`, `manufacturer`, instantiates the category's schema as concrete `fields`, and optionally owns one `Typeplate` plus `documents`.
+- **`AssetType`** (`asset_types`) — a **location-owned** model/template belonging to a category; carries media links, `weight`, `manufacturer`, instantiates the category's schema as concrete `fields`, and optionally owns one `Typeplate` plus `documents`. Its timestamps come solely from `AuditColumns` (the redundant `created_at` override was removed). Names are **unique per category** via a functional index — see [Asset type name uniqueness](#asset-type-name-uniqueness) below.
 - **`AssetTypeField`** / **`AssetTypeFieldOptions`** — concrete field values (and selected options) on an asset type, instantiated from the category definitions.
 - **`Typeplate`** (`typeplates`) — one-to-one compliance nameplate for an asset type (`test_results`, `eu_id`, `carbon_footprint_label`), with `documents` and image mappings.
 - **`TypeplateDocument`** / **`TypeplateImage`** / **`TypelateImageMapping`** — typeplate document files, shared images, and the typeplate↔image association table.
@@ -56,9 +56,24 @@ graph TD
 
 - **`Asset`** (`assets`) — the operational core: references an `AssetType` (definition) and a `Location` (placement), carries `pass_id` (the digital-passport identifier), `device_id`, `status` (`AssetStatus`), `serial_no`, `economic_operator`. Unique on `(device_id, location_id)`. Aggregates `services` and `audit`.
 - **`Service`** (`services`) — a maintenance/service record on an asset (`service_type` = `ServiceTypes`, provider, `expire_date`, `service_date`).
-- **`Audit`** (`audits`) — an inspection event on an asset by a user (`inspection_date`, `valid_until`), decomposed into `audit_tasks`.
+- **`Audit`** (`audits`) — an inspection event on an asset by a user (`inspection_date`, `valid_until`), decomposed into `audit_tasks`. `valid_until` is a timezone-aware `DateTime` (it was a `Date` before migration `pkg_0007`).
 - **`AuditTask`** (`audit_tasks`) — a step within an audit (`task_type` = `TaskType`, `status` = `AuditTaskStatus`, performer info), with `documents`.
 - **`AuditTaskDocument`** (`audit_task_documents`) — a file attached to an audit task (UUID PK).
+
+### Timestamp defaults
+
+Column defaults that stamp "now" (`Asset.manufacturing_date`, `Audit.inspection_date`, `Service.service_date`, `UserEmailToken.time`) use the callable `aware_utcnow` from `utils.misc`, so the time is taken per insert. Previously several used `default=datetime.now(UTC)`, which is evaluated once at import time and stamped every row with the process start time. On the wire these values are epoch seconds, converted with `datetime_to_epoch` / `datetime_from_epoch` — see [Schemas](schemas.md).
+
+### Asset type name uniqueness
+
+`asset_types` has a unique functional index `uq_asset_type_name_per_category` on `(asset_type_category_id, lower(btrim(regexp_replace(name, '\s+', ' ', 'g'))))`, so two asset types in the same category cannot differ only by case or whitespace. The expression is built by `normalized_asset_type_name()` in `models/asset_type.py` (index name in `ASSET_TYPE_NAME_UNIQUE_INDEX`), and `AssetTypeService` reuses it for its duplicate-name check so the query and the index compare the same normalized form. Its regex literals are `literal_column`s rather than bound parameters, because a bound backslash can render differently from the index definition and Postgres would then not use the index.
+
+```python
+def normalized_asset_type_name(name: ColumnElement[str]) -> ColumnElement[str]:
+    return func.lower(
+        func.btrim(func.regexp_replace(name, _WHITESPACE_RUN, _SINGLE_SPACE, _GLOBAL))
+    )
+```
 
 ### Document satellites
 
@@ -99,7 +114,7 @@ Two deliberate consequences of this design:
    *location* or *organization* does remove its data.
 
 Migrations `pkg_0003_location_based_asset_types` and `pkg_0004_created_by_set_null_on_user_delete`
-introduced this shape; see [Database Migrations](database-migrations.md). The authorization side of the
+introduced this shape (later revisions are listed in [Database Migrations](database-migrations.md)); see [Database Migrations](database-migrations.md). The authorization side of the
 same story — flags vs rows — is in [Security & Permissions](security-and-permissions.md).
 
 ## Dependencies
@@ -123,6 +138,13 @@ await asset_repo.get_one_or_none(device_id="X", location_id=1)
 add_location_count(Organization)
 add_user_count(Organization)
 add_role_count(Organization)
+
+# Duplicate-name check that matches the unique index expression (AssetTypeService):
+folded_name = normalized_asset_type_name(cast(literal(name), Text))
+await self.repository.get_one_or_none(
+    where=[normalized_asset_type_name(self._model.name) == folded_name],
+    asset_type_category_id=asset_type_category_id,
+)
 ```
 
 ## Cross-references
@@ -131,4 +153,4 @@ add_role_count(Organization)
 - [Schemas](schemas.md) — the Pydantic DTOs that mirror these models
 - [Services](services.md) — the business logic operating on these models
 - [Database Migrations](database-migrations.md) — how the schema is created/seeded
-- [Utilities](utilities.md) — the enums used as column types
+- [Utilities](utilities.md) — the enums used as column types, `aware_utcnow`

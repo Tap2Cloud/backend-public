@@ -1,5 +1,4 @@
 import mimetypes
-from datetime import datetime
 
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
@@ -29,7 +28,8 @@ from t2c_backend.schemas.v1.asset import (
 )
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.utils.enums import AssetStatus, DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
+from t2c_backend.utils.misc import datetime_from_epoch, normalize_name
 
 
 class AssetService:
@@ -45,16 +45,20 @@ class AssetService:
         asset_type: AssetType,
         location: Location,
     ):
+        device_id = normalize_name(asset_data.device_id)
+        if not device_id:
+            raise BadRequestError("Device ID is required")
+
         location = await self.repository.session.merge(location)
         asset_type = await self.repository.session.merge(asset_type)
 
         await self.repository.lock_values(
-            device_id=asset_data.device_id,
+            device_id=device_id,
             location_id=location.id,
         )
 
         is_device_id_exists = await self.repository.exists(
-            device_id=asset_data.device_id,
+            device_id=device_id,
             location_id=location.id,
         )
 
@@ -67,7 +71,7 @@ class AssetService:
                 f"{location.id}_{asset_data.device_id}"
             ),
             asset_type_id=asset_type.id,
-            manufacturing_date=datetime.fromtimestamp(asset_data.manufacturing_date),
+            manufacturing_date=datetime_from_epoch(asset_data.manufacturing_date),
             location_id=location.id,
             status=AssetStatus(asset_data.status),
             serial_no=asset_data.serial_no,
@@ -145,6 +149,8 @@ class AssetService:
         status: list[AssetStatus] | None,
         categories: list[DisplayAssetTypeCategory] | None,
         sort_by: SortBy | None,
+        manufacturing_start_date: int | None = None,
+        manufacturing_end_date: int | None = None,
     ):
         sort_order = {
             SortBy.Latest: desc(self._model.created_at),
@@ -185,10 +191,12 @@ class AssetService:
 
         if q:
             serial_no_filter = BaseRepository.parse_filters(self._model, serial_no__ilike=f"%{q}%")
+            device_id_filter = BaseRepository.parse_filters(self._model, device_id__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
             select_query = select_query.filter(
                 or_(
                     *serial_no_filter,
+                    *device_id_filter,
                     *[
                         self._model.asset_type.has(condition)
                         for condition in asset_type_name_filter
@@ -206,6 +214,14 @@ class AssetService:
             )
             select_query = select_query.filter(
                 self._model.asset_type.has(AssetType.asset_type_category.has(*category_condition))
+            )
+
+        if manufacturing_start_date is not None and manufacturing_end_date is not None:
+            select_query = select_query.filter(
+                self._model.manufacturing_date.between(
+                    datetime_from_epoch(manufacturing_start_date),
+                    datetime_from_epoch(manufacturing_end_date),
+                )
             )
 
         return await apaginate(

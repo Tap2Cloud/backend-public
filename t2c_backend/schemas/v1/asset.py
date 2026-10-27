@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from t2c_backend.models import Asset as AssetModel
 from t2c_backend.schemas.v1.asset_type import AssetTypeResponse, DisplayAssetType
@@ -11,22 +11,29 @@ from t2c_backend.schemas.v1.location import LocationBaseResponse
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
 from t2c_backend.schemas.v1.service import ServiceResponse
 from t2c_backend.utils.enums import AssetStatus
+from t2c_backend.utils.misc import EpochSeconds, datetime_to_epoch
 
 
 class CreateAsset(BaseModel):
     location: LocationBaseResponse
     device_id: str = Field(..., alias="deviceId")
-    status: str
+    status: AssetStatus
     serial_no: str | None = Field(..., alias="serialNo")
     economic_operator: str | None = Field(..., alias="economicOperator")
-    manufacturing_date: int = Field(..., alias="manufacturingDate")
+    manufacturing_date: EpochSeconds = Field(..., alias="manufacturingDate")
     asset_type: DisplayAssetType = Field(..., alias="assetType")
 
     model_config = ConfigDict(from_attributes=True)
 
+    @model_validator(mode="after")
+    def validate_manufacturing_date(self):
+        if self.manufacturing_date <= 0:
+            raise ValueError("Invalid manufacturing date")
+        return self
+
 
 class UpdateAsset(BaseModel):
-    status: str
+    status: AssetStatus
     serial_no: str | None = Field(..., alias="serialNo")
     economic_operator: str | None = Field(..., alias="economicOperator")
 
@@ -51,7 +58,7 @@ class AssetResponse(BaseModel):
             id=asset.id,
             location=LocationBaseResponse.convert(asset.location, asset.location.organization),
             deviceId=asset.device_id,
-            manufacturingDate=int(asset.manufacturing_date.timestamp()),
+            manufacturingDate=datetime_to_epoch(asset.manufacturing_date),
             assetType=AssetTypeResponse.convert(
                 asset.asset_type,
                 [documents for documents in asset.asset_type.documents],

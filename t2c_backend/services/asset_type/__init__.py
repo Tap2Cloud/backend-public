@@ -7,7 +7,7 @@ from fastapi import File, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from sqlalchemy import Text, asc, cast, desc, exists, literal, select
+from sqlalchemy import Text, asc, cast, desc, exists, literal, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.datastructures import UploadFile as StarletteUploadFile
@@ -34,7 +34,7 @@ from t2c_backend.schemas.v1.asset_type import (
 from t2c_backend.schemas.v1.asset_type_category import DisplayAssetTypeCategory
 from t2c_backend.schemas.v1.typeplates import TypeplateImageRequest
 from t2c_backend.utils.enums import DocumentFor, InputType, SortBy
-from t2c_backend.utils.errors import AlreadyExistsError, NotFoundError
+from t2c_backend.utils.errors import AlreadyExistsError, BadRequestError, NotFoundError
 
 
 class AssetTypeService:
@@ -76,6 +76,20 @@ class AssetTypeService:
         if duplicate:
             raise AlreadyExistsError("Asset type name already exists in this category")
 
+    async def unique_document_names(self, documents: list[UploadFile], field: str) -> None:
+        seen = set()
+        duplicates = set()
+        for document in documents or []:
+            if document.filename in seen:
+                duplicates.add(document.filename)
+            seen.add(document.filename)
+        if duplicates:
+            duplicates = sorted(duplicates)
+            raise BadRequestError(
+                f"Documents uploaded more than once: {', '.join(duplicates)}",
+                errors=[{"field": field, "documents": duplicates}],
+            )
+
     async def create_asset_type(
         self,
         user_id: int,
@@ -97,6 +111,7 @@ class AssetTypeService:
         if not asset_type_form:
             raise NotFoundError(msg="Asset type category not found")
 
+        await self.unique_document_names(instruction_manuals, "instruction_manuals")
         await self.ensure_name_is_free(
             name=asset_type_data.get("name"),
             asset_type_category_id=asset_type_form.id,
@@ -378,8 +393,16 @@ class AssetTypeService:
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            name_filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
+            manufacturer_filters = BaseRepository.parse_filters(
+                model=self._model, manufacturer__ilike=f"%{q}%"
+            )
+            select_query = select_query.filter(
+                or_(
+                    *name_filters,
+                    *manufacturer_filters,
+                )
+            )
 
         if categories:
             select_query = select_query.filter(
@@ -454,8 +477,15 @@ class AssetTypeService:
         )
 
         if q:
-            filters = BaseRepository.parse_filters(model=self._model, name__ilike=f"%{q}%")
-            select_query = select_query.filter(*filters)
+            select_query = select_query.filter(
+                or_(
+                    self._model.name.ilike(f"%{q}%"),
+                    exists().where(
+                        AssetTypeDocumentModel.asset_type_id == self._model.id,
+                        AssetTypeDocumentModel.name.ilike(f"%{q}%"),
+                    ),
+                )
+            )
 
         if is_video:
             select_query = select_query.filter(self._model.video_links.isnot(None))
@@ -505,6 +535,18 @@ class AssetTypeService:
 
         if not asset_type:
             raise NotFoundError("Asset type not found")
+
+        await self.unique_document_names(documents, "documents")
+        new_names = {doc.filename for doc in documents or []}
+        existing = sorted({d.name for d in asset_type.documents if d.name in new_names})
+        if existing:
+            names = ", ".join(f"'{name}'" for name in existing)
+            raise AlreadyExistsError(
+                f"Documents {names} already exist for this asset type"
+                if len(existing) > 1
+                else f"Document {names} already exists for this asset type",
+                errors=[{"field": "documents", "documents": existing}],
+            )
 
         new_db_documents = []
         new_documents = []

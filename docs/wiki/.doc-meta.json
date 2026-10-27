@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-08-26T11:43:22Z",
-  "commit_hash": "693df380d8551e56cfd8e9a285172e14a5553e40",
+  "generated_at": "2026-10-16T09:40:00Z",
+  "commit_hash": "83814141b49a5f6d7acd7ec862a7da89dbfdbea7",
   "repo_name": "backend-public",
   "output_path": "docs/wiki",
-  "component_count": 326,
+  "component_count": 343,
   "languages": [
     "python",
     "javascript"
@@ -30,7 +30,10 @@
         "t2c_backend.core.middlewares.sqlalchemy.SQLAlchemyMiddleware",
         "t2c_backend.core.middlewares.language.LanguageMiddleware",
         "t2c_backend.core.i18n.TranslationWrapper",
-        "t2c_backend.core.repository.TableLockMode"
+        "t2c_backend.core.repository.TableLockMode",
+        "t2c_backend.core.middlewares.upload_limit.UploadLimitMiddleware",
+        "t2c_backend.core.i18n.sync.sync_catalogs",
+        "t2c_backend.core.i18n.sync.main"
       ],
       "doc_file": "core-infrastructure.md"
     },
@@ -47,7 +50,9 @@
         "t2c_backend.models.audit.Audit",
         "t2c_backend.models.service.Service",
         "t2c_backend.models.product_pass_type.ProductPassType",
-        "t2c_backend.models.documents.Document"
+        "t2c_backend.models.documents.Document",
+        "t2c_backend.models.asset_type.normalized_asset_type_name",
+        "t2c_backend.models.asset_type.ASSET_TYPE_NAME_UNIQUE_INDEX"
       ],
       "doc_file": "data-models.md"
     },
@@ -73,7 +78,8 @@
         "t2c_backend.endpoints.v1.rest.asset_pass",
         "t2c_backend.endpoints.v1.rest.asset_type",
         "t2c_backend.endpoints.v1.rest.organization",
-        "t2c_backend.endpoints.v1.rest.user"
+        "t2c_backend.endpoints.v1.rest.user",
+        "t2c_backend.endpoints.v1.rest.audit.public_document_download"
       ],
       "doc_file": "api-endpoints.md"
     },
@@ -92,7 +98,10 @@
         "t2c_backend.services.service.ServiceService",
         "t2c_backend.services.audit.AuditService",
         "t2c_backend.services.dashboard.DashboardService",
-        "t2c_backend.services.product_pass_type.ProductPassTypeService"
+        "t2c_backend.services.product_pass_type.ProductPassTypeService",
+        "t2c_backend.services.audit.AuditService.public_document_download",
+        "t2c_backend.services.asset_type.AssetTypeService.ensure_name_is_free",
+        "t2c_backend.services.asset_type.AssetTypeService.unique_document_names"
       ],
       "doc_file": "services.md"
     },
@@ -118,7 +127,8 @@
         "t2c_backend.clients.storage.Storage",
         "t2c_backend.clients.storage.disk.DiskStorage",
         "t2c_backend.clients.storage.s3.S3Storage",
-        "t2c_backend.clients.storage.interface.StorageInterface"
+        "t2c_backend.clients.storage.interface.StorageInterface",
+        "t2c_backend.clients.storage.interface.StorageInterface.ensure_safe_filename"
       ],
       "doc_file": "clients.md"
     },
@@ -129,7 +139,12 @@
         "t2c_backend.utils.misc.DictContainer",
         "t2c_backend.utils.misc.underscore",
         "t2c_backend.utils.misc.normalize_name",
-        "t2c_backend.utils.misc.escape_like"
+        "t2c_backend.utils.misc.escape_like",
+        "t2c_backend.utils.misc.EpochSeconds",
+        "t2c_backend.utils.misc.parse_timezone",
+        "t2c_backend.utils.misc.datetime_to_epoch",
+        "t2c_backend.utils.misc.datetime_from_epoch",
+        "t2c_backend.utils.misc.aware_utcnow"
       ],
       "doc_file": "utilities.md"
     },
@@ -140,7 +155,9 @@
         "alembic.versions.pkg_0001_init_tables",
         "alembic.versions.pkg_0002_insert_static_data",
         "alembic.versions.pkg_0003_location_based_asset_types",
-        "alembic.versions.pkg_0004_created_by_set_null_on_user_delete"
+        "alembic.versions.pkg_0004_created_by_set_null_on_user_delete",
+        "alembic.versions.pkg_0006_unique_asset_type_per_category",
+        "alembic.versions.pkg_0007_update_date_time_columns"
       ],
       "doc_file": "database-migrations.md"
     },

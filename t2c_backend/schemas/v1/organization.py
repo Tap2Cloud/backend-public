@@ -1,9 +1,8 @@
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from t2c_backend.models import Organization as OrganizationModel
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
+from t2c_backend.utils.misc import datetime_from_epoch, datetime_to_epoch
 
 
 class DisplayOrganization(BaseModel):
@@ -21,7 +20,7 @@ class DisplayOrganization(BaseModel):
             id=organization.id,
             name=organization.name,
             number=organization.number,
-            createdAt=int(organization.created_at.timestamp()),
+            createdAt=datetime_to_epoch(organization.created_at),
             logo=organization.logo.get_string() if organization.logo is not None else None,
         )
 
@@ -31,7 +30,7 @@ class DisplayOrganization(BaseModel):
             id=organization_obj.id,
             name=organization_obj.name,
             number=organization_obj.number,
-            created_at=datetime.fromtimestamp(organization_obj.created_at),
+            created_at=datetime_from_epoch(organization_obj.created_at),
         )
 
 
@@ -81,7 +80,7 @@ class OrganizationDetails(DetailedOrganization):
             id=organization.id,
             name=organization.name,
             number=organization.number,
-            createdAt=int(organization.created_at.timestamp()),
+            createdAt=datetime_to_epoch(organization.created_at),
             logo=organization.logo.get_string() if organization.logo is not None else None,
             locationCount=organization.location_count,
             userCount=organization.user_count,

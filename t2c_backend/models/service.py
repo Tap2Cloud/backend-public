@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import (
@@ -9,6 +9,7 @@ from sqlalchemy.orm import (
 
 from t2c_backend.core.db import AdvancedDeclarativeBase, BigIntPrimaryKey, CommonTableAttributes
 from t2c_backend.utils.enums import ServiceTypes
+from t2c_backend.utils.misc import aware_utcnow
 
 
 class Service(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
@@ -19,7 +20,7 @@ class Service(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase):
     expire_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     service_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.now(UTC),
+        default=aware_utcnow,
     )
     web: Mapped[str] = mapped_column(Text(), nullable=True)
     email: Mapped[str] = mapped_column(Text(), nullable=True)

@@ -1,8 +1,6 @@
-from datetime import datetime, time
-
 from fastapi_pagination.config import Config
 from fastapi_pagination.ext.sqlalchemy import apaginate
-from sqlalchemy import asc, desc, or_, select
+from sqlalchemy import and_, asc, desc, or_, select
 from sqlalchemy.orm import contains_eager, joinedload
 
 from t2c_backend.core.pagination import CustomPage, CustomParams
@@ -12,7 +10,7 @@ from t2c_backend.models.service import Service
 from t2c_backend.schemas.v1.service import AssetServiceResponse, CreateService
 from t2c_backend.utils.enums import ServiceTypes, SortBy
 from t2c_backend.utils.errors import BadRequestError, NotFoundError
-from t2c_backend.utils.misc import aware_utcnow
+from t2c_backend.utils.misc import aware_utcnow, datetime_from_epoch
 
 
 class ServiceService:
@@ -39,8 +37,8 @@ class ServiceService:
             service_name=service_data.service_name,
             service_provider_name=service_data.service_provider_name,
             contact=service_data.contact,
-            expire_date=datetime.fromtimestamp(service_data.expire_date),
-            service_date=datetime.fromtimestamp(service_data.service_date),
+            expire_date=datetime_from_epoch(service_data.expire_date),
+            service_date=datetime_from_epoch(service_data.service_date),
             service_type=ServiceTypes(service_data.service_type),
             web=service_data.web,
             email=service_data.email,
@@ -67,7 +65,13 @@ class ServiceService:
             raise BadRequestError("Expired service details can not update")
 
         update_fields = service_data.model_dump()
-        update_fields["expire_date"] = datetime.fromtimestamp(service_data.expire_date)
+        if service_data.expire_date is None:
+            # A null expiry leaves the current one unchanged.
+            del update_fields["expire_date"]
+        else:
+            update_fields["expire_date"] = datetime_from_epoch(service_data.expire_date)
+            if update_fields["expire_date"] < service.service_date:
+                raise BadRequestError("expire date must be greater than service date")
 
         for key, value in update_fields.items():
             setattr(service, key, value)
@@ -91,12 +95,13 @@ class ServiceService:
         location_id: int,
         q: str,
         sort_by: SortBy | None,
-        service_start_date: datetime.date,
-        service_end_date: datetime.date,
-        expire_start_date: datetime.date,
-        expire_end_date: datetime.date,
+        service_start_date: int | None,
+        service_end_date: int | None,
+        expire_start_date: int | None,
+        expire_end_date: int | None,
         page: int,
         page_size: int,
+        service_type: ServiceTypes | None = None,
     ):
         _model = Asset
         sort_order = {
@@ -107,29 +112,48 @@ class ServiceService:
         asset_filters = []
         service_filters = []
 
-        if service_start_date and service_end_date:
-            service_start_date = datetime.combine(service_start_date, time.min)
-            service_end_date = datetime.combine(service_end_date, time.max)
-            filters = Service.service_date.between(service_start_date, service_end_date)
-            service_filters.append(filters)
-            asset_filters.append(Asset.services.any(filters))
+        if service_start_date is not None and service_end_date is not None:
+            service_filters.append(
+                Service.service_date.between(
+                    datetime_from_epoch(service_start_date), datetime_from_epoch(service_end_date)
+                )
+            )
 
-        if expire_start_date and expire_end_date:
-            expire_start_date = datetime.combine(expire_start_date, time.min)
-            expire_end_date = datetime.combine(expire_end_date, time.max)
-            filters = Service.expire_date.between(expire_start_date, expire_end_date)
-            service_filters.append(filters)
-            asset_filters.append(Asset.services.any(filters))
+        if expire_start_date is not None and expire_end_date is not None:
+            service_filters.append(
+                Service.expire_date.between(
+                    datetime_from_epoch(expire_start_date), datetime_from_epoch(expire_end_date)
+                )
+            )
+
+        if service_type:
+            service_filters.append(Service.service_type == service_type)
+
+        # A single service must match every service filter, and only matching services are loaded.
+        if service_filters:
+            asset_filters.append(Asset.services.any(and_(*service_filters)))
 
         if q:
             serial_no_filter = BaseRepository.parse_filters(_model, serial_no__ilike=f"%{q}%")
             asset_type_name_filter = BaseRepository.parse_filters(AssetType, name__ilike=f"%{q}%")
+            service_name_filter = BaseRepository.parse_filters(
+                Service, service_name__ilike=f"%{q}%"
+            )
+            asset_search = or_(
+                *serial_no_filter,
+                *[Asset.asset_type.has(condition) for condition in asset_type_name_filter],
+            )
             asset_filters.append(
                 or_(
-                    *serial_no_filter,
-                    *[Asset.asset_type.has(condition) for condition in asset_type_name_filter],
+                    asset_search,
+                    *[
+                        Asset.services.any(and_(condition, *service_filters))
+                        for condition in service_name_filter
+                    ],
                 )
             )
+            # Unless the asset itself matched the search, only name-matching services are loaded.
+            service_filters.append(or_(asset_search, *service_name_filter))
 
         select_query = (
             select(_model)

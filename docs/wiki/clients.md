@@ -14,6 +14,7 @@ graph TD
   Store --> Disk[DiskStorage]
   Store --> S3[S3Storage]
   Disk --> IF[StorageInterface]
+  IF --> Safe[ensure_safe_filename]
   S3 --> IF
   TB --> JWT[PyJWT]
 ```
@@ -45,9 +46,9 @@ A small reversible codec using a custom alphabet key (`Config().CRYPTOGRAPHY_KEY
 
 A strategy-pattern file store selected by configuration.
 
-- **`StorageInterface`** (`interface.py`) — the abstract contract: `save` / `delete` / `get` for raw paths, and `save_document` / `delete_document` / `get_document` that derive paths from `(organization_id, document_for, file_id)` where `document_for` is a `DocumentFor` enum. `get*` methods return async byte-chunk generators for streaming.
+- **`StorageInterface`** (`interface.py`) — the abstract contract: `save` / `delete` / `get` for raw paths, and `save_document` / `delete_document` / `get_document` that derive paths from `(organization_id, document_for, file_id)` where `document_for` is a `DocumentFor` enum. `get*` methods return async byte-chunk generators for streaming. It also provides a concrete static helper, `ensure_safe_filename(filename)`, which every backend should apply before joining a client-supplied name onto a storage path: it raises `BadRequestError` for an empty name, or one containing `/`, `\`, a NUL byte, or equal to `.`/`..`, and otherwise returns the name unchanged. This prevents path traversal via upload filenames or custom-field values used as filenames.
 - **`Storage.create(app)`** (`__init__.py`) — factory that reads `STORAGE_TYPE` from config and returns a `DiskStorage` or `S3Storage`; `setup(app)` registers the result under the name `"Storage"`.
-- **`DiskStorage`** (`disk/__init__.py`) — full implementation over `aiofiles`. Writes under `<project_root>/<BUCKET>/...`, avoids overwrites via `add_unique_postfix` (`name(2).ext`, `name(3).ext`, …), cleans up empty parent directories on delete, and streams reads in configurable chunk sizes.
+- **`DiskStorage`** (`disk/__init__.py`) — full implementation over `aiofiles`. Writes under `<project_root>/<BUCKET>/...`, passes every filename through `ensure_safe_filename` on save, delete, and document reads, avoids overwrites via `add_unique_postfix` (`name(2).ext`, `name(3).ext`, …), cleans up empty parent directories on delete, and streams reads in configurable chunk sizes.
 - **`S3Storage`** (`s3/__init__.py`) — a stub in the open-source core (constructor only); the concrete S3 implementation is part of the proprietary offering.
 
 Configuration (`clients/storage/config.py`): `STORAGE_TYPE` (`"DISK"` | `"S3"`) and `BUCKET`.

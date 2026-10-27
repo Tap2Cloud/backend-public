@@ -19,6 +19,8 @@ graph TD
   V2 --> V3[pkg_0003_location_based_asset_types]
   V3 --> V4[pkg_0004_created_by_set_null_on_user_delete]
   V4 --> V5[pkg_0005_reduce_register_field]
+  V5 --> V6[pkg_0006_unique_asset_type_per_category]
+  V6 --> V7[pkg_0007_update_date_time_columns]
 ```
 
 ## Components
@@ -37,6 +39,9 @@ graph TD
 - **`pkg_0004_created_by_set_null_on_user_delete`** — flips the "created by" `user_id` FKs from `ON DELETE CASCADE` to `ON DELETE SET NULL` (and makes the columns nullable) so deleting a user never deletes location-owned data. Applied uniformly by looping over a `_TABLES` list: `asset_type_categories`, `asset_types`, `asset_types_documents`, `audits`, `typeplate_documents`, `documents`.
 
 - **`pkg_0005_reduce_register_field`** — shrinks the registration surface and completes the taxonomy rename. It drops eight columns from `locations` (`street`, `mobile_number`, `postcode`, `name`, `email`, `tel_number`, `fax_number`, `region`), leaving only `city` and `country`; drops `organizations.email`; and makes `organizations.number` nullable. It then calls a hand-written `rename_taxonomy_to_product_pass_type()` step that renames the `taxonomies` table to `product_pass_types` along with its primary key index, the `organizations.taxonomy_id` column (to `product_pass_type_id`), and the FK constraint. That step is written to be **idempotent** — each rename is guarded by an `IF EXISTS` check against `information_schema` / `pg_constraint`, so it is a no-op on a database where the rename already happened.
+
+- **`pkg_0006_unique_asset_type_per_category`** — creates the unique functional index `uq_asset_type_name_per_category` on `asset_types (asset_type_category_id, lower(btrim(regexp_replace(name, '\s+', ' ', 'g'))))`, making asset type names unique per category ignoring case and whitespace runs. Creation fails if existing rows already collide under that normalization; resolve duplicates first. Downgrade drops the index.
+- **`pkg_0007_update_date_time_columns`** — changes `audits.valid_until` from `DATE` to `DateTime(timezone=True)` and adds `user_invites.updated_at` (`DateTime(timezone=True)`, `NOT NULL`, no server default — so the `ADD COLUMN` fails if `user_invites` already has rows). Downgrade drops the column and casts `valid_until` back to `DATE`, losing the time-of-day.
 
 These revisions have real `downgrade()` implementations, but note the asymmetry: `pkg_0004`'s
 downgrade restores `NOT NULL` on `user_id`, so it fails if any row has already been set to `NULL` by a

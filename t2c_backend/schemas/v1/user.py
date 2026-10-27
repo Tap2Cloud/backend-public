@@ -7,7 +7,7 @@ from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
 from t2c_backend.utils.enums import Role as RoleEnum
 from t2c_backend.utils.enums import UserStatus
-from t2c_backend.utils.misc import get_full_name
+from t2c_backend.utils.misc import datetime_to_epoch, get_full_name
 
 
 class UserBase(BaseModel):
@@ -51,7 +51,7 @@ class DisplayUser(BaseModel):
             firstName=user.first_name,
             lastName=user.last_name,
             fullName=user.get_full_name(),
-            createdAt=int(user.created_at.timestamp()),
+            createdAt=datetime_to_epoch(user.created_at),
             profileAvatar=user.profile_avatar.get_string()
             if user.profile_avatar is not None
             else None,
@@ -76,7 +76,7 @@ class UserResponse(DisplayUser):
             fullName=user.get_full_name(),
             emailVerified=user.is_email_verified,
             roles=RoleBase.convert(user.roles),
-            createdAt=int(user.created_at.timestamp()),
+            createdAt=datetime_to_epoch(user.created_at),
             location=(
                 Location.convert(user.location, user.location.organization)
                 if user.location
@@ -103,7 +103,7 @@ class OrganizationUser(DisplayUser):
             firstName=row.get("first_name"),
             lastName=row.get("last_name"),
             fullName=get_full_name(row.get("first_name"), row.get("last_name")),
-            createdAt=int(row.get("created_at").timestamp()),
+            createdAt=datetime_to_epoch(row.get("created_at")),
             location=LocationBaseResponse.convert(row.get("location"), row.get("organization")),
             roles=[
                 RoleBase(

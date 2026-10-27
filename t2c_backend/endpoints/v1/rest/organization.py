@@ -11,7 +11,7 @@ from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import DictContainer, datetime_to_epoch, form_json, parse_form_model
 
 router = APIRouter()
 
@@ -22,12 +22,14 @@ router = APIRouter()
 async def create_organization_with_location(
     name: str = Form(...),
     number: str | None = Form(...),
-    product_pass_type: ProductPassType = Form(..., alias="productPassType"),
+    product_pass_type: str | UploadFile = form_json(ProductPassType, alias="productPassType"),
     logo: UploadFile | None = File(None),
-    location: LocationCreateRequest = Form(...),
+    location: str | UploadFile = form_json(LocationCreateRequest),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
     services: DictContainer = Depends(get_services),
 ):
+    product_pass_type = parse_form_model(ProductPassType, product_pass_type, "productPassType")
+    location = parse_form_model(LocationCreateRequest, location, "location")
     (
         org,
         location,
@@ -70,7 +72,7 @@ async def update_organization(
         name=organization.name,
         number=organization.number,
         logo=organization.logo.get_string() if organization.logo else None,
-        createdAt=int(organization.created_at.timestamp()),
+        createdAt=datetime_to_epoch(organization.created_at),
     )
 
 

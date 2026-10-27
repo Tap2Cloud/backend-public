@@ -149,7 +149,9 @@ class AppConfig(Config):
 ```
 
 You inherit every core setting (`DATABASE_*`, `APP_HOST`, `ENVIRONMENT`, `PROJECT_NAME`,
-`API_STR`, `BACKEND_CORS_ORIGINS`, …) automatically.
+`API_STR`, `BACKEND_CORS_ORIGINS`, `FRONTEND_URL`, `BACKEND_URL`, `MAX_UPLOAD_SIZE_MB`, …)
+automatically. Note that `FRONTEND_URL` and `BACKEND_URL` have no defaults, so your environment must
+set both.
 
 ---
 
@@ -661,6 +663,30 @@ schema, service, and startup client — with zero changes to `backend-public`.
 
 ---
 
+## Translations
+
+The core ships only its source catalogs (`t2c_backend/locales/<lang>/LC_MESSAGES/messages.po`);
+compiled `.mo` files are never committed. Keep your own catalogs in your project, merge the core's
+messages into them, then compile one `messages.mo` per language as part of your build or deploy:
+
+```bash
+# After `pybabel extract` / `pybabel update` for your own sources:
+python -m t2c_backend.core.i18n.sync private_backend/locales
+pybabel compile -d private_backend/locales -D messages
+```
+
+The sync tags every message it copies with a `#. t2c_backend` comment and refreshes those on each run,
+so a core upgrade brings its new and changed translations with it. A message you define yourself
+(without that comment) wins over a core message with the same msgid. Run the sync after
+`pybabel update`, which marks the core messages obsolete because they aren't in your sources.
+
+The core loads catalogs from `<PROJECT_ROOT_PATH>/locales`, where `PROJECT_ROOT_PATH` is set by
+`Config.project_root_path` and defaults to the installed `t2c_backend` package. Override that property
+in your `Config` subclass to point at your package, so your compiled catalogs are the ones loaded. The
+disk storage backend resolves `BUCKET` against the same path.
+
+---
+
 ## The extension API, at a glance
 
 These are the concrete hooks on `CustomFastAPI` (see `t2c_backend/main.py`):
@@ -707,6 +733,13 @@ And the shared building blocks your extensions inherit or reuse:
   free them; create them lazily instead.
 - ✅ **Call `super()` in overrides.** In `setup_hook()`, call `await super().setup_hook()` so the core
   clients still load.
+- ✅ **Uploads are capped globally.** `UploadLimitMiddleware` (installed by the core's
+  `get_middleware_stack()`) limits the combined size of every multipart request — your routes
+  included — to `MAX_UPLOAD_SIZE_MB` (default 100) and answers 413 above it. Raise the setting in your
+  environment rather than working around the middleware.
+- ✅ **Sanitize filenames before touching storage.** If you add a storage backend, run every
+  client-supplied name through `StorageInterface.ensure_safe_filename()` before joining it onto a path,
+  as `DiskStorage` does.
 - ✅ **Guard every new route with a permission flag.** Pass `permissions={...}` to the bearer — an
   unguarded `JWTAPIAccessTokenBearer()` route is reachable by any authenticated user in any
   organization. Unknown flag names are filtered out silently, so verify the 403 path in a test.

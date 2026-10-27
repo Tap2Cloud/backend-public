@@ -2,15 +2,24 @@ from .enums import ErrorMessageCodes
 
 
 class ApplicationError(Exception):
-    def __init__(self, msg: str, error_code: ErrorMessageCodes, status_code: int) -> None:
+    def __init__(
+        self,
+        msg: str,
+        error_code: ErrorMessageCodes,
+        status_code: int,
+        errors: list[dict] | None = None,
+    ) -> None:
         self.msg = msg
         self.error_code = error_code
         self.status_code = status_code
+        self.errors = errors
 
 
 class BadRequestError(ApplicationError):
-    def __init__(self, msg: str) -> None:
-        super().__init__(msg, error_code=ErrorMessageCodes.BAD_REQUEST, status_code=400)
+    def __init__(self, msg: str, errors: list[dict] | None = None) -> None:
+        super().__init__(
+            msg, error_code=ErrorMessageCodes.BAD_REQUEST, status_code=400, errors=errors
+        )
 
 
 class NotFoundError(ApplicationError):
@@ -19,8 +28,10 @@ class NotFoundError(ApplicationError):
 
 
 class AlreadyExistsError(ApplicationError):
-    def __init__(self, msg: str) -> None:
-        super().__init__(msg, error_code=ErrorMessageCodes.ALREADY_EXIST, status_code=409)
+    def __init__(self, msg: str, errors: list[dict] | None = None) -> None:
+        super().__init__(
+            msg, error_code=ErrorMessageCodes.ALREADY_EXIST, status_code=409, errors=errors
+        )
 
 
 class UnAuthorizedError(ApplicationError):

@@ -42,13 +42,13 @@ Relevant `pyproject.toml` groups:
 ```toml
 [dependency-groups]
 dev = [
-    "ruff>=0.16.4",
+    "ruff>=0.17.0",
 ]
 test = [
-    "faker>=40.37.0",
+    "faker>=40.43.0",
     "pillow>=12.3.0",
     "pytest>=9.1.1",
-    "pytest-mock>=3.15.1",
+    "pytest-mock>=3.16.0",
     "pytest-order>=1.5.0",
 ]
 ```
@@ -122,9 +122,34 @@ docker compose -f development/docker-compose.yml up -d
 # 3. Create the schema and seed static data (see Database Migrations)
 uv run --env-file .env/.env.development alembic upgrade head
 
-# 4. Run the app
+# 4. Compile the translations (.mo files are build output and are not committed)
+uv run pybabel compile -d t2c_backend/locales -D messages
+
+# 5. Run the app
 uv run --env-file .env/.env.development python launcher.py
 ```
+
+Re-run step 4 whenever a `t2c_backend/locales/*/LC_MESSAGES/messages.po` file changes. Without
+compiled catalogs the app still starts, but every message falls back to English.
+
+## Translations
+
+User-facing strings (e.g. the audit report PDF labels) are translated with gettext. The source catalogs live in `t2c_backend/locales/<lang>/LC_MESSAGES/messages.po` for six languages — `de`, `en`, `es`, `fr`, `it`, `nl` — and all six carry the same set of message ids.
+
+- **Only `.po` files are committed.** `*.mo` is in `.gitignore`, so a fresh checkout has no compiled catalogs until you run `pybabel compile` (step 4 above).
+- **Lookup path.** `core/i18n` loads catalogs from `$PROJECT_ROOT_PATH/locales` with `fallback=True`. `.env/.env.development` sets `PROJECT_ROOT_PATH` to the `t2c_backend` directory, which is why the compile step targets `t2c_backend/locales`. A missing or uncompiled catalog is not an error — the original (English) msgid is returned.
+- **Packaging.** `pyproject.toml` ships the `.po` sources as package data (`[tool.setuptools.package-data] t2c_backend = ["locales/*/LC_MESSAGES/*.po"]`) so downstream projects can reuse them.
+
+### Merging core translations into a downstream project
+
+A project built on top of this package keeps its own `messages.po` per language and compiles one `messages.mo` from it. `t2c_backend/core/i18n/sync.py` copies the core messages into those catalogs first:
+
+```bash
+python -m t2c_backend.core.i18n.sync path/to/your/locales
+pybabel compile -d path/to/your/locales -D messages
+```
+
+Copied entries are tagged with a `t2c_backend` auto comment and are dropped and re-added on every run, so edits or removals in the core catalogs propagate. Entries without that marker belong to the downstream project and win over a core entry with the same msgid. Core messages that `pybabel update` had marked obsolete in the downstream catalog are reactivated.
 
 FastAPI then serves the OpenAPI docs under the app's `/api` prefix.
 

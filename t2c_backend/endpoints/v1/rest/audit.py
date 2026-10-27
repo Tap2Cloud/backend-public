@@ -1,6 +1,6 @@
-import datetime
+import uuid
 
-from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Header, Path, Query, UploadFile
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
@@ -13,20 +13,28 @@ from t2c_backend.schemas.v1.audit import (
 )
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
+from t2c_backend.utils.enums import AuditTaskStatus, SortBy, TaskType
 from t2c_backend.utils.enums import Language as LanguageEnum
-from t2c_backend.utils.enums import SortBy
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import (
+    MAX_EPOCH_SECONDS,
+    MIN_EPOCH_SECONDS,
+    DictContainer,
+    form_json,
+    parse_form_model,
+    parse_timezone,
+)
 
 router = APIRouter()
 
 
 @router.post("/audit/task", response_model=AuditTaskResponse, status_code=201)
 async def create_audit_task(
-    task: CreateAuditTask = Form(...),
-    documents: list[UploadFile] = File(None),
+    task: str | UploadFile = form_json(CreateAuditTask),
+    documents: list[UploadFile] = File(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_create": True})),
     services: DictContainer = Depends(get_services),
 ):
+    task = parse_form_model(CreateAuditTask, task, "task")
     audit_task, saved_documents = await services.audit_service.create_audit_task(
         organization_id=token.organization_id,
         task=task,
@@ -57,11 +65,32 @@ async def create_audit(
 async def get_audit(
     q: str | None = None,
     sort_by: SortBy | None = SortBy.Latest,
-    inspection_start_date: datetime.date = None,
-    inspection_end_date: datetime.date = None,
-    valid_until_start_date: datetime.date = None,
-    valid_until_end_date: datetime.date = None,
-    is_audit_available: bool = None,
+    inspection_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    inspection_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    valid_until_start_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    valid_until_end_date: int | None = Query(
+        None,
+        ge=MIN_EPOCH_SECONDS,
+        le=MAX_EPOCH_SECONDS,
+        description="Unix timestamp (seconds)",
+    ),
+    task_type: TaskType | None = None,
+    task_status: list[AuditTaskStatus] | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=1000, alias="pageSize"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
@@ -76,7 +105,8 @@ async def get_audit(
         inspection_end_date=inspection_end_date,
         valid_until_start_date=valid_until_start_date,
         valid_until_end_date=valid_until_end_date,
-        is_audit_available=is_audit_available,
+        task_type=task_type,
+        task_status=task_status,
         location_id=token.location_id,
     )
 
@@ -124,6 +154,7 @@ async def audit_report(
     asset_id: int = Path(..., alias="assetId"),
     audit_id: int = Path(..., alias="auditId"),
     accept_language: LanguageEnum | None = Header(..., alias="Accept-Language"),
+    timezone: str | None = Header(None, alias="X-Timezone"),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"audit_read": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -131,4 +162,13 @@ async def audit_report(
         asset_id=asset_id,
         audit_id=audit_id,
         language=accept_language,
+        timezone=parse_timezone(timezone),
     )
+
+
+@router.get("/public/audit-document/{documentId}/download")
+async def public_document_download(
+    document_id: uuid.UUID = Path(..., alias="documentId"),
+    services: DictContainer = Depends(get_services),
+):
+    return await services.audit_service.public_document_download(document_id)
