@@ -7,9 +7,10 @@ import alembic.config
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from main import app
-from tests.utils.misc import Pagination
-from utils.enums import (
+
+from t2c_backend.main import app
+from t2c_backend.tests.utils.misc import Pagination
+from t2c_backend.utils.enums import (
     AssetStatus,
     AuditTaskStatus,
     InputType,

@@ -4,7 +4,8 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import DocumentFor
+
+from t2c_backend.utils.enums import DocumentFor
 
 
 @pytest.mark.order(

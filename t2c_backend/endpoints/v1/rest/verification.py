@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Response
-from services import get_services
 
 from t2c_backend.clients.celery_app.tasks import forgot_password_mail, verification_mail
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.token import AccessToken
+from t2c_backend.services import get_services
 from t2c_backend.utils.enums import TokenType
 from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.utils.misc import DictContainer

@@ -3,7 +3,8 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import AssetStatus, DocumentFor
+
+from t2c_backend.utils.enums import AssetStatus, DocumentFor
 
 
 @pytest.mark.order(after="test_asset_type.py::test_delete_asset_type_field_document")

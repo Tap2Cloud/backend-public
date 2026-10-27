@@ -1,4 +1,3 @@
-from endpoints.v1.rest import verification
 from fastapi import APIRouter
 
 from t2c_backend.endpoints.v1.rest import (
@@ -19,6 +18,7 @@ from t2c_backend.endpoints.v1.rest import (
     token,
     typeplate,
     user,
+    verification,
 )
 
 router = APIRouter(prefix="/v1")

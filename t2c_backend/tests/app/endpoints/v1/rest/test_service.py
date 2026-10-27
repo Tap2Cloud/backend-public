@@ -3,7 +3,8 @@ import random
 import pytest
 from faker import Faker
 from fastapi.testclient import TestClient
-from utils.enums import ServiceTypes
+
+from t2c_backend.utils.enums import ServiceTypes
 
 
 @pytest.mark.order(after="test_audit.py::test_generate_audit_report")
