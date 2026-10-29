@@ -38,6 +38,8 @@ class Config(BaseSettings):
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
 
+    REDIS_URL: str
+
     APP_HOST: str
     APP_PORT: int
 
@@ -49,6 +51,10 @@ class Config(BaseSettings):
 
     USER_EMAIL_TOKEN_EXPIRY_HOURS: int
     USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS: int
+
+    USER_EMAIL_CODE_EXPIRY_MINUTES: int
+    USER_EMAIL_CODE_MAX_ATTEMPTS: int
+    USER_EMAIL_CODE_RESEND_COOLDOWN_SECONDS: int
 
     @property
     def project_root_path(self):

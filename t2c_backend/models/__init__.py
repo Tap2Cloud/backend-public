@@ -8,6 +8,7 @@ from .asset_type_category import (
 )
 from .audit import Audit, AuditTask, AuditTaskDocument
 from .documents import Document
+from .email_template import EmailTemplate
 from .location import Location
 from .organization import Organization
 from .product_pass_type import ProductPassType
@@ -34,6 +35,7 @@ __all__ = [
     "UserEmailToken",
     "Typeplate",
     "Document",
+    "EmailTemplate",
     "TypeplateDocument",
     "AssetTypeDocument",
     "AssetTypeCategoryGroup",

@@ -38,6 +38,7 @@ initial_clients = [
     "t2c_backend.clients.storage",
     "t2c_backend.clients.email_provider",
     "t2c_backend.clients.celery_app",
+    "t2c_backend.clients.redis",
 ]
 
 

@@ -27,14 +27,28 @@ class EmailProvider:
     def attachments(name: str, attachment_type: str, content):
         return lettr.Attachment(name, attachment_type, content)
 
-    def send_email(self, to: list, template_slug: str, tags: dict, attachments: list = None):
+    def send_email(
+        self,
+        to: list,
+        template_slug: str,
+        tags: dict,
+        attachments: list = None,
+        metadata: dict[str, str] | None = None,
+        idempotency_key: str | None = None,
+        project_id: int | None = None,
+        from_name: str | None = None,
+    ):
         try:
             return self.client.emails.send(
                 from_email=Config().SENDER_EMAIL,
+                from_name=from_name,
                 to=to,
                 template_slug=template_slug,
+                project_id=project_id,
                 substitution_data=tags,
                 attachments=attachments,
+                metadata=metadata,
+                idempotency_key=idempotency_key,
             )
         except lettr.LettrError as e:
             # ValidationError carries field errors, BadRequestError carries error_code

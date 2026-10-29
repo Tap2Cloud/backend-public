@@ -1,0 +1,66 @@
+[
+    {
+        "type": "verify_email",
+        "language": "en",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-en-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "en",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "en",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-en-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "en",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "en",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-en-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "en",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "en",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-en-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "en",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    }
+]

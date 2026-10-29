@@ -21,7 +21,7 @@ from t2c_backend.core.db import (
 )
 from t2c_backend.core.db.types import ImageType
 from t2c_backend.schemas.v1.image import Image
-from t2c_backend.utils.enums import Status, TokenType
+from t2c_backend.utils.enums import Language, Status, TokenType
 from t2c_backend.utils.misc import aware_utcnow, get_full_name
 
 from .role import Role
@@ -45,6 +45,9 @@ class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Aud
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    language: Mapped[Language] = mapped_column(
+        Enum(Language), nullable=False, default=Language.en, server_default=Language.en.name
+    )
 
     profile_avatar: Mapped["Image"] = mapped_column(ImageType(), nullable=True)
 

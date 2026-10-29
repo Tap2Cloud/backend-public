@@ -16,10 +16,11 @@ from t2c_backend.models.product_pass_type import ProductPassType
 from t2c_backend.models.user import UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.user import OrganizationUser, OrganizationUsersCustomPage, UserCount
-from t2c_backend.utils.enums import UserStatus
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
     BadRequestError,
+    EmailNotVerifiedError,
     NotFoundError,
     UnAuthorizedError,
 )
@@ -83,7 +84,15 @@ class UserService:
         if not is_valid_password:
             raise UnAuthorizedError(msg="Incorrect username or password")
 
+        if not db_user.is_email_verified:
+            raise EmailNotVerifiedError(msg="Email is not verified")
+
         return db_user
+
+    async def mark_email_verified(self, user: User) -> None:
+        user.is_active = True
+        user.is_email_verified = True
+        await self.repository.save(user)
 
     async def get_user_profile(self, user_id: int) -> User:
         user = await self.repository.get(
@@ -138,6 +147,7 @@ class UserService:
         password: str,
         first_name: str,
         last_name: str,
+        language: Language = Language.en,
     ):
         is_user_exists = await self.repository.exists(email=email)
 
@@ -152,6 +162,7 @@ class UserService:
             salt=salt,
             first_name=first_name,
             last_name=last_name,
+            language=language,
             roles=[],
         )
 

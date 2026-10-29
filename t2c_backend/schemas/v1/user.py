@@ -5,8 +5,8 @@ from t2c_backend.models import User as UserModel
 from t2c_backend.schemas.v1.location import Location, LocationBaseResponse
 from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.enums import Role as RoleEnum
-from t2c_backend.utils.enums import UserStatus
 from t2c_backend.utils.misc import datetime_to_epoch, get_full_name
 
 
@@ -125,8 +125,18 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(...)
     first_name: str = Field(..., alias="firstName")
     last_name: str = Field(..., alias="lastName")
+    language: Language = Field(default=Language.en)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EmailVerificationCodeRequest(BaseModel):
+    email: EmailStr = Field(...)
+
+
+class EmailVerificationCodeVerifyRequest(BaseModel):
+    token: str = Field(...)
+    code: str = Field(..., pattern=r"^\d{6}$")
 
 
 class ChangePasswordRequest(BaseModel):

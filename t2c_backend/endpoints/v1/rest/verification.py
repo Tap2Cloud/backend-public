@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, Response
 
-from t2c_backend.clients.celery_app.tasks import forgot_password_mail, verification_mail
-from t2c_backend.core.security import JWTAPIAccessTokenBearer
-from t2c_backend.schemas.v1.token import AccessToken
+from t2c_backend.clients.celery_app.tasks import forgot_password_mail
+from t2c_backend.schemas.v1.user import (
+    EmailVerificationCodeRequest,
+    EmailVerificationCodeVerifyRequest,
+)
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import TokenType
 from t2c_backend.utils.errors import BadRequestError
@@ -11,47 +13,20 @@ from t2c_backend.utils.misc import DictContainer
 router = APIRouter()
 
 
-@router.post("/email-verification/token/verify", name="verify-email-token")
-async def verify_email(
-    user_token: str,
-    services: DictContainer = Depends(get_services),
-):
-    # Fetch the token details
-    user_email_token = await services.user_email_token_service.find_by_token(
-        user_token,
-    )
-
-    # Check if the token exists and is valid
-    if not user_email_token or user_email_token.type == TokenType.ForgotPasswordToken:
-        return Response(status_code=401)
-
-    # Check if the email is already verified or the token has been used
-    if user_email_token.user.is_email_verified or user_email_token.is_used:
-        return Response(status_code=409)  # Conflict: Already verified or token used
-
-    # Attempt to verify the token
-    if not await services.user_email_token_service.verify_email_token(
-        user_email_token,
-    ):
-        return Response(status_code=400)  # Bad Request: Invalid credentials
-
-    # Successfully verified
-    return Response(status_code=200)
-
-
-@router.post("/email-verification/token/generate", name="generate-email-token", status_code=200)
-async def generate_email_verification_token(
-    token: AccessToken = Depends(JWTAPIAccessTokenBearer()),
+@router.post("/email-verification/code/generate", name="generate-email-code", status_code=200)
+async def generate_email_verification_code(
+    data: EmailVerificationCodeRequest,
     services: DictContainer = Depends(get_services),
 ) -> None:
-    user_email_token = await services.user_email_token_service.create_token(
-        token.user_id,
-        TokenType.EmailVerificationToken,
-    )
-    token_with_link = services.authentication.create_link_for_user_email_verification(
-        user_email_token.user_token,
-    )
-    verification_mail.delay(user_email_token.user.email, token_with_link)
+    await services.user_email_token_service.resend_verification_code(str(data.email))
+
+
+@router.post("/email-verification/code/verify", name="verify-email-code", status_code=200)
+async def verify_email_code(
+    data: EmailVerificationCodeVerifyRequest,
+    services: DictContainer = Depends(get_services),
+) -> None:
+    await services.user_email_token_service.verify_email_code(data.token, data.code)
 
 
 @router.post(

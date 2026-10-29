@@ -59,6 +59,19 @@ class InvitationTokenExpiredError(ApplicationError):
         super().__init__(msg, error_code=ErrorMessageCodes.TOKEN_EXPIRED, status_code=498)
 
 
+class EmailNotVerifiedError(ApplicationError):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg, error_code=ErrorMessageCodes.EMAIL_NOT_VERIFIED, status_code=403)
+
+
+class TooManyRequestsError(ApplicationError):
+    def __init__(self, msg: str, retry_after: int | None = None) -> None:
+        errors = [{"retryAfter": retry_after}] if retry_after is not None else None
+        super().__init__(
+            msg, error_code=ErrorMessageCodes.TOO_MANY_REQUESTS, status_code=429, errors=errors
+        )
+
+
 class EmailProviderError(ApplicationError):
     def __init__(self, msg: str, retryable: bool = False) -> None:
         super().__init__(msg, error_code=ErrorMessageCodes.SERVER_ERROR, status_code=500)
