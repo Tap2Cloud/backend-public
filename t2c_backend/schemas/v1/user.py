@@ -125,7 +125,7 @@ class UserRegisterRequest(BaseModel):
     password: str = Field(...)
     first_name: str = Field(..., alias="firstName")
     last_name: str = Field(..., alias="lastName")
-    language: Language = Field(default=Language.en)
+    language: Language = Field(...)
 
     model_config = ConfigDict(from_attributes=True)
 
