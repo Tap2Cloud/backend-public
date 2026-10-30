@@ -166,7 +166,9 @@ class UserService:
             roles=[],
         )
 
-        return await self.repository.save(user)
+        user = await self.repository.save(user)
+        await self.app.services.user_email_token_service.send_verification_code(user)
+        return user
 
     async def update_user_profile(
         self,

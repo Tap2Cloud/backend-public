@@ -85,6 +85,8 @@ class OrganizationService:
             organization=organization,
         )
 
+        await self.app.services.user_email_token_service.send_welcome_mail(user, organization)
+
         return organization, location
 
     async def update_organization(

@@ -12,11 +12,10 @@ async def register(
     user_data: UserRegisterRequest,
     services: DictContainer = Depends(get_services),
 ) -> None:
-    user = await services.user_service.register_user(
+    await services.user_service.register_user(
         str(user_data.email),
         user_data.password,
         user_data.first_name,
         user_data.last_name,
         user_data.language,
     )
-    await services.user_email_token_service.send_verification_code(user)

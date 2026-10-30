@@ -1,9 +1,9 @@
 import secrets
 from uuid import uuid4
 
-from t2c_backend.clients.celery_app.tasks import verification_mail
+from t2c_backend.clients.celery_app.tasks import verification_mail, welcome_mail
 from t2c_backend.core.repository import BaseRepository
-from t2c_backend.models import EmailTemplate, User, UserEmailToken
+from t2c_backend.models import EmailTemplate, Organization, User, UserEmailToken
 from t2c_backend.utils.enums import EmailTemplateType, Language, TokenType
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
@@ -66,6 +66,21 @@ class UserEmailTokenService:
                 "from_name": template.from_name,
             },
             task_id=record.user_token,
+        )
+
+    async def send_welcome_mail(self, user: User, organization: Organization) -> None:
+        template = await self.get_email_template(EmailTemplateType.welcome, user.language)
+        welcome_mail.apply_async(
+            kwargs={
+                "user_email": user.email,
+                "first_name": user.first_name,
+                "company_name": organization.name,
+                "action_url": self.app.services.authentication.create_link_for_dashboard(),
+                "template_slug": template.template_slug,
+                "project_id": template.project_id,
+                "from_name": template.from_name,
+            },
+            task_id=f"welcome-{user.id}",
         )
 
     async def get_email_template(
