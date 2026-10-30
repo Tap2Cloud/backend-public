@@ -29,6 +29,7 @@ from .role import Role
 
 class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, AuditColumns):
     __tablename__ = "users"
+    __mapper_args__ = {"eager_defaults": False}
 
     location_id: Mapped[int] = mapped_column(
         ForeignKey("locations.id", ondelete="CASCADE"),
@@ -46,7 +47,7 @@ class User(BigIntPrimaryKey, CommonTableAttributes, AdvancedDeclarativeBase, Aud
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     language: Mapped[Language] = mapped_column(
-        Enum(Language), nullable=False, default=Language.en, server_default=Language.en.name
+        Enum(Language), nullable=False, server_default=Language.en.name
     )
 
     profile_avatar: Mapped["Image"] = mapped_column(ImageType(), nullable=True)
