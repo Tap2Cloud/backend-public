@@ -35,13 +35,13 @@ class UserEmailTokenService:
         """Finds a user token by its string value."""
         return await self.repository.get_one_or_none(user_token=token, is_used__is_not=True)
 
-    async def send_verification_code(self, user: User) -> None:
+    async def send_verification_code(self, user: User, frontend_url: str) -> None:
         redis = self.app.clients.redis.client
         config = self.app.config
         await self._start_cooldown(user.email)
         template = await self.get_email_template(EmailTemplateType.verify_email, user.language)
         code = f"{secrets.randbelow(1_000_000):06d}"
-        record = await self.create_token(user.id, TokenType.EmailVerificationToken)
+        record = await self._get_or_create_verification_token(user)
         key = EMAIL_VERIFICATION_KEY.format(email=user.email)
         async with redis.pipeline(transaction=True) as pipe:
             pipe.delete(key)
@@ -51,7 +51,7 @@ class UserEmailTokenService:
 
         verification_page_url = (
             self.app.services.authentication.create_link_for_user_email_verification(
-                record.user_token
+                record.user_token, frontend_url
             )
         )
         verification_mail.apply_async(
@@ -65,17 +65,20 @@ class UserEmailTokenService:
                 "project_id": template.project_id,
                 "from_name": template.from_name,
             },
-            task_id=record.user_token,
         )
 
-    async def send_welcome_mail(self, user: User, organization: Organization) -> None:
+    async def send_welcome_mail(
+        self, user: User, organization: Organization, frontend_url: str
+    ) -> None:
         template = await self.get_email_template(EmailTemplateType.welcome, user.language)
         welcome_mail.apply_async(
             kwargs={
                 "user_email": user.email,
                 "first_name": user.first_name,
                 "company_name": organization.name,
-                "action_url": self.app.services.authentication.create_link_for_dashboard(),
+                "action_url": self.app.services.authentication.create_link_for_dashboard(
+                    frontend_url
+                ),
                 "template_slug": template.template_slug,
                 "project_id": template.project_id,
                 "from_name": template.from_name,
@@ -98,7 +101,7 @@ class UserEmailTokenService:
             raise EmailProviderError(f"No '{template_type}' email template for '{environment}'")
         return template
 
-    async def resend_verification_code(self, email: str) -> None:
+    async def resend_verification_code(self, email: str, frontend_url: str) -> None:
         user = await self.app.services.user_service.repository.get_one_or_none(email=email)
         if not user:
             raise NotFoundError("Email not registered")
@@ -106,7 +109,7 @@ class UserEmailTokenService:
         if user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
-        await self.send_verification_code(user)
+        await self.send_verification_code(user, frontend_url)
 
     async def verify_email_code(self, token: str, code: str) -> None:
         redis = self.app.clients.redis.client
@@ -145,6 +148,16 @@ class UserEmailTokenService:
         await self.app.services.user_service.mark_email_verified(user)
         record.is_used = True
         await self.repository.save(record)
+
+    async def _get_or_create_verification_token(self, user: User) -> UserEmailToken:
+        token = await self.repository.get_one_or_none(
+            user_id=user.id,
+            type=TokenType.EmailVerificationToken,
+            is_used__is_not=True,
+        )
+        if token:
+            return token
+        return await self.create_token(user.id, TokenType.EmailVerificationToken)
 
     async def _start_cooldown(self, email: str) -> None:
         redis = self.app.clients.redis.client

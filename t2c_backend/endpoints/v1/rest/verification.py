@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 
 from t2c_backend.clients.celery_app.tasks import forgot_password_mail
 from t2c_backend.schemas.v1.user import (
@@ -8,20 +8,22 @@ from t2c_backend.schemas.v1.user import (
 from t2c_backend.services import get_services
 from t2c_backend.utils.enums import TokenType
 from t2c_backend.utils.errors import BadRequestError
-from t2c_backend.utils.misc import DictContainer
+from t2c_backend.utils.misc import DictContainer, get_frontend_url
 
 router = APIRouter()
 
 
 @router.post("/email-verification/code/generate", name="generate-email-code", status_code=200)
 async def generate_email_verification_code(
+    request: Request,
     data: EmailVerificationCodeRequest,
     services: DictContainer = Depends(get_services),
 ) -> None:
-    await services.user_email_token_service.resend_verification_code(str(data.email))
+    frontend_url = get_frontend_url(request)
+    await services.user_email_token_service.resend_verification_code(str(data.email), frontend_url)
 
 
-@router.post("/email-verification/code/verify", name="verify-email-code", status_code=200)
+@router.post("/email-verification/code/auth/verify", name="verify-email-code", status_code=200)
 async def verify_email_code(
     data: EmailVerificationCodeVerifyRequest,
     services: DictContainer = Depends(get_services),

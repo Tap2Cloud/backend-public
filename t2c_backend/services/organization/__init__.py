@@ -34,6 +34,7 @@ class OrganizationService:
         logo: UploadFile,
         location_data: LocationCreateRequest,
         user_id: int,
+        frontend_url: str,
     ):
         name = normalize_name(name)
         if not name:
@@ -85,7 +86,9 @@ class OrganizationService:
             organization=organization,
         )
 
-        await self.app.services.user_email_token_service.send_welcome_mail(user, organization)
+        await self.app.services.user_email_token_service.send_welcome_mail(
+            user, organization, frontend_url
+        )
 
         return organization, location
 

@@ -147,6 +147,7 @@ class UserService:
         password: str,
         first_name: str,
         last_name: str,
+        frontend_url: str,
         language: Language = Language.en,
     ):
         is_user_exists = await self.repository.exists(email=email)
@@ -167,7 +168,7 @@ class UserService:
         )
 
         user = await self.repository.save(user)
-        await self.app.services.user_email_token_service.send_verification_code(user)
+        await self.app.services.user_email_token_service.send_verification_code(user, frontend_url)
         return user
 
     async def update_user_profile(
