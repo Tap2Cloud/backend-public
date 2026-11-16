@@ -20,7 +20,9 @@ async def generate_email_verification_code(
     services: DictContainer = Depends(get_services),
 ) -> None:
     frontend_url = get_frontend_url(request)
-    await services.user_email_token_service.resend_verification_code(str(data.email), frontend_url)
+    await services.user_email_token_service.resend_verification_code(
+        str(data.email) if data.email else None, data.token, frontend_url
+    )
 
 
 @router.post("/email-verification/code/auth/verify", name="verify-email-code", status_code=200)

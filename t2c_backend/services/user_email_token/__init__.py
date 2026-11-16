@@ -101,10 +101,20 @@ class UserEmailTokenService:
             raise EmailProviderError(f"No '{template_type}' email template for '{environment}'")
         return template
 
-    async def resend_verification_code(self, email: str, frontend_url: str) -> None:
-        user = await self.app.services.user_service.repository.get_one_or_none(email=email)
-        if not user:
-            raise NotFoundError("Email not registered")
+    async def resend_verification_code(
+        self, email: str | None, token: str | None, frontend_url: str
+    ) -> None:
+        if email:
+            user = await self.app.services.user_service.repository.get_one_or_none(email=email)
+            if not user:
+                raise NotFoundError("Email not registered")
+        else:
+            record = await self.repository.get_one_or_none(
+                user_token=token, type=TokenType.EmailVerificationToken
+            )
+            if not record:
+                raise BadRequestError("Invalid verification link")
+            user = record.user
 
         if user.is_email_verified:
             raise AlreadyExistsError("Email already verified")

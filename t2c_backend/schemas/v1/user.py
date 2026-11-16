@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.models import User as UserModel
@@ -131,7 +131,14 @@ class UserRegisterRequest(BaseModel):
 
 
 class EmailVerificationCodeRequest(BaseModel):
-    email: EmailStr = Field(...)
+    email: EmailStr | None = None
+    token: str | None = None
+
+    @model_validator(mode="after")
+    def validate_email_or_token(self):
+        if self.email is None and self.token is None:
+            raise ValueError("Either email or token is required")
+        return self
 
 
 class EmailVerificationCodeVerifyRequest(BaseModel):
