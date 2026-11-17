@@ -13,7 +13,12 @@ from t2c_backend.utils.misc import DictContainer, get_frontend_url
 router = APIRouter()
 
 
-@router.post("/email-verification/code/generate", name="generate-email-code", status_code=200)
+@router.post(
+    "/email-verification/code/generate",
+    name="generate-email-code",
+    operation_id="generate email verification code",
+    status_code=200,
+)
 async def generate_email_verification_code(
     request: Request,
     data: EmailVerificationCodeRequest,
@@ -25,7 +30,12 @@ async def generate_email_verification_code(
     )
 
 
-@router.post("/email-verification/code/auth/verify", name="verify-email-code", status_code=200)
+@router.post(
+    "/email-verification/code/auth/verify",
+    name="verify-email-code",
+    operation_id="verify email code",
+    status_code=200,
+)
 async def verify_email_code(
     data: EmailVerificationCodeVerifyRequest,
     services: DictContainer = Depends(get_services),
