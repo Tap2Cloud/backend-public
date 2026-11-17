@@ -16,6 +16,86 @@
         "from_name": "HK.DIGITAL"
     },
     {
+        "type": "verify_email",
+        "language": "de",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-de-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "de",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-de-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "es",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-es-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "es",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-es-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "fr",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-fr-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "fr",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-fr-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "it",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-it-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "it",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-it-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "nl",
+        "environment": "development",
+        "template_slug": "hk-digital-verify-email-nl-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "verify_email",
+        "language": "nl",
+        "environment": "production",
+        "template_slug": "hk-digital-verify-email-nl-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
         "type": "welcome",
         "language": "en",
         "environment": "development",
@@ -28,6 +108,86 @@
         "language": "en",
         "environment": "production",
         "template_slug": "hk-digital-welcome-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "de",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-de-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "de",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-de-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "es",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-es-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "es",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-es-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "fr",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-fr-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "fr",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-fr-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "it",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-it-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "it",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-it-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "nl",
+        "environment": "development",
+        "template_slug": "hk-digital-welcome-nl-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "welcome",
+        "language": "nl",
+        "environment": "production",
+        "template_slug": "hk-digital-welcome-nl-production",
         "project_id": 1204,
         "from_name": "HK.DIGITAL"
     },
@@ -48,6 +208,86 @@
         "from_name": "HK.DIGITAL"
     },
     {
+        "type": "forgot_password",
+        "language": "de",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-de-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "de",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-de-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "es",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-es-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "es",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-es-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "fr",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-fr-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "fr",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-fr-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "it",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-it-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "it",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-it-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "nl",
+        "environment": "development",
+        "template_slug": "hk-digital-forgot-password-nl-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "forgot_password",
+        "language": "nl",
+        "environment": "production",
+        "template_slug": "hk-digital-forgot-password-nl-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
         "type": "invite",
         "language": "en",
         "environment": "development",
@@ -60,6 +300,86 @@
         "language": "en",
         "environment": "production",
         "template_slug": "hk-digital-invite-en-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "de",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-de-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "de",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-de-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "es",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-es-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "es",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-es-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "fr",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-fr-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "fr",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-fr-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "it",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-it-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "it",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-it-production",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "nl",
+        "environment": "development",
+        "template_slug": "hk-digital-invite-nl-development",
+        "project_id": 1204,
+        "from_name": "HK.DIGITAL"
+    },
+    {
+        "type": "invite",
+        "language": "nl",
+        "environment": "production",
+        "template_slug": "hk-digital-invite-nl-production",
         "project_id": 1204,
         "from_name": "HK.DIGITAL"
     }
