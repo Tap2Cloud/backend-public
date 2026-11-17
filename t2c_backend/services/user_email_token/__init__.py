@@ -83,7 +83,6 @@ class UserEmailTokenService:
                 "project_id": template.project_id,
                 "from_name": template.from_name,
             },
-            task_id=f"welcome-{user.id}",
         )
 
     async def get_email_template(
