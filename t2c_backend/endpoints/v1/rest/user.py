@@ -6,6 +6,7 @@ from t2c_backend.schemas.v1.user import (
     ChangePasswordRequest,
     OrganizationUser,
     OrganizationUsersCustomPage,
+    ResetPasswordRequest,
     UserResponse,
 )
 from t2c_backend.services import get_services
@@ -107,7 +108,7 @@ async def organization_users_handler(
     )
 
 
-@router.post("/user/password/change", operation_id="change password", name="change-user-password")
+@router.post("/user/password/change", operation_id="change password")
 async def change_user_password(
     passwords: ChangePasswordRequest,
     token: AccessToken = Depends(
@@ -123,25 +124,13 @@ async def change_user_password(
     return Response(status_code=200)
 
 
-@router.post("/user/password/reset", operation_id="reset password", name="reset-user-password")
+@router.post(
+    "/user/password/reset",
+    operation_id="reset password",
+    status_code=200,
+)
 async def reset_password(
-    verification_token: str,
-    password: str,
+    data: ResetPasswordRequest,
     services: DictContainer = Depends(get_services),
-):
-    # Verify the forgot password token
-    user_id = await services.user_email_token_service.mark_forgot_password_token(
-        token=verification_token
-    )
-
-    if isinstance(user_id, int):
-        await services.user_service.reset_password(user_id=user_id, password=password)
-
-    status_map = {
-        "invalid token": 401,  # Unauthorized
-        "already verified": 409,  # Conflict
-        "time expired": 400,  # Bad Request
-    }
-
-    # Return appropriate status code or success if the token is valid
-    return Response(status_code=status_map.get(user_id, 200))
+) -> None:
+    await services.user_email_token_service.reset_password(data.reset_token, data.password)

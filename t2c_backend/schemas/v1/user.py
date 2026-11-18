@@ -122,7 +122,7 @@ class OrganizationUser(DisplayUser):
 
 class UserRegisterRequest(BaseModel):
     email: EmailStr = Field(...)
-    password: str = Field(...)
+    password: str = Field(..., min_length=14)
     first_name: str = Field(..., alias="firstName")
     last_name: str = Field(..., alias="lastName")
     language: Language = Field(...)
@@ -146,6 +146,24 @@ class EmailVerificationCodeVerifyRequest(BaseModel):
     code: str = Field(..., pattern=r"^\d{6}$")
 
 
+class ForgotPasswordCodeRequest(BaseModel):
+    email: EmailStr = Field(...)
+
+
+class ForgotPasswordCodeVerifyRequest(BaseModel):
+    email: EmailStr = Field(...)
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class ForgotPasswordCodeVerifyResponse(BaseModel):
+    reset_token: str = Field(..., alias="resetToken")
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str = Field(..., alias="resetToken")
+    password: str = Field(..., min_length=14)
+
+
 class ChangePasswordRequest(BaseModel):
     old_password: str = Field(..., alias="oldPassword")
-    new_password: str = Field(..., alias="newPassword")
+    new_password: str = Field(..., alias="newPassword", min_length=14)

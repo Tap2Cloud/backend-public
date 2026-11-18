@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request
 
-from t2c_backend.clients.celery_app.tasks import forgot_password_mail
 from t2c_backend.schemas.v1.user import (
     EmailVerificationCodeRequest,
     EmailVerificationCodeVerifyRequest,
+    ForgotPasswordCodeRequest,
+    ForgotPasswordCodeVerifyRequest,
+    ForgotPasswordCodeVerifyResponse,
 )
 from t2c_backend.services import get_services
-from t2c_backend.utils.enums import TokenType
-from t2c_backend.utils.errors import BadRequestError
 from t2c_backend.utils.misc import DictContainer, get_frontend_url
 
 router = APIRouter()
@@ -15,7 +15,6 @@ router = APIRouter()
 
 @router.post(
     "/email-verification/code/generate",
-    name="generate-email-code",
     operation_id="generate email verification code",
     status_code=200,
 )
@@ -32,7 +31,6 @@ async def generate_email_verification_code(
 
 @router.post(
     "/email-verification/code/auth/verify",
-    name="verify-email-code",
     operation_id="verify email code",
     status_code=200,
 )
@@ -44,45 +42,28 @@ async def verify_email_code(
 
 
 @router.post(
-    "/forgot-password/token/generate",
-    name="generate-forgot-password-email-token",
+    "/forgot-password/code/generate",
+    operation_id="generate forgot password code",
     status_code=200,
 )
-async def generate_forgot_password_email_token(
-    email: str,
+async def generate_forgot_password_code(
+    data: ForgotPasswordCodeRequest,
     services: DictContainer = Depends(get_services),
 ) -> None:
-    user = await services.user_service.repository.get_one_or_none(email=email)
-
-    if not user:
-        raise BadRequestError("Please enter valid email")
-
-    user_email_token = await services.user_email_token_service.create_token(
-        user.id,
-        TokenType.ForgotPasswordToken,
-    )
-    token_with_link = services.authentication.create_link_for_forgot_password_email_verification(
-        user_email_token.user_token,
-    )
-    forgot_password_mail.delay(user.email, token_with_link)
+    await services.user_email_token_service.send_forgot_password_code(str(data.email))
 
 
-@router.head("/forgot-password/token/verify", name="verify-forgot-password-email-token")
-async def verify_forgot_password_email(
-    verification_token: str,
+@router.post(
+    "/forgot-password/code/auth/verify",
+    operation_id="verify forgot password code",
+    response_model=ForgotPasswordCodeVerifyResponse,
+    status_code=200,
+)
+async def verify_forgot_password_code(
+    data: ForgotPasswordCodeVerifyRequest,
     services: DictContainer = Depends(get_services),
-):
-    # Verify the forgot password token
-    response = await services.user_email_token_service.verify_forgot_password_token(
-        verification_token,
+) -> ForgotPasswordCodeVerifyResponse:
+    reset_token = await services.user_email_token_service.verify_forgot_password_code(
+        str(data.email), data.code
     )
-
-    # Map response strings to corresponding status codes
-    status_map = {
-        "invalid token": 401,  # Unauthorized
-        "already verified": 409,  # Conflict
-        "time expired": 400,  # Bad Request
-    }
-
-    # Return appropriate status code or success if the token is valid
-    return Response(status_code=status_map.get(response, 200))
+    return ForgotPasswordCodeVerifyResponse(resetToken=reset_token)

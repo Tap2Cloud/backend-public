@@ -51,9 +51,6 @@ class Authentication:
     def create_link_for_dashboard(self, frontend_url: str):
         return urljoin(frontend_url, "/dashboard")
 
-    def create_link_for_forgot_password_email_verification(self, token: str):
-        return urljoin(str(self.app.config.FRONTEND_URL), f"/forgot-password/?token={token}")
-
 
 def setup(app, session, *args, **kwargs):
     return app.add_service(Authentication(app), session.info["session_id"])
