@@ -406,3 +406,44 @@ class Permissions(BaseFlags):
 #: Bitmask with every flag declared on :class:`Permissions` enabled. Recomputed
 #: automatically, so a newly added ``FlagValue`` is included without changes here.
 ALL_PERMISSIONS = Permissions(**dict.fromkeys(Permissions.VALID_FLAGS, True)).value
+
+#: Direct requirements of each permission: selecting a key also needs every listed permission
+#: (and, transitively, whatever those require). Permissions without requirements are omitted.
+PERMISSION_DEPENDENCIES: dict[str, list[str]] = {
+    "asset_type_category_create": ["asset_type_category_read"],
+    "asset_type_category_update": ["asset_type_category_read"],
+    "asset_type_category_delete": ["asset_type_category_read"],
+    "asset_type_read": ["asset_type_category_read"],
+    "asset_type_create": ["asset_type_read", "typeplate_read", "typeplate_update"],
+    "asset_type_update": ["asset_type_read"],
+    "asset_type_delete": ["asset_type_read"],
+    "typeplate_read": ["asset_type_read"],
+    "typeplate_update": ["typeplate_read"],
+    "typeplate_document_delete": ["typeplate_update"],
+    "instruction_manual_read": ["asset_type_read"],
+    "instruction_manual_create": ["instruction_manual_read"],
+    "instruction_manual_update": ["instruction_manual_read"],
+    "instruction_manual_delete": ["instruction_manual_read"],
+    "asset_read": ["asset_type_read", "instruction_manual_read", "typeplate_read"],
+    "asset_create": ["asset_read"],
+    "asset_update": ["asset_read"],
+    "asset_delete": ["asset_read"],
+    "service_read": ["asset_read"],
+    "service_create": ["service_read"],
+    "service_update": ["service_read"],
+    "service_delete": ["service_read"],
+    "audit_read": ["asset_read"],
+    "audit_create": ["audit_read"],
+    "audit_update": ["audit_read"],
+    "audit_delete": ["audit_read"],
+    "list_asset_pass": ["asset_read"],
+    "organization_create": ["organization_read"],
+    "organization_update": ["organization_read"],
+    "organization_delete": ["organization_read"],
+    "update_location": ["get_location"],
+    "user_create": ["user_read"],
+    "org_user_delete": ["user_read"],
+    "create_role": ["get_role"],
+}
+
+DEFAULT_PERMISSIONS = {"user_update", "user_delete", "change_user_password"}

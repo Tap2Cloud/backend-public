@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 
+from t2c_backend.core.permissions import (
+    DEFAULT_PERMISSIONS,
+    PERMISSION_DEPENDENCIES,
+    Permissions,
+)
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.location import Location, LocationCreateRequest
 from t2c_backend.schemas.v1.organization import (
@@ -7,7 +12,7 @@ from t2c_backend.schemas.v1.organization import (
     UpdateOrganizationResponse,
 )
 from t2c_backend.schemas.v1.product_pass_type import ProductPassType
-from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
+from t2c_backend.schemas.v1.role import PermissionResponse, RoleBase, RoleCreate
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
@@ -125,6 +130,27 @@ async def create_organization_roles(
     )
 
     return RoleBase.convert_(role=role)
+
+
+@router.get(
+    "/permissions",
+    operation_id="get all permissions",
+    response_model=list[PermissionResponse],
+    status_code=200,
+)
+async def get_all_permissions(
+    token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"get_role": True})),
+):
+    return [
+        PermissionResponse(
+            name=name,
+            bit=flag.bit_length() - 1,
+            value=str(flag),
+            requires=PERMISSION_DEPENDENCIES.get(name, []),
+            default=name in DEFAULT_PERMISSIONS,
+        )
+        for name, flag in Permissions.VALID_FLAGS.items()
+    ]
 
 
 @router.delete("/organization", operation_id="delete organization", status_code=200)
