@@ -59,6 +59,11 @@ class InvitationTokenExpiredError(ApplicationError):
         super().__init__(msg, error_code=ErrorMessageCodes.TOKEN_EXPIRED, status_code=498)
 
 
+class EmailVerificationLinkExpiredError(ApplicationError):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg, error_code=ErrorMessageCodes.TOKEN_EXPIRED, status_code=410)
+
+
 class EmailNotVerifiedError(ApplicationError):
     def __init__(self, msg: str) -> None:
         super().__init__(msg, error_code=ErrorMessageCodes.EMAIL_NOT_VERIFIED, status_code=403)

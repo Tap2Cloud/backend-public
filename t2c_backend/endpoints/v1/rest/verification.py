@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, Request
 
+from t2c_backend.schemas.v1.token import AccessToken, RefreshToken
 from t2c_backend.schemas.v1.user import (
     EmailVerificationCodeRequest,
     EmailVerificationCodeVerifyRequest,
     ForgotPasswordCodeRequest,
     ForgotPasswordCodeVerifyRequest,
     ForgotPasswordCodeVerifyResponse,
+    UserLoginResponse,
+    VerificationTokenResponse,
 )
 from t2c_backend.services import get_services
 from t2c_backend.utils.misc import DictContainer, get_frontend_url
@@ -22,11 +25,13 @@ async def generate_email_verification_code(
     request: Request,
     data: EmailVerificationCodeRequest,
     services: DictContainer = Depends(get_services),
-) -> None:
+) -> VerificationTokenResponse:
+    # returns the token so sign-in (unverified email) can open /verify?token=… right away
     frontend_url = get_frontend_url(request)
-    await services.user_email_token_service.resend_verification_code(
+    token = await services.user_email_token_service.resend_verification_code(
         str(data.email) if data.email else None, data.token, frontend_url
     )
+    return VerificationTokenResponse(token=token)
 
 
 @router.post(
@@ -35,10 +40,17 @@ async def generate_email_verification_code(
     status_code=200,
 )
 async def verify_email_code(
+    request: Request,
     data: EmailVerificationCodeVerifyRequest,
     services: DictContainer = Depends(get_services),
-) -> None:
-    await services.user_email_token_service.verify_email_code(data.token, data.code)
+) -> UserLoginResponse:
+    user = await services.user_email_token_service.verify_email_code(data.token, data.code)
+    # the code proves the inbox, so sign the user in instead of sending them to the login page
+    token_backend = request.app.clients.token_backend
+    return UserLoginResponse(
+        access_token=str(AccessToken.for_user(user, token_backend)),
+        refresh_token=str(RefreshToken.for_user(user, token_backend)),
+    )
 
 
 @router.post(

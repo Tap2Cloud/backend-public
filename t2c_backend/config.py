@@ -50,6 +50,8 @@ class Config(BaseSettings):
     BACKEND_URL: AnyHttpUrl
 
     USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS: int
+    # unused /verify?token=… links stop working after this; sign-in or resend sends a new one
+    USER_EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES: int
 
     USER_EMAIL_CODE_EXPIRY_MINUTES: int
     USER_EMAIL_CODE_MAX_ATTEMPTS: int

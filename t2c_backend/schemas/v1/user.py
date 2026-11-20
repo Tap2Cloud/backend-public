@@ -155,6 +155,12 @@ class ForgotPasswordCodeVerifyRequest(BaseModel):
     code: str = Field(..., pattern=r"^\d{6}$")
 
 
+class VerificationTokenResponse(BaseModel):
+    """Token for the /verify?token=… page; the emailed code is still required to use it."""
+
+    token: str
+
+
 class ForgotPasswordCodeVerifyResponse(BaseModel):
     reset_token: str = Field(..., alias="resetToken")
 
