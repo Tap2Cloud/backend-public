@@ -273,7 +273,7 @@ class UserEmailTokenService:
     def _is_token_expired(self, user_email_token: UserEmailToken) -> bool:
         config = self.app.config
         if user_email_token.type == TokenType.EmailVerificationToken:
-            lifetime = timedelta(minutes=config.USER_EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES)
+            lifetime = timedelta(days=config.USER_EMAIL_VERIFICATION_TOKEN_EXPIRY_DAYS)
         else:
             lifetime = timedelta(hours=config.USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS)
         return aware_utcnow() - user_email_token.time > lifetime
