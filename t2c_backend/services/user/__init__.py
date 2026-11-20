@@ -177,8 +177,10 @@ class UserService:
         picture,
         first_name,
         last_name,
+        language: Language,
     ):
         user = await self.get_user_profile(user_id)
+        user.language = language
 
         update_fields = {
             "first_name": first_name,

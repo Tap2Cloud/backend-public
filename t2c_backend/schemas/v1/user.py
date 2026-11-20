@@ -63,6 +63,7 @@ class UserResponse(DisplayUser):
     roles: list[RoleBase]
     location: Location | None
     profile_avatar: str | None = Field(..., alias="profileAvatar")
+    language: Language
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,6 +86,7 @@ class UserResponse(DisplayUser):
             profileAvatar=user.profile_avatar.get_string()
             if user.profile_avatar is not None
             else None,
+            language=user.language,
         )
 
 

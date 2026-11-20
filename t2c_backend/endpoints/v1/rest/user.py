@@ -10,7 +10,7 @@ from t2c_backend.schemas.v1.user import (
     UserResponse,
 )
 from t2c_backend.services import get_services
-from t2c_backend.utils.enums import UserStatus
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.errors import NotFoundError, UnAuthenticatedError
 from t2c_backend.utils.misc import DictContainer
 
@@ -67,6 +67,7 @@ async def user_profile_update_handler(
     picture: UploadFile = File(None),
     first_name: str = Form(..., alias="firstName", validation_alias="firstName"),
     last_name: str = Form(..., alias="lastName", validation_alias="lastName"),
+    language: Language = Form(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_update": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -75,6 +76,7 @@ async def user_profile_update_handler(
         picture,
         first_name,
         last_name,
+        language,
     )
 
     if not user:
