@@ -9,7 +9,12 @@ from t2c_backend.clients.celery_app.tasks import (
 )
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import EmailTemplate, Organization, User, UserEmailToken
-from t2c_backend.utils.enums import EmailTemplateType, Language, TokenType
+from t2c_backend.utils.enums import (
+    EmailTemplateType,
+    Language,
+    TokenType,
+    VerificationCodeSource,
+)
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
     BadRequestError,
@@ -120,19 +125,41 @@ class UserEmailTokenService:
         return template
 
     async def resend_verification_code(
-        self, email: str | None, token: str | None, frontend_url: str
+        self,
+        source: VerificationCodeSource,
+        email: str | None,
+        token: str | None,
+        frontend_url: str,
     ) -> str:
+        record = None
         if email:
             user = await self.app.services.user_service.repository.get_one_or_none(email=email)
             if not user:
                 raise NotFoundError("Email not registered")
         else:
-            user = (await self._find_verification_token(token)).user
+            record = await self.repository.get_one_or_none(
+                user_token=token, type=TokenType.EmailVerificationToken
+            )
+            if not record:
+                raise EmailVerificationLinkExpiredError("Invalid or expired verification link")
+            user = record.user
 
         if user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
+        if source == VerificationCodeSource.verify_page:
+            record = record or await self.repository.get_one_or_none(
+                user_id=user.id, type=TokenType.EmailVerificationToken, is_used__is_not=True
+            )
+            if record and self._is_token_expired(record):
+                raise EmailVerificationLinkExpiredError("Invalid or expired verification link")
+
         return await self.send_verification_code(user, frontend_url)
+
+    async def validate_verification_token(self, token: str) -> None:
+        record = await self._find_verification_token(token)
+        if record.is_used or record.user.is_email_verified:
+            raise AlreadyExistsError("Email already verified")
 
     async def verify_email_code(self, token: str, code: str) -> User:
         record = await self._find_verification_token(token)

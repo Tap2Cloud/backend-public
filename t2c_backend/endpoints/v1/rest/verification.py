@@ -4,6 +4,7 @@ from t2c_backend.schemas.v1.token import AccessToken, RefreshToken
 from t2c_backend.schemas.v1.user import (
     EmailVerificationCodeRequest,
     EmailVerificationCodeVerifyRequest,
+    EmailVerificationTokenRequest,
     ForgotPasswordCodeRequest,
     ForgotPasswordCodeVerifyRequest,
     ForgotPasswordCodeVerifyResponse,
@@ -29,9 +30,21 @@ async def generate_email_verification_code(
     # returns the token so sign-in (unverified email) can open /verify?token=… right away
     frontend_url = get_frontend_url(request)
     token = await services.user_email_token_service.resend_verification_code(
-        str(data.email) if data.email else None, data.token, frontend_url
+        data.source, str(data.email) if data.email else None, data.token, frontend_url
     )
     return VerificationTokenResponse(token=token)
+
+
+@router.post(
+    "/email-verification/token/validate",
+    operation_id="validate email verification token",
+    status_code=200,
+)
+async def validate_email_verification_token(
+    data: EmailVerificationTokenRequest,
+    services: DictContainer = Depends(get_services),
+) -> None:
+    await services.user_email_token_service.validate_verification_token(data.token)
 
 
 @router.post(

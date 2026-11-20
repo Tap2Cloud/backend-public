@@ -188,3 +188,11 @@ class EmailTemplateType(enum.StrEnum):
 
     def __str__(self) -> str:
         return self.value
+
+
+class VerificationCodeSource(enum.StrEnum):
+    sign_in = "sign_in"
+    verify_page = "verify_page"
+
+    def __str__(self) -> str:
+        return self.value
