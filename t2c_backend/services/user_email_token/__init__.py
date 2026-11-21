@@ -156,6 +156,8 @@ class UserEmailTokenService:
         if record.is_used or record.user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
+        await self._check_not_blocked(EMAIL_VERIFICATION_KEY.format(email=record.user.email))
+
     async def verify_email_code(self, token: str, code: str) -> None:
         record = await self._find_verification_token(token)
         user = record.user
@@ -248,6 +250,18 @@ class UserEmailTokenService:
         return code
 
     async def _check_code(self, key: str, code: str) -> None:
+        await self._check_not_blocked(key)
+
+        try:
+            await self._match_code(key, code)
+        except BadRequestError:
+            redis = self.app.clients.redis.client
+            failures_key = f"{key}:failures"
+            if await redis.incr(failures_key) == 1:
+                await redis.expire(failures_key, DAY_SECONDS)
+            raise
+
+    async def _check_not_blocked(self, key: str) -> None:
         redis = self.app.clients.redis.client
         failures_key = f"{key}:failures"
         if int(await redis.get(failures_key) or 0) >= MAX_DAILY_CODE_FAILURES:
@@ -255,13 +269,6 @@ class UserEmailTokenService:
                 "Too many wrong codes, please try again later",
                 retry_after=max(await redis.ttl(failures_key), 1),
             )
-
-        try:
-            await self._match_code(key, code)
-        except BadRequestError:
-            if await redis.incr(failures_key) == 1:
-                await redis.expire(failures_key, DAY_SECONDS)
-            raise
 
     async def _match_code(self, key: str, code: str) -> None:
         redis = self.app.clients.redis.client
