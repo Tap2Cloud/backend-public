@@ -220,6 +220,9 @@ class UserEmailTokenService:
         )
         record.is_used = True
         await self.repository.save(record)
+        await self.app.clients.redis.client.delete(
+            FORGOT_PASSWORD_COOLDOWN_KEY.format(email=record.user.email)
+        )
 
     async def _get_or_create_token(self, user: User, token_type: TokenType) -> UserEmailToken:
         token = await self.repository.get_one_or_none(
