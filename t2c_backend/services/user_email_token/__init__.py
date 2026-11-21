@@ -180,10 +180,10 @@ class UserEmailTokenService:
         return record
 
     async def send_forgot_password_code(self, email: str) -> None:
-        await self._start_cooldown(FORGOT_PASSWORD_COOLDOWN_KEY.format(email=email))
         user = await self.app.services.user_service.repository.get_one_or_none(email=email)
         if not user:
-            return
+            raise NotFoundError("Email not registered")
+        await self._start_cooldown(FORGOT_PASSWORD_COOLDOWN_KEY.format(email=email))
 
         config = self.app.config
         template = await self.get_email_template(EmailTemplateType.forgot_password, user.language)
