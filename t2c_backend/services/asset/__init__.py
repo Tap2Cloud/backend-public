@@ -66,8 +66,10 @@ class AssetService:
             raise AlreadyExistsError("Device ID already exists")
 
         asset = Asset(
-            device_id=device_id,
-            pass_id=self.app.clients.cryptography.encode(f"{location.id}_{device_id}"),
+            device_id=asset_data.device_id,
+            pass_id=self.app.clients.cryptography_provider.encode(
+                f"{location.id}_{asset_data.device_id}"
+            ),
             asset_type_id=asset_type.id,
             manufacturing_date=datetime_from_epoch(asset_data.manufacturing_date),
             location_id=location.id,

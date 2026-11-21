@@ -6,16 +6,27 @@ from calendar import timegm
 from datetime import UTC, datetime, tzinfo
 from inspect import isawaitable
 from typing import Annotated
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import tomlkit
-from fastapi import Form
+from fastapi import Form, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field, ValidationError
 from starlette.datastructures import UploadFile
 
 from t2c_backend.core.db.session import get_session_context
 from t2c_backend.utils.errors import BadRequestError
+
+
+def get_frontend_url(request: Request) -> str:
+    for header in ("origin", "referer"):
+        value = request.headers.get(header)
+        if value:
+            parsed = urlparse(value)
+            if parsed.scheme and parsed.netloc:
+                return f"{parsed.scheme}://{parsed.netloc}"
+    return str(request.app.config.FRONTEND_URL)
 
 
 async def maybe_coroutine(func, *args, **kwargs):

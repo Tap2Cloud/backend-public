@@ -1,12 +1,12 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from t2c_backend.core.pagination import CustomPage
 from t2c_backend.models import User as UserModel
 from t2c_backend.schemas.v1.location import Location, LocationBaseResponse
 from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.enums import Role as RoleEnum
-from t2c_backend.utils.enums import UserStatus
 from t2c_backend.utils.misc import datetime_to_epoch, get_full_name
 
 
@@ -63,6 +63,7 @@ class UserResponse(DisplayUser):
     roles: list[RoleBase]
     location: Location | None
     profile_avatar: str | None = Field(..., alias="profileAvatar")
+    language: Language
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,6 +86,7 @@ class UserResponse(DisplayUser):
             profileAvatar=user.profile_avatar.get_string()
             if user.profile_avatar is not None
             else None,
+            language=user.language,
         )
 
 
@@ -122,13 +124,59 @@ class OrganizationUser(DisplayUser):
 
 class UserRegisterRequest(BaseModel):
     email: EmailStr = Field(...)
-    password: str = Field(...)
+    password: str = Field(..., min_length=14)
     first_name: str = Field(..., alias="firstName")
     last_name: str = Field(..., alias="lastName")
+    language: Language = Field(...)
 
     model_config = ConfigDict(from_attributes=True)
 
 
+class EmailVerificationCodeRequest(BaseModel):
+    refresh_expired_token: bool = Field(..., alias="refreshExpiredToken")
+    email: EmailStr | None = None
+    token: str | None = None
+
+    @model_validator(mode="after")
+    def validate_email_or_token(self):
+        if self.email is None and self.token is None:
+            raise ValueError("Either email or token is required")
+        return self
+
+
+class EmailVerificationTokenRequest(BaseModel):
+    token: str = Field(...)
+
+
+class EmailVerificationCodeVerifyRequest(BaseModel):
+    token: str = Field(...)
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class ForgotPasswordCodeRequest(BaseModel):
+    email: EmailStr = Field(...)
+
+
+class ForgotPasswordCodeVerifyRequest(BaseModel):
+    email: EmailStr = Field(...)
+    code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class VerificationTokenResponse(BaseModel):
+    """Token for the /verify?token=… page; the emailed code is still required to use it."""
+
+    token: str
+
+
+class ForgotPasswordCodeVerifyResponse(BaseModel):
+    reset_token: str = Field(..., alias="resetToken")
+
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str = Field(..., alias="resetToken")
+    password: str = Field(..., min_length=14)
+
+
 class ChangePasswordRequest(BaseModel):
     old_password: str = Field(..., alias="oldPassword")
-    new_password: str = Field(..., alias="newPassword")
+    new_password: str = Field(..., alias="newPassword", min_length=14)

@@ -38,6 +38,8 @@ class Config(BaseSettings):
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
 
+    REDIS_URL: str
+
     APP_HOST: str
     APP_PORT: int
 
@@ -46,6 +48,14 @@ class Config(BaseSettings):
 
     FRONTEND_URL: AnyHttpUrl
     BACKEND_URL: AnyHttpUrl
+
+    USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS: int
+    # unused /verify?token=… links stop working after this; sign-in or resend sends a new one
+    USER_EMAIL_VERIFICATION_TOKEN_EXPIRY_DAYS: int
+
+    USER_EMAIL_CODE_EXPIRY_MINUTES: int
+    USER_EMAIL_CODE_MAX_ATTEMPTS: int
+    USER_EMAIL_CODE_RESEND_COOLDOWN_SECONDS: int
 
     @property
     def project_root_path(self):

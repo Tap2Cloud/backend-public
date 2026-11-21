@@ -16,10 +16,11 @@ from t2c_backend.models.product_pass_type import ProductPassType
 from t2c_backend.models.user import UserInviteRole
 from t2c_backend.schemas.v1.image import Image
 from t2c_backend.schemas.v1.user import OrganizationUser, OrganizationUsersCustomPage, UserCount
-from t2c_backend.utils.enums import UserStatus
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
     BadRequestError,
+    EmailNotVerifiedError,
     NotFoundError,
     UnAuthorizedError,
 )
@@ -83,7 +84,15 @@ class UserService:
         if not is_valid_password:
             raise UnAuthorizedError(msg="Incorrect username or password")
 
+        if not db_user.is_email_verified:
+            raise EmailNotVerifiedError(msg="Email is not verified")
+
         return db_user
+
+    async def mark_email_verified(self, user: User) -> None:
+        user.is_active = True
+        user.is_email_verified = True
+        await self.repository.save(user)
 
     async def get_user_profile(self, user_id: int) -> User:
         user = await self.repository.get(
@@ -138,6 +147,8 @@ class UserService:
         password: str,
         first_name: str,
         last_name: str,
+        frontend_url: str,
+        language: Language = Language.en,
     ):
         is_user_exists = await self.repository.exists(email=email)
 
@@ -152,10 +163,13 @@ class UserService:
             salt=salt,
             first_name=first_name,
             last_name=last_name,
+            language=language,
             roles=[],
         )
 
-        return await self.repository.save(user)
+        user = await self.repository.save(user)
+        await self.app.services.user_email_token_service.send_verification_code(user, frontend_url)
+        return user
 
     async def update_user_profile(
         self,
@@ -163,6 +177,7 @@ class UserService:
         picture,
         first_name,
         last_name,
+        language: Language,
     ):
         user = await self.get_user_profile(user_id)
 
@@ -170,6 +185,7 @@ class UserService:
             "first_name": first_name,
             "last_name": last_name,
             "profile_avatar": await Image.from_file(picture) if picture else None,
+            "language": language,
         }
 
         for field, value in update_fields.items():
@@ -340,6 +356,15 @@ class UserService:
             },
             unique=False,
         )
+
+    async def reset_password(self, user_id: int, password: str):
+        db_user = await self.repository.get_one_or_none(id=user_id)
+        salt, hashed_password = self.app.services.authentication.generate_encoded_password(password)
+
+        db_user.salt = salt
+        db_user.hashed_password = hashed_password
+
+        await self.repository.save(db_user)
 
 
 def setup(app, session, *args, **kwargs):

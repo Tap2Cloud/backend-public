@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 
 from t2c_backend.core.security import JWTAPIAccessTokenBearer
 from t2c_backend.schemas.v1.location import Location, LocationCreateRequest
@@ -11,7 +11,13 @@ from t2c_backend.schemas.v1.role import RoleBase, RoleCreate
 from t2c_backend.schemas.v1.token import AccessToken
 from t2c_backend.services import get_services
 from t2c_backend.utils.errors import UnAuthorizedError
-from t2c_backend.utils.misc import DictContainer, datetime_to_epoch, form_json, parse_form_model
+from t2c_backend.utils.misc import (
+    DictContainer,
+    datetime_to_epoch,
+    form_json,
+    get_frontend_url,
+    parse_form_model,
+)
 
 router = APIRouter()
 
@@ -20,6 +26,7 @@ router = APIRouter()
     "/organization", operation_id="create organization", response_model=Location, status_code=200
 )
 async def create_organization_with_location(
+    request: Request,
     name: str = Form(...),
     number: str | None = Form(...),
     product_pass_type: str | UploadFile = form_json(ProductPassType, alias="productPassType"),
@@ -30,6 +37,7 @@ async def create_organization_with_location(
 ):
     product_pass_type = parse_form_model(ProductPassType, product_pass_type, "productPassType")
     location = parse_form_model(LocationCreateRequest, location, "location")
+    frontend_url = get_frontend_url(request)
     (
         org,
         location,
@@ -40,6 +48,7 @@ async def create_organization_with_location(
         logo=logo,
         location_data=location,
         user_id=token.user_id,
+        frontend_url=frontend_url,
     )
 
     return Location.convert(location=location, organization=org)

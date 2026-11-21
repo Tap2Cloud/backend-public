@@ -6,10 +6,11 @@ from t2c_backend.schemas.v1.user import (
     ChangePasswordRequest,
     OrganizationUser,
     OrganizationUsersCustomPage,
+    ResetPasswordRequest,
     UserResponse,
 )
 from t2c_backend.services import get_services
-from t2c_backend.utils.enums import UserStatus
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.errors import NotFoundError, UnAuthenticatedError
 from t2c_backend.utils.misc import DictContainer
 
@@ -66,6 +67,7 @@ async def user_profile_update_handler(
     picture: UploadFile = File(None),
     first_name: str = Form(..., alias="firstName", validation_alias="firstName"),
     last_name: str = Form(..., alias="lastName", validation_alias="lastName"),
+    language: Language = Form(...),
     token: AccessToken = Depends(JWTAPIAccessTokenBearer(permissions={"user_update": True})),
     services: DictContainer = Depends(get_services),
 ):
@@ -74,6 +76,7 @@ async def user_profile_update_handler(
         picture,
         first_name,
         last_name,
+        language,
     )
 
     if not user:
@@ -107,7 +110,7 @@ async def organization_users_handler(
     )
 
 
-@router.post("/user/password/change", operation_id="change password", name="change-user-password")
+@router.post("/user/password/change", operation_id="change password")
 async def change_user_password(
     passwords: ChangePasswordRequest,
     token: AccessToken = Depends(
@@ -121,3 +124,15 @@ async def change_user_password(
         user_id=token.user_id,
     )
     return Response(status_code=200)
+
+
+@router.post(
+    "/user/password/reset",
+    operation_id="reset password",
+    status_code=200,
+)
+async def reset_password(
+    data: ResetPasswordRequest,
+    services: DictContainer = Depends(get_services),
+) -> None:
+    await services.user_email_token_service.reset_password(data.reset_token, data.password)

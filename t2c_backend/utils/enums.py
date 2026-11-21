@@ -22,6 +22,8 @@ class ErrorMessageCodes(enum.StrEnum):
     SERVER_ERROR = "SERVER_ERROR"
     BAD_REQUEST = "BAD_REQUEST"
     TOKEN_EXPIRED = "TOKEN_EXPIRED"
+    EMAIL_NOT_VERIFIED = "EMAIL_NOT_VERIFIED"
+    TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
 
 
 class TokenType(enum.IntEnum):
@@ -173,6 +175,16 @@ class DocumentFor(enum.StrEnum):
     InstructionManualDocuments = "instruction_manual_documents"
     EuFiles = "eu_files"
     AssetTypeFieldSpecificDocuments = "asset_type_field_specific_documents"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class EmailTemplateType(enum.StrEnum):
+    verify_email = "verify_email"
+    welcome = "welcome"
+    forgot_password = "forgot_password"
+    invite = "invite"
 
     def __str__(self) -> str:
         return self.value
