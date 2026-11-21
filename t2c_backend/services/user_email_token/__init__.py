@@ -156,7 +156,7 @@ class UserEmailTokenService:
         if record.is_used or record.user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
-    async def verify_email_code(self, token: str, code: str) -> User:
+    async def verify_email_code(self, token: str, code: str) -> None:
         record = await self._find_verification_token(token)
         user = record.user
         if record.is_used or user.is_email_verified:
@@ -167,7 +167,6 @@ class UserEmailTokenService:
         await self.app.services.user_service.mark_email_verified(user)
         record.is_used = True
         await self.repository.save(record)
-        return user
 
     async def _find_verification_token(self, token: str) -> UserEmailToken:
         """The link's token record, used or not; unknown (replaced) or expired raises 410."""

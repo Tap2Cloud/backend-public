@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 
-from t2c_backend.schemas.v1.token import AccessToken, RefreshToken
 from t2c_backend.schemas.v1.user import (
     EmailVerificationCodeRequest,
     EmailVerificationCodeVerifyRequest,
@@ -8,7 +7,6 @@ from t2c_backend.schemas.v1.user import (
     ForgotPasswordCodeRequest,
     ForgotPasswordCodeVerifyRequest,
     ForgotPasswordCodeVerifyResponse,
-    UserLoginResponse,
     VerificationTokenResponse,
 )
 from t2c_backend.services import get_services
@@ -56,17 +54,10 @@ async def validate_email_verification_token(
     status_code=200,
 )
 async def verify_email_code(
-    request: Request,
     data: EmailVerificationCodeVerifyRequest,
     services: DictContainer = Depends(get_services),
-) -> UserLoginResponse:
-    user = await services.user_email_token_service.verify_email_code(data.token, data.code)
-    # the code proves the inbox, so sign the user in instead of sending them to the login page
-    token_backend = request.app.clients.token_backend
-    return UserLoginResponse(
-        access_token=str(AccessToken.for_user(user, token_backend)),
-        refresh_token=str(RefreshToken.for_user(user, token_backend)),
-    )
+) -> None:
+    await services.user_email_token_service.verify_email_code(data.token, data.code)
 
 
 @router.post(
