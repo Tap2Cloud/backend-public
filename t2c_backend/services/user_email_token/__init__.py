@@ -1,4 +1,5 @@
 import secrets
+from datetime import timedelta
 from uuid import uuid4
 
 from t2c_backend.clients.celery_app.tasks import (
@@ -13,6 +14,7 @@ from t2c_backend.utils.errors import (
     AlreadyExistsError,
     BadRequestError,
     EmailProviderError,
+    EmailVerificationLinkExpiredError,
     NotFoundError,
     TooManyRequestsError,
 )
@@ -22,6 +24,11 @@ EMAIL_VERIFICATION_KEY = "email_verification:{email}"
 EMAIL_VERIFICATION_COOLDOWN_KEY = "email_verification_cooldown:{email}"
 FORGOT_PASSWORD_KEY = "forgot_password:{email}"
 FORGOT_PASSWORD_COOLDOWN_KEY = "forgot_password_cooldown:{email}"
+
+# Wrong codes allowed per email and flow in 24h, across all resends. Without it, asking for a
+# new code every cooldown allows ~7,200 guesses a day at a 6-digit code.
+MAX_DAILY_CODE_FAILURES = 20
+DAY_SECONDS = 24 * 60 * 60
 
 
 class UserEmailTokenService:
@@ -41,9 +48,21 @@ class UserEmailTokenService:
         """Finds a user token by its string value."""
         return await self.repository.get_one_or_none(user_token=token, is_used__is_not=True)
 
-    async def send_verification_code(self, user: User, frontend_url: str) -> None:
+    async def get_verification_token(self, user: User) -> str:
+        """The token for the /verify?token=… page; the emailed code is still required to use it."""
+        record = await self._get_or_create_token(user, TokenType.EmailVerificationToken)
+        return record.user_token
+
+    async def send_verification_code(self, user: User, frontend_url: str) -> str:
+        """Emails a new code; returns the token for /verify (same one until used or expired)."""
         config = self.app.config
-        await self._start_cooldown(EMAIL_VERIFICATION_COOLDOWN_KEY.format(email=user.email))
+        try:
+            await self._start_cooldown(EMAIL_VERIFICATION_COOLDOWN_KEY.format(email=user.email))
+        except TooManyRequestsError as error:
+            # a code went out moments ago: hand back its token too, so the code page still opens.
+            # It was saved when that code was sent, so the rollback of this request keeps it.
+            error.errors = [{**error.errors[0], "token": await self.get_verification_token(user)}]
+            raise
         template = await self.get_email_template(EmailTemplateType.verify_email, user.language)
         record = await self._get_or_create_token(user, TokenType.EmailVerificationToken)
         code = await self._store_code(EMAIL_VERIFICATION_KEY.format(email=user.email))
@@ -65,6 +84,7 @@ class UserEmailTokenService:
                 "from_name": template.from_name,
             },
         )
+        return record.user_token
 
     async def send_welcome_mail(
         self, user: User, organization: Organization, frontend_url: str
@@ -100,8 +120,13 @@ class UserEmailTokenService:
         return template
 
     async def resend_verification_code(
-        self, email: str | None, token: str | None, frontend_url: str
-    ) -> None:
+        self,
+        refresh_expired_token: bool,
+        email: str | None,
+        token: str | None,
+        frontend_url: str,
+    ) -> str:
+        record = None
         if email:
             user = await self.app.services.user_service.repository.get_one_or_none(email=email)
             if not user:
@@ -111,21 +136,32 @@ class UserEmailTokenService:
                 user_token=token, type=TokenType.EmailVerificationToken
             )
             if not record:
-                raise BadRequestError("Invalid verification link")
+                raise EmailVerificationLinkExpiredError("Invalid or expired verification link")
             user = record.user
 
         if user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
-        await self.send_verification_code(user, frontend_url)
+        if not refresh_expired_token:
+            record = record or await self.repository.get_one_or_none(
+                user_id=user.id, type=TokenType.EmailVerificationToken, is_used__is_not=True
+            )
+            if record and self._is_token_expired(record):
+                raise EmailVerificationLinkExpiredError("Invalid or expired verification link")
+
+        return await self.send_verification_code(user, frontend_url)
+
+    async def validate_verification_token(self, token: str) -> None:
+        record = await self._find_verification_token(token)
+        if record.is_used or record.user.is_email_verified:
+            raise AlreadyExistsError("Email already verified")
+
+        await self._check_not_blocked(EMAIL_VERIFICATION_KEY.format(email=record.user.email))
 
     async def verify_email_code(self, token: str, code: str) -> None:
-        record = await self.find_by_token(token)
-        if not record or record.type != TokenType.EmailVerificationToken:
-            raise BadRequestError("Invalid or expired code")
-
+        record = await self._find_verification_token(token)
         user = record.user
-        if user.is_email_verified:
+        if record.is_used or user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
         await self._check_code(EMAIL_VERIFICATION_KEY.format(email=user.email), code)
@@ -133,6 +169,15 @@ class UserEmailTokenService:
         await self.app.services.user_service.mark_email_verified(user)
         record.is_used = True
         await self.repository.save(record)
+
+    async def _find_verification_token(self, token: str) -> UserEmailToken:
+        """The link's token record, used or not; unknown (replaced) or expired raises 410."""
+        record = await self.repository.get_one_or_none(
+            user_token=token, type=TokenType.EmailVerificationToken
+        )
+        if not record or (not record.is_used and self._is_token_expired(record)):
+            raise EmailVerificationLinkExpiredError("Invalid or expired verification link")
+        return record
 
     async def send_forgot_password_code(self, email: str) -> None:
         await self._start_cooldown(FORGOT_PASSWORD_COOLDOWN_KEY.format(email=email))
@@ -177,6 +222,9 @@ class UserEmailTokenService:
         )
         record.is_used = True
         await self.repository.save(record)
+        await self.app.clients.redis.client.delete(
+            FORGOT_PASSWORD_COOLDOWN_KEY.format(email=record.user.email)
+        )
 
     async def _get_or_create_token(self, user: User, token_type: TokenType) -> UserEmailToken:
         token = await self.repository.get_one_or_none(
@@ -185,7 +233,7 @@ class UserEmailTokenService:
         if not token:
             return await self.create_token(user.id, token_type)
 
-        if token_type == TokenType.ForgotPasswordToken and self._is_token_expired(token):
+        if self._is_token_expired(token):
             token.user_token = uuid4().hex
             token.time = aware_utcnow()
             token = await self.repository.save(token)
@@ -202,6 +250,27 @@ class UserEmailTokenService:
         return code
 
     async def _check_code(self, key: str, code: str) -> None:
+        await self._check_not_blocked(key)
+
+        try:
+            await self._match_code(key, code)
+        except BadRequestError:
+            redis = self.app.clients.redis.client
+            failures_key = f"{key}:failures"
+            if await redis.incr(failures_key) == 1:
+                await redis.expire(failures_key, DAY_SECONDS)
+            raise
+
+    async def _check_not_blocked(self, key: str) -> None:
+        redis = self.app.clients.redis.client
+        failures_key = f"{key}:failures"
+        if int(await redis.get(failures_key) or 0) >= MAX_DAILY_CODE_FAILURES:
+            raise TooManyRequestsError(
+                "Too many wrong codes, please try again later",
+                retry_after=max(await redis.ttl(failures_key), 1),
+            )
+
+    async def _match_code(self, key: str, code: str) -> None:
         redis = self.app.clients.redis.client
         async with redis.pipeline(transaction=True) as pipe:
             pipe.hincrby(key, "attempts", 1)
@@ -233,9 +302,12 @@ class UserEmailTokenService:
             )
 
     def _is_token_expired(self, user_email_token: UserEmailToken) -> bool:
-        difference = aware_utcnow() - user_email_token.time
-        hours = difference.total_seconds() / 3600
-        return hours > self.app.config.USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS
+        config = self.app.config
+        if user_email_token.type == TokenType.EmailVerificationToken:
+            lifetime = timedelta(days=config.USER_EMAIL_VERIFICATION_TOKEN_EXPIRY_DAYS)
+        else:
+            lifetime = timedelta(hours=config.USER_FORGOT_PASSWORD_TOKEN_EXPIRY_HOURS)
+        return aware_utcnow() - user_email_token.time > lifetime
 
 
 def setup(app, session, *args, **kwargs):

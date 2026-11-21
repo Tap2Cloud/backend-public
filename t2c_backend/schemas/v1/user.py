@@ -63,6 +63,7 @@ class UserResponse(DisplayUser):
     roles: list[RoleBase]
     location: Location | None
     profile_avatar: str | None = Field(..., alias="profileAvatar")
+    language: Language
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -85,6 +86,7 @@ class UserResponse(DisplayUser):
             profileAvatar=user.profile_avatar.get_string()
             if user.profile_avatar is not None
             else None,
+            language=user.language,
         )
 
 
@@ -131,6 +133,7 @@ class UserRegisterRequest(BaseModel):
 
 
 class EmailVerificationCodeRequest(BaseModel):
+    refresh_expired_token: bool = Field(..., alias="refreshExpiredToken")
     email: EmailStr | None = None
     token: str | None = None
 
@@ -139,6 +142,10 @@ class EmailVerificationCodeRequest(BaseModel):
         if self.email is None and self.token is None:
             raise ValueError("Either email or token is required")
         return self
+
+
+class EmailVerificationTokenRequest(BaseModel):
+    token: str = Field(...)
 
 
 class EmailVerificationCodeVerifyRequest(BaseModel):
@@ -153,6 +160,12 @@ class ForgotPasswordCodeRequest(BaseModel):
 class ForgotPasswordCodeVerifyRequest(BaseModel):
     email: EmailStr = Field(...)
     code: str = Field(..., pattern=r"^\d{6}$")
+
+
+class VerificationTokenResponse(BaseModel):
+    """Token for the /verify?token=… page; the emailed code is still required to use it."""
+
+    token: str
 
 
 class ForgotPasswordCodeVerifyResponse(BaseModel):

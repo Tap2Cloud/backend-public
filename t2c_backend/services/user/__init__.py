@@ -177,6 +177,7 @@ class UserService:
         picture,
         first_name,
         last_name,
+        language: Language,
     ):
         user = await self.get_user_profile(user_id)
 
@@ -184,6 +185,7 @@ class UserService:
             "first_name": first_name,
             "last_name": last_name,
             "profile_avatar": await Image.from_file(picture) if picture else None,
+            "language": language,
         }
 
         for field, value in update_fields.items():
