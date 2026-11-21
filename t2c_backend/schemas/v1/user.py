@@ -5,7 +5,7 @@ from t2c_backend.models import User as UserModel
 from t2c_backend.schemas.v1.location import Location, LocationBaseResponse
 from t2c_backend.schemas.v1.role import RoleBase
 from t2c_backend.schemas.v1.token import TokenResponse
-from t2c_backend.utils.enums import Language, UserStatus, VerificationCodeSource
+from t2c_backend.utils.enums import Language, UserStatus
 from t2c_backend.utils.enums import Role as RoleEnum
 from t2c_backend.utils.misc import datetime_to_epoch, get_full_name
 
@@ -133,7 +133,7 @@ class UserRegisterRequest(BaseModel):
 
 
 class EmailVerificationCodeRequest(BaseModel):
-    source: VerificationCodeSource = Field(...)
+    refresh_expired_token: bool = Field(..., alias="refreshExpiredToken")
     email: EmailStr | None = None
     token: str | None = None
 

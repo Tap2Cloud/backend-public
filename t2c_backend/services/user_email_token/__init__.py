@@ -9,12 +9,7 @@ from t2c_backend.clients.celery_app.tasks import (
 )
 from t2c_backend.core.repository import BaseRepository
 from t2c_backend.models import EmailTemplate, Organization, User, UserEmailToken
-from t2c_backend.utils.enums import (
-    EmailTemplateType,
-    Language,
-    TokenType,
-    VerificationCodeSource,
-)
+from t2c_backend.utils.enums import EmailTemplateType, Language, TokenType
 from t2c_backend.utils.errors import (
     AlreadyExistsError,
     BadRequestError,
@@ -126,7 +121,7 @@ class UserEmailTokenService:
 
     async def resend_verification_code(
         self,
-        source: VerificationCodeSource,
+        refresh_expired_token: bool,
         email: str | None,
         token: str | None,
         frontend_url: str,
@@ -147,7 +142,7 @@ class UserEmailTokenService:
         if user.is_email_verified:
             raise AlreadyExistsError("Email already verified")
 
-        if source == VerificationCodeSource.verify_page:
+        if not refresh_expired_token:
             record = record or await self.repository.get_one_or_none(
                 user_id=user.id, type=TokenType.EmailVerificationToken, is_used__is_not=True
             )

@@ -30,7 +30,10 @@ async def generate_email_verification_code(
     # returns the token so sign-in (unverified email) can open /verify?token=… right away
     frontend_url = get_frontend_url(request)
     token = await services.user_email_token_service.resend_verification_code(
-        data.source, str(data.email) if data.email else None, data.token, frontend_url
+        data.refresh_expired_token,
+        str(data.email) if data.email else None,
+        data.token,
+        frontend_url,
     )
     return VerificationTokenResponse(token=token)
 
