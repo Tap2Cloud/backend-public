@@ -185,6 +185,7 @@ class EmailTemplateType(enum.StrEnum):
     welcome = "welcome"
     forgot_password = "forgot_password"
     invite = "invite"
+    account_unblocked = "account_unblocked"
 
     def __str__(self) -> str:
         return self.value
