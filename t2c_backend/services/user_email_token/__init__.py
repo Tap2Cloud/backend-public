@@ -28,6 +28,8 @@ FORGOT_PASSWORD_COOLDOWN_KEY = "forgot_password_cooldown:{email}"
 # Wrong codes allowed per email and flow in 24h, across all resends. Without it, asking for a
 # new code every cooldown allows ~7,200 guesses a day at a 6-digit code.
 MAX_DAILY_CODE_FAILURES = 20
+# Code mails allowed per email and flow in 24h; the resend cooldown alone allows ~1,440.
+MAX_DAILY_CODE_MAILS = 20
 DAY_SECONDS = 24 * 60 * 60
 
 
@@ -56,6 +58,8 @@ class UserEmailTokenService:
     async def send_verification_code(self, user: User, frontend_url: str) -> str:
         """Emails a new code; returns the token for /verify (same one until used or expired)."""
         config = self.app.config
+        key = EMAIL_VERIFICATION_KEY.format(email=user.email)
+        await self._check_send_allowed(key)
         try:
             await self._start_cooldown(EMAIL_VERIFICATION_COOLDOWN_KEY.format(email=user.email))
         except TooManyRequestsError as error:
@@ -65,7 +69,7 @@ class UserEmailTokenService:
             raise
         template = await self.get_email_template(EmailTemplateType.verify_email, user.language)
         record = await self._get_or_create_token(user, TokenType.EmailVerificationToken)
-        code = await self._store_code(EMAIL_VERIFICATION_KEY.format(email=user.email))
+        code = await self._store_code(key)
 
         verification_page_url = (
             self.app.services.authentication.create_link_for_user_email_verification(
@@ -84,6 +88,7 @@ class UserEmailTokenService:
                 "from_name": template.from_name,
             },
         )
+        await self._count_sent(key)
         return record.user_token
 
     async def send_welcome_mail(
@@ -183,11 +188,13 @@ class UserEmailTokenService:
         user = await self.app.services.user_service.repository.get_one_or_none(email=email)
         if not user:
             raise NotFoundError("Email not registered")
-        await self._start_cooldown(FORGOT_PASSWORD_COOLDOWN_KEY.format(email=email))
+        key = FORGOT_PASSWORD_KEY.format(email=user.email)
+        await self._check_send_allowed(key)
+        await self._start_cooldown(FORGOT_PASSWORD_COOLDOWN_KEY.format(email=user.email))
 
         config = self.app.config
         template = await self.get_email_template(EmailTemplateType.forgot_password, user.language)
-        code = await self._store_code(FORGOT_PASSWORD_KEY.format(email=user.email))
+        code = await self._store_code(key)
         forgot_password_mail.apply_async(
             kwargs={
                 "user_email": user.email,
@@ -199,6 +206,7 @@ class UserEmailTokenService:
                 "from_name": template.from_name,
             },
         )
+        await self._count_sent(key)
 
     async def verify_forgot_password_code(self, email: str, code: str) -> str:
         await self._check_code(FORGOT_PASSWORD_KEY.format(email=email), code)
@@ -252,14 +260,15 @@ class UserEmailTokenService:
     async def _check_code(self, key: str, code: str) -> None:
         await self._check_not_blocked(key)
 
+        redis = self.app.clients.redis.client
+        failures_key = f"{key}:failures"
         try:
             await self._match_code(key, code)
         except BadRequestError:
-            redis = self.app.clients.redis.client
-            failures_key = f"{key}:failures"
             if await redis.incr(failures_key) == 1:
                 await redis.expire(failures_key, DAY_SECONDS)
             raise
+        await redis.delete(failures_key)
 
     async def _check_not_blocked(self, key: str) -> None:
         redis = self.app.clients.redis.client
@@ -269,6 +278,23 @@ class UserEmailTokenService:
                 "Too many wrong codes, please try again later",
                 retry_after=max(await redis.ttl(failures_key), 1),
             )
+
+    async def _check_send_allowed(self, key: str) -> None:
+        await self._check_not_blocked(key)
+        redis = self.app.clients.redis.client
+        sent_key = f"{key}:sent"
+        if int(await redis.get(sent_key) or 0) >= MAX_DAILY_CODE_MAILS:
+            raise TooManyRequestsError(
+                "Too many codes requested, please try again later",
+                retry_after=max(await redis.ttl(sent_key), 1),
+            )
+
+    async def _count_sent(self, key: str) -> None:
+        redis = self.app.clients.redis.client
+        sent_key = f"{key}:sent"
+        sent = await redis.incr(sent_key)
+        if sent == 1 or sent == MAX_DAILY_CODE_MAILS:
+            await redis.expire(sent_key, DAY_SECONDS)
 
     async def _match_code(self, key: str, code: str) -> None:
         redis = self.app.clients.redis.client
