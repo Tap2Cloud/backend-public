@@ -12,6 +12,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 
 from alembic import op
+from t2c_backend.config import Config
 from t2c_backend.utils.enums import ENVIRONMENT
 
 # revision identifiers, used by Alembic.
@@ -33,7 +34,12 @@ def upgrade() -> None:
         sa.Column(
             "type",
             sa.Enum(
-                "verify_email", "welcome", "forgot_password", "invite", name="emailtemplatetype"
+                "verify_email",
+                "welcome",
+                "forgot_password",
+                "invite",
+                "account_unblocked",
+                name="emailtemplatetype",
             ),
             nullable=False,
         ),
@@ -56,8 +62,9 @@ def upgrade() -> None:
         sa.Column("language", language_enum, server_default="en", nullable=False),
     )
 
+    environment = Config().ENVIRONMENT
     with open("data/email_templates.json") as f:
-        templates = json.load(f)
+        templates = [t for t in json.load(f) if t["environment"] == environment]
 
     for template in templates:
         template["environment"] = ENVIRONMENT(template["environment"]).name
